@@ -514,6 +514,7 @@ textarea.fi2{resize:vertical;min-height:90px;}
 
 /* ══ 스팟 태그 ══ */
 .spot-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;}
+.spot-reason-tag{display:inline-block;font-size:10px;font-weight:700;color:var(--pri);background:rgba(99,102,241,.1);border-radius:20px;padding:2px 8px;margin-bottom:4px;letter-spacing:0.02em;}
 .spot-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;
   background:rgba(232,88,10,.09);border:1px solid rgba(232,88,10,.2);color:var(--pri);
   white-space:nowrap;}
@@ -936,6 +937,20 @@ body{overscroll-behavior-y:none;}
         <div class="chip on" onclick="togSingle(this,'accom-chips','일반호텔')">🏨 일반호텔</div>
         <div class="chip" onclick="togSingle(this,'accom-chips','에어비앤비')">🏡 에어비앤비</div>
         <div class="chip" onclick="togSingle(this,'accom-chips','럭셔리호텔')">🏆 럭셔리</div>
+      </div>
+      <div class="fl" style="margin-bottom:8px;">숙소 위치 선호 <span style="font-size:11px;font-weight:400;color:var(--sub);">(선택)</span></div>
+      <div class="chips" id="accom-zone-chips">
+        <div class="chip" onclick="togAccomZone(this,'번화가')">🏙️ 번화가 중심</div>
+        <div class="chip" onclick="togAccomZone(this,'조용한곳')">🌙 조용한 곳</div>
+        <div class="chip" onclick="togAccomZone(this,'자연속')">🌿 자연 속</div>
+        <div class="chip" onclick="togAccomZone(this,'치안중요')">🔒 치안 중요</div>
+      </div>
+      <div class="fl" style="margin-bottom:8px;">체력 / 하루 여행 강도</div>
+      <div class="chips" id="stamina-chips">
+        <div class="chip" onclick="togSingle(this,'stamina-chips','최강')">💪 체력왕 (2만보+)</div>
+        <div class="chip on" onclick="togSingle(this,'stamina-chips','보통')">😊 보통 (1만보)</div>
+        <div class="chip" onclick="togSingle(this,'stamina-chips','여유')">🧘 여유롭게 (8천보↓)</div>
+        <div class="chip" onclick="togSingle(this,'stamina-chips','약함')">🪑 무리 안 하게</div>
       </div>
     </div>
   </div>
@@ -1649,7 +1664,8 @@ for(const[c,countries] of Object.entries(HIER)) for(const cities of Object.value
 // ══════════════════════════════════════════════
 const ST = {
   dest:'', dests:[], from:'', to:'', ppl:2,
-  styleText:'', interests:[], budget:'중간', accom:'일반호텔'
+  styleText:'', interests:[], budget:'중간', accom:'일반호텔',
+  stamina:'보통', accomZone:''
 };
 
 // ══════════════════════════════════════════════
@@ -1692,7 +1708,12 @@ function togSingle(el,groupId,val){
   document.querySelectorAll('#'+groupId+' .chip').forEach(c=>c.classList.remove('on'));
   el.classList.add('on');
   if(groupId==='budget-chips') ST.budget=val;
+  else if(groupId==='stamina-chips') ST.stamina=val;
   else ST.accom=val;
+}
+function togAccomZone(el,val){
+  if(el.classList.contains('on')){el.classList.remove('on');ST.accomZone='';}
+  else{document.querySelectorAll('#accom-zone-chips .chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');ST.accomZone=val;}
 }
 
 // ══════════════════════════════════════════════
@@ -1883,7 +1904,7 @@ function findDest(q){
 // ══════════════════════════════════════════════
 function parseStyle(text){
   const t=text.toLowerCase();
-  const out={budget:'중간',accom:'일반호텔',pace:'보통',interests:[...ST.interests]};
+  const out={budget:'중간',accom:'일반호텔',pace:'보통',interests:[...ST.interests],stamina:ST.stamina,accomZone:ST.accomZone};
   if(/저렴|싸게|가성비|알뜰|게스트하우스|호스텔|도미토리|budget/.test(t)){out.budget='저예산';}
   if(/럭셔리|고급|5성|프리미엄|luxury|비즈니스/.test(t)){out.budget='럭셔리';}
   if(ST.budget!=='중간') out.budget=ST.budget;
@@ -1893,10 +1914,79 @@ function parseStyle(text){
   if(ST.accom!=='일반호텔') out.accom=ST.accom;
   if(/여유|느긋|천천히|쉬엄|여유롭게/.test(t)) out.pace='여유';
   if(/빡빡|알차게|많이|최대한|빡세게/.test(t)) out.pace='빡빡';
+  // ── 동행자 유형 자동 감지 → 관심사·체력 보정 ──
+  if(/엄마|아빠|부모님|어르신|노약자|할머니|할아버지/.test(t)){
+    if(!out.interests.includes('힐링/스파')) out.interests.unshift('힐링/스파');
+    if(out.stamina==='보통') out.stamina='약함';
+    if(out.pace==='보통') out.pace='여유';
+  }
+  if(/아이|어린이|유아|아기|가족여행|키즈/.test(t)){
+    if(!out.interests.includes('액티비티')) out.interests.unshift('액티비티');
+    if(out.stamina==='보통') out.stamina='약함';
+    if(out.pace==='보통') out.pace='여유';
+  }
+  if(/신혼|허니문|커플|데이트|연인/.test(t)){
+    if(!out.interests.includes('야경')) out.interests.unshift('야경');
+    if(!out.interests.includes('카페')) out.interests.push('카페');
+  }
+  if(/혼자|1인|솔로|혼행/.test(t)){
+    if(!out.interests.includes('카페')) out.interests.push('카페');
+    if(!out.interests.includes('문화/역사')) out.interests.push('문화/역사');
+  }
+  // ── 자연어 체력 감지 (스탬채택 안 했을 때 텍스트로 보정) ──
+  if(out.stamina==='보통'){
+    if(/2만보|체력왕|많이 걷|빡세게 다니|최대한 많이/.test(t)) out.stamina='최강';
+    else if(/여유롭게|쉬엄쉬엄|걷기 싫|걷기 힘|느긋/.test(t)) out.stamina='여유';
+    else if(/무리 안|몸이 안 좋|회복중|재활|노약/.test(t)) out.stamina='약함';
+  }
+  // ── 관심사 키워드 → 카테고리 매핑 ──
   const cats=['맛집','쇼핑','문화','역사','자연','야경','카페','액티비티','힐링','스파','한식','쇼핑몰','박물관','미술관'];
   const map={맛집:'food',쇼핑:'쇼핑',문화:'문화/역사',역사:'문화/역사',자연:'자연',야경:'야경',카페:'카페',액티비티:'액티비티',힐링:'힐링/스파',스파:'힐링/스파',한식:'food',쇼핑몰:'쇼핑',박물관:'문화/역사',미술관:'문화/역사'};
   cats.forEach(c=>{if(t.includes(c)){const m=map[c];if(m&&!out.interests.includes(m))out.interests.push(m);}});
   return out;
+}
+
+// ══════════════════════════════════════════════
+// 숙소 추천 구역 DB
+// ══════════════════════════════════════════════
+const ACCOM_ZONES={
+  '도쿄':{번화가:'신주쿠·시부야',조용한곳:'우에노·아사쿠사',자연속:'닛코·하코네 (근교)',치안중요:'미나토·시부야'},
+  '오사카':{번화가:'난바·도톤보리',조용한곳:'우메다·기타',자연속:'미노·아리마 (근교)',치안중요:'신사이바시·난바'},
+  '교토':{번화가:'기온·시조',조용한곳:'히가시야마·아라시야마',자연속:'아라시야마·후시미',치안중요:'시조·가와라마치'},
+  '후쿠오카':{번화가:'텐진·하카타',조용한곳:'오호리 공원 인근',자연속:'다자이후·이토시마 (근교)',치안중요:'텐진·하카타'},
+  '삿포로':{번화가:'스스키노·오도리',조용한곳:'마루야마',자연속:'조잔케이 (근교)',치안중요:'오도리·스스키노'},
+  '방콕':{번화가:'수쿰빗·실롬',조용한곳:'라타나코신·방람푸',자연속:'카오산 로드 인근',치안중요:'수쿰빗·사톤'},
+  '치앙마이':{번화가:'님만해민·올드시티',조용한곳:'핑강 인근·님만해민',자연속:'도이수텝 인근',치안중요:'올드시티·님만해민'},
+  '파리':{번화가:'1·2구·마레',조용한곳:'6·7구·몽마르트르',자연속:'뱅센 숲 인근',치안중요:'6·7·8구'},
+  '런던':{번화가:'소호·웨스트엔드·코번트가든',조용한곳:'노팅힐·켄싱턴',자연속:'리치몬드 파크 인근',치안중요:'켄싱턴·메이페어'},
+  '바르셀로나':{번화가:'고딕지구·람블라스',조용한곳:'그라시아·사리아',자연속:'몬주익 인근',치안중요:'에이샴플레·레스코르트'},
+  '로마':{번화가:'트레비·스페인광장',조용한곳:'트라스테베레',자연속:'아피아 가도 인근',치안중요:'프라티·포폴로'},
+  '암스테르담':{번화가:'담광장·레이체광장',조용한곳:'요르단',자연속:'폰델파크 인근',치안중요:'오우드 제이트'},
+  '뉴욕':{번화가:'미드타운·타임스퀘어',조용한곳:'브루클린·어퍼웨스트',자연속:'센트럴파크 인근',치안중요:'미드타운·어퍼이스트'},
+  '싱가포르':{번화가:'오차드·마리나베이',조용한곳:'티옹바루·부기스',자연속:'파시르리스 인근',치안중요:'마리나베이·오차드'},
+  '홍콩':{번화가:'침사추이·몽콕',조용한곳:'완차이·셩완',자연속:'디스커버리베이·사이쿵',치안중요:'침사추이·센트럴'},
+  '타이베이':{번화가:'시먼딩·신이',조용한곳:'다안·궁관',자연속:'양밍산 인근',치안중요:'신이·다안'},
+  '발리':{번화가:'쿠타·스미냑',조용한곳:'우붓',자연속:'우붓·떼갈랄랑',치안중요:'스미냑·우붓'},
+  '다낭':{번화가:'한시장 인근·미케비치',조용한곳:'미케비치 북쪽',자연속:'바나힐스 인근',치안중요:'미케비치'},
+  '하노이':{번화가:'호안끼엠·구시가지',조용한곳:'서호(타이호) 인근',자연속:'닌빈 (근교)',치안중요:'호안끼엠'},
+  '호치민':{번화가:'1군·벤탄',조용한곳:'3군·빈탄',자연속:'메콩 (근교)',치안중요:'1군·3군'},
+  '세부':{번화가:'IT파크·막탄',조용한곳:'막탄섬 리조트',자연속:'오슬롭·모알보알 (근교)',치안중요:'IT파크·막탄'},
+  '마닐라':{번화가:'BGC·마카티',조용한곳:'BGC',자연속:'따가이따이 (근교)',치안중요:'BGC·마카티'},
+  '쿠알라룸푸르':{번화가:'KLCC·부킷빈탕',조용한곳:'방사르',자연속:'켄힐 공원 인근',치안중요:'KLCC·부킷빈탕'},
+  '두바이':{번화가:'다운타운·두바이마리나',조용한곳:'JBR·팜주메이라',자연속:'데저트사파리 인근',치안중요:'다운타운·DIFC'},
+  '이스탄불':{번화가:'베식타쉬·탁심',조용한곳:'발라트·페네르',자연속:'벨그라드 숲 인근',치안중요:'베식타쉬·갈라타'},
+  '프라하':{번화가:'바츨라프광장·구시가지',조용한곳:'비노흐라디',자연속:'디보카 샤르카 인근',치안중요:'구시가지·비노흐라디'},
+  '비엔나':{번화가:'1구·링슈트라세',조용한곳:'9구·18구',자연속:'빈 숲 인근',치안중요:'1구·4구'},
+  '시드니':{번화가:'CBD·달링하버',조용한곳:'뉴타운·글리브',자연속:'맨리·왓슨베이',치안중요:'CBD·포츠포인트'},
+  '멜버른':{번화가:'CBD·사우스뱅크',조용한곳:'피츠로이·콜링우드',자연속:'세인트킬다 인근',치안중요:'CBD·사우스뱅크'},
+};
+
+// 추천 이유 카테고리 레이블
+const _CAT_REASON_MAP={'food':'맛집 추천','쇼핑':'쇼핑 선호','문화/역사':'문화·역사','자연':'자연 코스','야경':'야경 명소','카페':'카페 투어','액티비티':'액티비티','힐링/스파':'힐링 코스','힐링':'힐링 코스'};
+function _getSpotReason(cat, interests){
+  if(!interests||!interests.length) return null;
+  if(interests.includes(cat)) return _CAT_REASON_MAP[cat]||null;
+  return null;
 }
 
 // ══════════════════════════════════════════════
@@ -1918,7 +2008,11 @@ function _guessCat(s){
 }
 
 function buildItinerary(dest,days,style){
-  const spotsPerDay=style.pace==='여유'?2:style.pace==='빡빡'?4:3;
+  // ── 체력 레벨 → 하루 스팟 수 결정 (stamina 우선, 없으면 pace 폴백) ──
+  let spotsPerDay;
+  if(style.stamina==='최강') spotsPerDay=5;
+  else if(style.stamina==='여유'||style.stamina==='약함') spotsPerDay=2;
+  else spotsPerDay=style.pace==='여유'?2:style.pace==='빡빡'?4:3;
   const interests=[...(style.interests||[])];
   const seen=new Set();
   const byCat={};
@@ -1949,6 +2043,16 @@ function buildItinerary(dest,days,style){
   order.forEach(cat=>(byCat[cat]||[]).forEach(s=>pool.push(s)));
   // 분류 안 된 나머지
   Object.keys(byCat).filter(c=>!order.includes(c)).forEach(c=>byCat[c].forEach(s=>pool.push(s)));
+
+  // ⑤ 무리 안 하게(약함) — 고강도 스팟을 후순위로 밀기
+  if(style.stamina==='약함'){
+    const _highIntensity=/트레킹|하이킹|등산|래프팅|서핑|번지|스카이다이빙|짚라인|ATV|패러글|자전거 투어|자전거투어|마라톤/;
+    pool.sort((a,b)=>{
+      const aH=_highIntensity.test(a.n+(a.d||''))?1:0;
+      const bH=_highIntensity.test(b.n+(b.d||''))?1:0;
+      return aH-bH;
+    });
+  }
 
   // 스팟 부족 감지 — 필요 스팟 수 vs 풀 크기
   const neededTotal=days<=1?spotsPerDay-1:
@@ -2192,6 +2296,45 @@ function _runGenerate(){
   <div id="rate-widget"></div>
   <div id="festival-widget"></div>`;
 
+  // ── 숙소 추천 구역 카드 ──
+  (()=>{
+    const _zone=style.accomZone;
+    const _accomType=style.accom;
+    const _accomEmoji={게스트하우스:'🏠',일반호텔:'🏨',에어비앤비:'🏡',럭셔리호텔:'🏆'};
+    const _zoneEmoji={번화가:'🏙️',조용한곳:'🌙',자연속:'🌿',치안중요:'🔒'};
+    // 대표 도시 구역 찾기
+    const _firstDest=destKeys.map(k=>findDest(k)).find(d=>d&&d.kr);
+    const _cityZones=_firstDest?ACCOM_ZONES[_firstDest.kr]:null;
+    const _zoneRec=_zone&&_cityZones?_cityZones[_zone]:null;
+    const _accomTips={
+      게스트하우스:'번화가·대중교통 인근이 편리해요. 공용 공간에서 여행자를 만날 수 있어요.',
+      일반호텔:'위치와 서비스를 균형 있게 누릴 수 있는 선택이에요.',
+      에어비앤비:'현지 생활을 경험하고 싶다면 주거지 인근이 좋아요.',
+      럭셔리호텔:'수영장·스파 등 시설을 활용하려면 구역보다 시설 위주로 선택하세요.'
+    };
+    const _zoneTips={
+      번화가:'교통 접근성이 뛰어나고 주변 맛집·쇼핑도 편리해요.',
+      조용한곳:'소음 없이 편안하게 쉬고 싶을 때 추천해요.',
+      자연속:'힐링과 자연 경관을 즐기고 싶다면 최적이에요.',
+      치안중요:'치안이 검증된 구역으로, 안전하게 여행할 수 있어요.'
+    };
+    const _lines=[];
+    if(_zoneRec) _lines.push(`<div style="font-size:14px;font-weight:800;color:var(--pri);margin-bottom:4px;">${_zoneEmoji[_zone]||'📍'} 추천 구역: <span style="color:var(--txt);">${_zoneRec}</span></div>`);
+    if(_zone&&_zoneTips[_zone]) _lines.push(`<div style="font-size:12px;color:var(--sub);margin-bottom:4px;">${_zoneTips[_zone]}</div>`);
+    if(!_zone&&_cityZones){
+      const _entries=Object.entries(_cityZones).slice(0,3);
+      _lines.push('<div style="font-size:12px;color:var(--sub);margin-bottom:6px;">숙소 위치 선호를 선택하면 맞춤 구역을 안내해 드려요 · 참고 구역:</div>');
+      _lines.push(_entries.map(([k,v])=>`<span style="font-size:11px;background:rgba(99,102,241,.1);color:var(--pri);border-radius:20px;padding:2px 8px;margin-right:4px;display:inline-block;">${_zoneEmoji[k]||'📍'}${k}: ${v}</span>`).join(''));
+    }
+    if(_accomTips[_accomType]) _lines.push(`<div style="font-size:12px;color:var(--sub);margin-top:6px;">${_accomEmoji[_accomType]||'🏨'} ${_accomType} 팁: ${_accomTips[_accomType]}</div>`);
+    if(_lines.length>0){
+      html+=`<div style="background:var(--card);border:1.5px solid var(--bdr);border-radius:14px;padding:14px 16px;margin-top:12px;">
+        <div style="font-size:13px;font-weight:700;color:var(--pri);margin-bottom:8px;">🏨 숙소 선택 가이드</div>
+        ${_lines.join('')}
+      </div>`;
+    }
+  })();
+
   // ── 가로 컬럼 일정 렌더링 헬퍼 ──
   function renderDayColumns(itin, destObj, startDayNum, dailyCosts){
     const cityName=destObj?destObj.kr:'';
@@ -2243,6 +2386,7 @@ function _runGenerate(){
         const spotImg=resolveSpotImg(e.n, destObj&&(destObj.kr||destObj.en));
         const spotDet=resolveSpotDetail(e.n, e.d);
         const _sCat=s.cat||'문화/역사';
+        const _reason=_getSpotReason(_sCat, style&&style.interests);
         h+=`<div class="spot-block" role="article" aria-label="${e.n}" data-city="${escHtml(cityName)}" data-cat="${escHtml(_sCat)}" data-spot-name="${escHtml(e.n)}">
           ${spotImg?`<img class="spot-thumb-img" src="${spotImg}" alt="${e.n}" loading="lazy" onerror="this.style.display='none'">`:''}
           <div class="spot-block-inner">
@@ -2257,6 +2401,7 @@ function _runGenerate(){
                 title="Google Maps에서 보기" aria-label="${e.n} 지도 보기"
                 onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.6">🗺️</a>
             </div>
+            ${_reason?`<div class="spot-reason-tag">✓ ${_reason}</div>`:''}
             <div class="spot-block-desc">${e.d}</div>
             ${spotDet?`<div class="spot-detail-wrap">
               <div class="spot-detail-sec">
