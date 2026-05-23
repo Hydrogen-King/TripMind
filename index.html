@@ -8313,38 +8313,82 @@ function loadFestivalWidget(fromDate, toDate, destKeys){
   </div>`;
 }
 
+// WMO 기상 코드 → 이모지·설명 (Open-Meteo 표준)
+function _wmoIcon(c){
+  if(c===0)return'☀️';if(c<=2)return'⛅';if(c===3)return'☁️';
+  if(c<=48)return'🌫';if(c<=55)return'🌦';if(c<=67)return'🌧';
+  if(c<=77)return'❄️';if(c<=82)return'🌧';if(c<=86)return'🌨';return'⛈';
+}
+function _wmoDesc(c){
+  if(c===0)return'맑음';if(c===1)return'대체로 맑음';if(c===2)return'구름 조금';if(c===3)return'흐림';
+  if(c<=48)return'안개';if(c<=55)return'이슬비';if(c<=67)return'비';
+  if(c<=77)return'눈';if(c<=82)return'소나기';if(c<=86)return'눈소나기';return'뇌우';
+}
+
 async function loadWeatherWidget(destObj, fromDate){
   const el=document.getElementById('weather-widget');
   if(!el) return;
   try{
-    const cityEn=destObj.en||destObj.kr||'';
-    const url=`https://wttr.in/${encodeURIComponent(cityEn)}?format=j1&lang=ko`;
-    const res=await fetch(url,{signal:AbortSignal.timeout(5000)});
-    if(!res.ok) throw new Error('weather fetch failed');
-    const d=await res.json();
-    const weather=d.weather||[];
-    if(!weather.length) throw new Error('no weather data');
-    const dayHtml=weather.slice(0,3).map(day=>{
-      const date=new Date(day.date);
-      const weekday=['일','월','화','수','목','금','토'][date.getDay()];
-      const mn=day.mintempC, mx=day.maxtempC;
-      // 대표 날씨: 정오 hourly (index 4 = 12:00)
-      const noon=day.hourly[Math.floor(day.hourly.length/2)]||day.hourly[0];
-      const code=parseInt(noon.weatherCode||113);
-      const icon=WEATHER_ICON[code]||'🌤';
-      const desc=(noon.weatherDesc&&noon.weatherDesc[0]&&noon.weatherDesc[0].value)||'';
-      const rain=parseFloat(noon.precipMM||0);
-      const shortDesc=desc.length>8?desc.slice(0,8)+'…':desc;
+    const cityKr=destObj?destObj.kr:'';
+    const geo=GEO[cityKr]||(destObj&&destObj.en?GEO[destObj.en]:null);
+    if(!geo) throw new Error('no geo');
+    const [lat,lon]=geo;
+
+    const today=new Date(); today.setHours(0,0,0,0);
+    const travelDate=new Date(fromDate); travelDate.setHours(0,0,0,0);
+    const daysUntil=Math.round((travelDate-today)/86400000);
+
+    // 종료일: 여행 시작+2일 (3일치 표시)
+    const endDate=new Date(travelDate); endDate.setDate(endDate.getDate()+2);
+
+    let daily, isHistorical=false;
+
+    if(daysUntil<=15){
+      // ① 실제 예보 — Open-Meteo forecast (최대 16일 선행)
+      const startStr=travelDate.toISOString().slice(0,10);
+      const endStr=endDate.toISOString().slice(0,10);
+      const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto&start_date=${startStr}&end_date=${endStr}&forecast_days=16`;
+      const res=await fetch(url,{signal:AbortSignal.timeout(6000)});
+      if(!res.ok) throw new Error('forecast fail');
+      daily=(await res.json()).daily;
+    } else {
+      // ② 기후 참고 — 작년 동기 기록 (Open-Meteo archive)
+      isHistorical=true;
+      const refStart=new Date(travelDate); refStart.setFullYear(refStart.getFullYear()-1);
+      const refEnd=new Date(refStart); refEnd.setDate(refEnd.getDate()+2);
+      const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${refStart.toISOString().slice(0,10)}&end_date=${refEnd.toISOString().slice(0,10)}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`;
+      const res=await fetch(url,{signal:AbortSignal.timeout(6000)});
+      if(!res.ok) throw new Error('archive fail');
+      daily=(await res.json()).daily;
+    }
+
+    if(!daily||!daily.time||!daily.time.length) throw new Error('no data');
+
+    const dayHtml=daily.time.map((dateStr,i)=>{
+      // 기후 참고 모드: 실제 출발 날짜로 날짜 표시 보정
+      const displayDate=isHistorical
+        ? new Date(new Date(travelDate).setDate(travelDate.getDate()+i))
+        : new Date(dateStr);
+      const weekday=['일','월','화','수','목','금','토'][displayDate.getDay()];
+      const code=daily.weather_code[i]||0;
+      const mn=Math.round(daily.temperature_2m_min[i]);
+      const mx=Math.round(daily.temperature_2m_max[i]);
+      const rain=parseFloat(daily.precipitation_sum[i]||0);
       return `<div class="weather-day">
-        <div class="weather-day-date">${(date.getMonth()+1)}/${date.getDate()}(${weekday})</div>
-        <div class="weather-day-icon">${icon}</div>
-        <div class="weather-day-desc">${shortDesc}</div>
+        <div class="weather-day-date">${(displayDate.getMonth()+1)}/${displayDate.getDate()}(${weekday})</div>
+        <div class="weather-day-icon">${_wmoIcon(code)}</div>
+        <div class="weather-day-desc">${_wmoDesc(code)}</div>
         <div class="weather-day-temp">${mn}°~${mx}°</div>
-        ${rain>0?`<div class="weather-day-rain">💧${rain}mm</div>`:''}
+        ${rain>0?`<div class="weather-day-rain">💧${rain.toFixed(1)}mm</div>`:''}
       </div>`;
     }).join('');
+
+    const subtitle=isHistorical
+      ? `작년 동기 기후 참고 · 출발 15일 전부터 실제 예보로 전환`
+      : daysUntil===0?`오늘 날씨`:`출발일 기준 예보 (D-${daysUntil})`;
+
     el.innerHTML=`<div class="weather-card">
-      <div class="weather-title">🌤 ${destObj.kr} 날씨 예보 <span style="font-weight:400;color:var(--sub);font-size:10px;">(실시간)</span></div>
+      <div class="weather-title">🌤 ${cityKr} 날씨 <span style="font-weight:400;color:var(--sub);font-size:10px;">${subtitle}</span></div>
       <div class="weather-days">${dayHtml}</div>
     </div>`;
   }catch(e){
