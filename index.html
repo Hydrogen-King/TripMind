@@ -452,6 +452,19 @@ textarea.fi2{resize:vertical;min-height:90px;}
 .export-btn:hover{border-color:var(--pri);color:var(--pri);box-shadow:0 4px 14px rgba(232,88,10,.15);}
 .export-btn:disabled{opacity:.5;cursor:not-allowed;}
 
+/* ══ 축제 뱃지 & 위젯 ══ */
+.festival-chip-badge{position:absolute;top:-7px;right:-4px;background:#e8580a;color:#fff;font-size:9px;font-weight:800;padding:1px 5px;border-radius:8px;white-space:nowrap;pointer-events:none;line-height:1.6;}
+.festival-widget{background:linear-gradient(135deg,rgba(232,88,10,.07),rgba(255,140,66,.05));border:1.5px solid rgba(232,88,10,.2);border-radius:14px;padding:14px 16px;margin-top:14px;}
+.festival-widget-title{font-size:13px;font-weight:800;color:var(--pri);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.festival-card{display:flex;gap:12px;align-items:flex-start;padding:9px 0;border-bottom:1px solid rgba(232,88,10,.12);}
+.festival-card:last-child{border-bottom:none;padding-bottom:0;}
+.festival-emoji{font-size:22px;flex-shrink:0;line-height:1.2;}
+.festival-info{}
+.festival-name{font-size:13px;font-weight:800;margin-bottom:2px;}
+.festival-meta{font-size:11px;color:var(--sub);margin-bottom:3px;}
+.festival-desc{font-size:12px;color:var(--txt);line-height:1.5;}
+.festival-tip{font-size:11px;color:var(--pri);font-weight:600;margin-top:3px;}
+
 /* ══ 앱 설치 모달 ══ */
 .install-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:3000;display:flex;align-items:flex-end;justify-content:center;padding:0;}
 .install-modal{background:var(--bg);border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;padding:20px 18px 32px;box-shadow:0 -8px 32px rgba(0,0,0,.18);}
@@ -1712,7 +1725,12 @@ function selCountry(el){
   if(si) si.value='';
   const el2=document.getElementById('city-chips');
   // render chips, mark already-selected cities as .on
-  el2.innerHTML=HIER[cont][country].map(c=>`<div class="chip${ST.dests.includes(c)?' on':''}" onclick="selCity(this,'${c}')">${c}</div>`).join('');
+  const _nowMonth=new Date().getMonth()+1;
+  el2.innerHTML=HIER[cont][country].map(c=>{
+    const _fests=(CITY_FESTIVALS[c]||[]).filter(f=>f.months.includes(_nowMonth));
+    const _badge=_fests.length?`<span class="festival-chip-badge" title="${_fests.map(f=>f.name).join(', ')}">🎉 축제중</span>`:'';
+    return `<div class="chip${ST.dests.includes(c)?' on':''}" onclick="selCity(this,'${c}')" style="position:relative;">${c}${_badge}</div>`;
+  }).join('');
   document.getElementById('fg-city').style.display='';
 }
 function selCity(el,city){
@@ -1783,11 +1801,30 @@ function stepPplR(delta){
 }
 // ── 박/일 자동 계산 ──
 function calcNights(){
-  const f=document.getElementById('i-from').value;
-  const t=document.getElementById('i-to').value;
+  const fromEl=document.getElementById('i-from');
+  const toEl=document.getElementById('i-to');
   const lbl=document.getElementById('nights-label');
-  if(!f||!t||!lbl) return;
-  const diff=Math.round((new Date(t)-new Date(f))/(1000*60*60*24));
+  const f=fromEl?fromEl.value:'';
+  const t=toEl?toEl.value:'';
+
+  // 출발일 선택 시: 귀국일 최소값 자동 설정 + 귀국일이 출발일 이전이면 자동 조정
+  if(f&&toEl){
+    const minTo=new Date(f);
+    minTo.setDate(minTo.getDate()+1);
+    const minToStr=minTo.toISOString().slice(0,10);
+    toEl.min=minToStr;
+    if(t&&t<=f){
+      // 귀국일이 출발일보다 앞이면 출발일 +3일로 자동 설정
+      const autoTo=new Date(f);
+      autoTo.setDate(autoTo.getDate()+3);
+      toEl.value=autoTo.toISOString().slice(0,10);
+    }
+  }
+
+  const fVal=fromEl?fromEl.value:'';
+  const tVal=toEl?toEl.value:'';
+  if(!fVal||!tVal||!lbl) return;
+  const diff=Math.round((new Date(tVal)-new Date(fVal))/(1000*60*60*24));
   if(diff>0){lbl.textContent=diff+'박'+(diff+1)+'일';lbl.style.display='inline-block';}
   else{lbl.style.display='none';}
 }
@@ -2152,7 +2189,8 @@ function _runGenerate(){
     </div>
   </div>
   <div id="weather-widget"><div class="weather-loading">🌤 날씨 정보 불러오는 중…</div></div>
-  <div id="rate-widget"></div>`;
+  <div id="rate-widget"></div>
+  <div id="festival-widget"></div>`;
 
   // ── 가로 컬럼 일정 렌더링 헬퍼 ──
   function renderDayColumns(itin, destObj, startDayNum, dailyCosts){
@@ -2161,6 +2199,22 @@ function _runGenerate(){
     const hasFoodData=!!CITY_FOOD_RECS[cityName];
     const hasNearbyData=nearbyList.length>0;
     const foodState={};  // 식당 중복 방지: 전체 일정 공유 인덱스
+
+    // 하루 스팟의 시간대 분배 보정 (오전만/오후만 몰리는 버그 수정)
+    const _TIME_ORDER={'오전':0,'점심':1,'오후':2,'저녁':3,'야경':4,'일몰':3,'종일':2};
+    const _PERIOD_SLOTS=['오전','오후','저녁'];
+    function _balancePeriods(spots){
+      if(spots.length<=1) return spots;
+      // 정렬: 자연스러운 시간 순서
+      const sorted=[...spots].sort((a,b)=>(_TIME_ORDER[a.p]??2)-(_TIME_ORDER[b.p]??2));
+      // 모두 같은 시간대면 강제 분배
+      const unique=new Set(sorted.map(s=>s.p));
+      if(unique.size===1){
+        return sorted.map((s,i)=>({...s,p:_PERIOD_SLOTS[Math.min(i,_PERIOD_SLOTS.length-1)]}));
+      }
+      return sorted;
+    }
+
     let h=`<div class="itinerary-scroll" role="region" aria-label="일정 컬럼"><div class="days-row">`;
     itin.forEach((day,i)=>{
       const dn=startDayNum+i;
@@ -2183,7 +2237,7 @@ function _runGenerate(){
           ${noNearbyNote}
         </div>`;
       }
-      day.spots.forEach(s=>{
+      _balancePeriods(day.spots).forEach(s=>{
         const e=enrichSpot(s,destObj,foodState);
         const noFoodNote=(!hasFoodData)?'<span class="no-data-note">일반 추천</span>':'';
         const spotImg=resolveSpotImg(e.n, destObj&&(destObj.kr||destObj.en));
@@ -2429,6 +2483,7 @@ function _runGenerate(){
   if(_wDest){
     loadWeatherWidget(_wDest, ST.from);
     loadExchangeRate(_wDest);
+    loadFestivalWidget(ST.from, ST.to, destKeys);
   }
 
   // ── 지도 초기화 (DOM 반영 후) ──
@@ -7657,6 +7712,157 @@ const WEATHER_ICON={
   356:'🌧',359:'🌧',362:'🌧',365:'🌧',368:'🌨',371:'❄️',
   374:'🌧',377:'🌧',386:'⛈',389:'⛈',392:'⛈',395:'⛈',
 };
+// ══════════════════════════════════════════════
+// 🎉 축제 DB & 위젯
+// ══════════════════════════════════════════════
+const CITY_FESTIVALS={
+  // ── 일본
+  '도쿄':[
+    {name:'하나미 (벚꽃 축제)',emoji:'🌸',months:[3,4],dates:'3월 말~4월 초',desc:'우에노공원·메구로강·신주쿠교엔 벚꽃 만개. 도쿄 최대 봄 행사.',tip:'이른 아침 방문 추천, 주말은 매우 혼잡'},
+    {name:'칸다 마츠리',emoji:'🏮',months:[5],dates:'5월 중순 (홀수해)',desc:'일본 3대 축제 중 하나. 도쿄 칸다 신사에서 열리는 화려한 신사 행렬.',tip:'홀수 년도에만 진행'},
+    {name:'아사쿠사 삼바 카니발',emoji:'💃',months:[8],dates:'8월 마지막 토요일',desc:'브라질 삼바와 일본 문화가 만나는 아사쿠사 대형 퍼레이드.',tip:'무료 관람 가능'},
+    {name:'스미다가와 불꽃놀이',emoji:'🎆',months:[7],dates:'7월 마지막 토요일',desc:'도쿄 최대 하나비 대회. 스미다강 위로 2만 발 불꽃.',tip:'자리 확보는 오후부터'},
+    {name:'도쿄 크리스마스 마켓',emoji:'🎄',months:[12],dates:'12월 초~25일',desc:'히비야공원 독일식 크리스마스 마켓. 글뤼바인·소시지·공예품.',tip:'평일 저녁이 한산'},
+  ],
+  '오사카':[
+    {name:'하나미 (벚꽃)',emoji:'🌸',months:[3,4],dates:'3월 말~4월 초',desc:'오사카성 공원·마루야마 공원 벚꽃. 야간 라이트업 운영.',tip:'오사카성 해자 주변이 포토 스팟'},
+    {name:'텐진마츠리',emoji:'⛵',months:[7],dates:'7월 24~25일',desc:'일본 3대 축제. 오쿠니타마 신사 행렬과 오사카만 불꽃·선박 행진.',tip:'7월 25일 저녁이 클라이맥스'},
+    {name:'나니와 요도가와 불꽃놀이',emoji:'🎆',months:[8],dates:'8월 초',desc:'요도가와 강변 대형 불꽃 축제. 약 2만 발.',tip:'강변 자리 경쟁 치열'},
+  ],
+  '교토':[
+    {name:'하나미 (벚꽃)',emoji:'🌸',months:[3,4],dates:'3월 말~4월 초',desc:'마루야마공원·기온·철학의 길 벚꽃 명소 집중.',tip:'기온 시라카와 야간 라이트업 필수'},
+    {name:'기온마츠리',emoji:'🏮',months:[7],dates:'7월 전체',desc:'교토 최대 축제. 야마호코 행렬(17일·24일)과 기온 야시장.',tip:'17일 전날 밤(요이야마) 가장 화려'},
+    {name:'지다이마츠리',emoji:'👘',months:[10],dates:'10월 22일',desc:'헤이안신궁 창건 기념. 1200년 역사의 시대행렬 퍼레이드.',tip:'무료 관람 가능'},
+    {name:'단풍 시즌',emoji:'🍁',months:[11],dates:'11월 중순~12월 초',desc:'아라시야마·도후쿠지·에이칸도 단풍. 교토 최고의 계절.',tip:'이른 아침 방문으로 인파 피하기'},
+  ],
+  '후쿠오카':[
+    {name:'하카타 기온야마가사',emoji:'🏮',months:[7],dates:'7월 1~15일',desc:'770년 역사의 하카타 전통 축제. 15일 새벽 5시 오이야마 레이스.',tip:'15일 새벽 행사가 하이라이트'},
+    {name:'하나미',emoji:'🌸',months:[3,4],dates:'3월 말~4월 초',desc:'마이즈루공원·오호리공원 벚꽃 명소.',tip:'오호리공원 수면 반영 사진 인기'},
+  ],
+  '삿포로':[
+    {name:'삿포로 눈 축제',emoji:'⛄',months:[2],dates:'2월 초 (약 1주일)',desc:'오도리공원에 대형 설상·빙상 조각. 세계 3대 겨울 축제.',tip:'야간 라이트업이 특히 환상적'},
+    {name:'삿포로 맥주 축제',emoji:'🍺',months:[7,8],dates:'7월 말~8월 중순',desc:'오도리공원 대형 맥주 가든. 삿포로·아사히·기린·산토리 4개 구역.',tip:'평일 저녁이 자리 잡기 쉬움'},
+  ],
+  // ── 동남아
+  '방콕':[
+    {name:'송크란 (태국 설날)',emoji:'💦',months:[4],dates:'4월 13~15일',desc:'태국 최대 물 축제. 카오산 로드·실롬 거리에서 대규모 물싸움.',tip:'귀중품 방수 필수, 옷 흠뻑 각오'},
+    {name:'러이크라통',emoji:'🪔',months:[11],dates:'음력 12월 보름 (11월경)',desc:'연꽃 모양 등불을 강에 띄우는 태국 전통 축제. 차오프라야강 최고.',tip:'저녁 6시 이후 강변으로'},
+    {name:'카우삿 (안거 해제)',emoji:'🎊',months:[10],dates:'음력 10월 보름',desc:'안거 해제 후 스님들 행진·선물 공양. 전통 문화 체험.',tip:'이른 아침 행사'},
+  ],
+  '발리':[
+    {name:'냐피 (발리 새해)',emoji:'🌑',months:[3],dates:'3월 (힌두 달력)',desc:'침묵의 날. 불·소리·이동 전면 금지. 섬 전체가 하루 정적.',tip:'다음날 오고오고 퍼레이드가 화려'},
+    {name:'갈룽안',emoji:'🏮',months:[1,2,3,4,5,6,7,8,9,10,11,12],dates:'210일 주기 (힌두 달력)',desc:'조상신이 내려오는 발리 최대 명절. 처남부 대나무 장식 거리 장관.',tip:'210일 주기라 연중 몇 번 있음'},
+    {name:'우붓 라자 페스티벌',emoji:'🎭',months:[10],dates:'10월',desc:'발리 전통 음악·무용·공예 축제. 우붓 왕궁 앞 공연.',tip:'케짝 댄스 공연 티켓 사전 구매 추천'},
+  ],
+  '싱가포르':[
+    {name:'중국 설날 (칭아이)',emoji:'🧧',months:[1,2],dates:'1~2월 (음력 설)',desc:'차이나타운 대형 등불·퍼레이드·불꽃. 아시아 최대 설날 행사 중 하나.',tip:'차이나타운 방문은 야간 추천'},
+    {name:'디파발리',emoji:'🪔',months:[10,11],dates:'10~11월',desc:'힌두 빛의 축제. 리틀 인디아 거리 조명 장식 화려.',tip:'리틀 인디아 야간 방문 추천'},
+    {name:'싱가포르 국경절',emoji:'🎇',months:[8],dates:'8월 9일',desc:'국경절 퍼레이드·불꽃놀이. 마리나베이 일대 최고 야경.',tip:'자리는 일찍 확보 필요'},
+    {name:'F1 싱가포르 그랑프리',emoji:'🏎️',months:[9],dates:'9월',desc:'야간 시가지 F1 레이스. 마리나베이 서킷.',tip:'티켓 수개월 전 예매 필수'},
+  ],
+  '홍콩':[
+    {name:'중국 설날',emoji:'🧧',months:[1,2],dates:'1~2월 (음력 설)',desc:'빅토리아항 불꽃·퍼레이드·등불. 홍콩 최대 명절.',tip:'침사추이 해변에서 불꽃 관람'},
+    {name:'드래곤보트 축제',emoji:'🐉',months:[6],dates:'음력 5월 5일 (6월경)',desc:'홍콩 최대 드래곤보트 레이스. 스탠리·삼와이촌 경기.',tip:'스탠리 해변이 분위기 최고'},
+    {name:'홍콩 럭비 세븐스',emoji:'🏉',months:[4],dates:'4월',desc:'세계적인 7인제 럭비 대회. 스타디움 야간 파티 분위기.',tip:'입장권 사전 구매 필수'},
+  ],
+  '다낭':[
+    {name:'다낭 국제 불꽃 축제',emoji:'🎆',months:[6,7],dates:'6~7월 주말',desc:'한강 위에서 펼쳐지는 세계 각국 불꽃 경연 대회.',tip:'한강 다리 위 무료 관람 가능'},
+  ],
+  // ── 유럽
+  '파리':[
+    {name:'바스티유 데이 (혁명기념일)',emoji:'🗼',months:[7],dates:'7월 14일',desc:'에펠탑 불꽃+샹젤리제 군사 퍼레이드. 파리 최대 국경일.',tip:'샹 드 마르스 공원 자리 확보 오전부터'},
+    {name:'크리스마스 마켓',emoji:'🎄',months:[12],dates:'11월 말~1월 초',desc:'샹젤리제·생제르맹·에펠탑 주변 크리스마스 마켓.',tip:'라데팡스 마켓이 규모 가장 큼'},
+    {name:'파리 패션위크',emoji:'👗',months:[3,10],dates:'3월·10월',desc:'세계 4대 패션위크. 거리 곳곳 모델·패션 피플.',tip:'공개 행사는 무료 구경 가능'},
+    {name:'뮤직 페스티벌 (음악의 날)',emoji:'🎵',months:[6],dates:'6월 21일',desc:'전국 무료 길거리 음악 공연. 파리 전역 광장·거리 공연.',tip:'완전 무료, 모든 장르 음악'},
+  ],
+  '런던':[
+    {name:'노팅힐 카니발',emoji:'🎺',months:[8],dates:'8월 마지막 주말',desc:'유럽 최대 카리브 문화 축제. 화려한 의상·삼바·캘립소.',tip:'일요일보다 월요일이 더 화려'},
+    {name:'가이 포크스 나이트',emoji:'🎇',months:[11],dates:'11월 5일',desc:'전국 불꽃놀이·모닥불. 런던 전역 동시 불꽃.',tip:'빅토리아 파크·배터시공원 행사 추천'},
+    {name:'크리스마스 마켓',emoji:'🎄',months:[12],dates:'11월 말~12월',desc:'하이드파크 윈터 원더랜드·사우스뱅크 등 여러 마켓.',tip:'하이드파크 마켓이 규모 최대'},
+  ],
+  '바르셀로나':[
+    {name:'라 메르세 축제',emoji:'🎊',months:[9],dates:'9월 24일 전후 1주일',desc:'바르셀로나 최대 무료 축제. 인간 탑·불달리기·불꽃·콘서트.',tip:'카스텔레스(인간 탑)는 꼭 관람'},
+    {name:'산 후안 (불의 축제)',emoji:'🔥',months:[6],dates:'6월 23~24일',desc:'해변 모닥불·불꽃·파티. 바르셀로나 최고 여름 밤 축제.',tip:'바르셀로네타 해변이 최고 명당'},
+    {name:'세마나 산타 (부활절)',emoji:'✝️',months:[4],dates:'4월 (부활절 전주)',desc:'가톨릭 전통 행진. 성당·거리 종교 퍼레이드.',tip:'사그라다 파밀리아 미사 체험 추천'},
+  ],
+  '로마':[
+    {name:'부활절',emoji:'✝️',months:[4],dates:'4월 (부활절)',desc:'바티칸 성 베드로 광장 교황 미사. 전 세계 신자 집결.',tip:'광장 미사는 무료나 인파 극심'},
+    {name:'에스타 디 로마 (여름 축제)',emoji:'🎭',months:[6,7,8],dates:'6~8월',desc:'로마 야외 음악·영화·문화 페스티벌. 유적지 특별 개방.',tip:'테르메 디 카라칼라 오페라 추천'},
+    {name:'크리스마스 시즌',emoji:'🎄',months:[12],dates:'12월',desc:'나보나 광장 크리스마스 마켓. 바티칸 구유 장식.',tip:'나보나 광장 야간이 가장 낭만적'},
+  ],
+  '프라하':[
+    {name:'크리스마스 마켓',emoji:'🎄',months:[12],dates:'11월 말~1월 초',desc:'구시가지 광장 유럽 최고 크리스마스 마켓 중 하나.',tip:'트르들로 (굴뚝빵)과 뱅쇼 필수'},
+    {name:'프라하 봄 음악제',emoji:'🎻',months:[5,6],dates:'5~6월',desc:'체코 최대 클래식 음악 축제. 스메타나 기념 공연.',tip:'스메타나 홀 공연 사전 예매 추천'},
+    {name:'이스터 마켓',emoji:'🐣',months:[4],dates:'4월 (부활절 전)',desc:'구시가지 광장 부활절 마켓. 전통 수공예·음식.',tip:'수공예 달걀 공예품 기념품으로 추천'},
+  ],
+  '암스테르담':[
+    {name:'킹스데이',emoji:'🧡',months:[4],dates:'4월 27일',desc:'국왕 생일. 전 도시 오렌지 파티·운하 보트 파티.',tip:'오렌지색 옷 필수, 운하 보트 미리 예약'},
+    {name:'튤립 시즌',emoji:'🌷',months:[4,5],dates:'4~5월',desc:'쾨켄호프 정원 700만 송이 튤립. 세계 최대 꽃 공원.',tip:'4월 중순이 절정, 주말은 매우 혼잡'},
+    {name:'암스테르담 라이트 페스티벌',emoji:'💡',months:[12,1],dates:'12~1월',desc:'운하 위 대형 빛 설치 예술. 보트 투어로 감상.',tip:'보트 투어 예약이 도보 관람보다 추천'},
+  ],
+  '두바이':[
+    {name:'두바이 쇼핑 페스티벌',emoji:'🛍️',months:[1,2],dates:'1~2월',desc:'전 쇼핑몰 대규모 할인·공연·불꽃. 두바이 최대 행사.',tip:'몰 오브 에미레이트 불꽃이 장관'},
+    {name:'두바이 푸드 페스티벌',emoji:'🍽️',months:[2,3],dates:'2~3월',desc:'세계 각국 셰프 팝업·레스토랑 할인 행사.',tip:'브런치 패키지 사전 예약 추천'},
+    {name:'라마단',emoji:'🌙',months:[3,4],dates:'3~4월 (이슬람 달력)',desc:'낮 금식 기간. 저녁 이후 이프타르 축제 분위기.',tip:'저녁 이프타르 뷔페 체험 추천'},
+  ],
+  // ── 아메리카
+  '뉴욕':[
+    {name:'메이시스 추수감사절 퍼레이드',emoji:'🦃',months:[11],dates:'11월 넷째 목요일',desc:'대형 풍선·악대·유명인 퍼레이드. NYC 최고 가족 행사.',tip:'77번가~34번가 브로드웨이가 최고 명당'},
+    {name:'타임스퀘어 카운트다운',emoji:'🎊',months:[12],dates:'12월 31일',desc:'볼 드롭 카운트다운. 전 세계 10억 명 시청.',tip:'오후 3~4시부터 자리 확보 필요'},
+    {name:'세인트 패트릭스 데이',emoji:'☘️',months:[3],dates:'3월 17일',desc:'5번가 그린 퍼레이드. 아일랜드계 미국인 최대 축제.',tip:'42번가 관람 자리가 가장 좋음'},
+  ],
+  '하와이':[
+    {name:'알로하 페스티벌',emoji:'🌺',months:[9,10],dates:'9~10월',desc:'하와이 최대 문화 축제. 훌라·폴리네시안 공연·퍼레이드.',tip:'카파훌루 애비뉴 퍼레이드 무료'},
+    {name:'스팸잼 페스티벌',emoji:'🥫',months:[4],dates:'4월 마지막 토요일',desc:'하와이 스팸 요리 경연·음식 축제. 와이키키 칼라카우아 애비뉴.',tip:'무료 입장, 스팸 무스비 필수'},
+  ],
+  // ── 국내
+  '제주도':[
+    {name:'제주 유채꽃 축제',emoji:'🌼',months:[3,4],dates:'3~4월',desc:'성산일출봉·가시리 유채꽃밭 만개. 노란 물결.',tip:'가시리 가시아름다름이 포토 스팟'},
+    {name:'제주 벚꽃 시즌',emoji:'🌸',months:[3,4],dates:'3월 말~4월 초',desc:'전농로·종합경기장 주변 벚꽃 명소.',tip:'종합경기장 벚꽃길이 가장 화려'},
+    {name:'제주 들불 축제',emoji:'🔥',months:[3],dates:'3월 초',desc:'오름에 불을 놓아 해충 제거하는 전통 행사. 장관.',tip:'새별오름 특별관람석 사전 예매'},
+    {name:'탐라문화제',emoji:'🎭',months:[10],dates:'10월 초',desc:'제주 최대 전통문화 축제. 해녀·민속 공연·음식.',tip:'탑동광장 일대 무료 행사'},
+  ],
+};
+
+function loadFestivalWidget(fromDate, toDate, destKeys){
+  const el=document.getElementById('festival-widget');
+  if(!el||!fromDate||!toDate) return;
+
+  // 여행 기간 내 월 추출
+  const months=new Set();
+  const d=new Date(fromDate);
+  const end=new Date(toDate);
+  while(d<=end){months.add(d.getMonth()+1);d.setDate(d.getDate()+1);}
+
+  // 해당 도시 축제 중 여행 월과 겹치는 것 수집
+  const found=[];
+  destKeys.forEach(key=>{
+    const destObj=findDest(key);
+    const cityKr=destObj?destObj.kr:key;
+    (CITY_FESTIVALS[cityKr]||[]).forEach(f=>{
+      if(f.months.some(m=>months.has(m))){
+        found.push({...f,city:cityKr});
+      }
+    });
+  });
+
+  if(!found.length) return;
+
+  el.innerHTML=`<div class="festival-widget">
+    <div class="festival-widget-title">🎉 여행 기간 중 이런 축제가 있어요!</div>
+    ${found.map(f=>`
+      <div class="festival-card">
+        <div class="festival-emoji">${f.emoji}</div>
+        <div class="festival-info">
+          <div class="festival-name">${f.name} <span style="font-size:10px;color:var(--sub);font-weight:500;">${f.city}</span></div>
+          <div class="festival-meta">📅 ${f.dates}</div>
+          <div class="festival-desc">${f.desc}</div>
+          ${f.tip?`<div class="festival-tip">💡 ${f.tip}</div>`:''}
+        </div>
+      </div>`).join('')}
+  </div>`;
+}
+
 async function loadWeatherWidget(destObj, fromDate){
   const el=document.getElementById('weather-widget');
   if(!el) return;
