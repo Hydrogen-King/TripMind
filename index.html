@@ -452,6 +452,22 @@ textarea.fi2{resize:vertical;min-height:90px;}
 .export-btn:hover{border-color:var(--pri);color:var(--pri);box-shadow:0 4px 14px rgba(232,88,10,.15);}
 .export-btn:disabled{opacity:.5;cursor:not-allowed;}
 
+/* ══ 기능 안내 모달 ══ */
+#feat-guide-modal{display:none;position:fixed;inset:0;z-index:9999;align-items:flex-end;justify-content:center;}
+#feat-guide-modal.on{display:flex;}
+#feat-guide-modal .fgm-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);}
+#feat-guide-modal .fgm-sheet{position:relative;background:var(--card);border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:20px 20px 32px;box-shadow:0 -8px 40px rgba(28,30,46,.18);animation:slideUp .28s cubic-bezier(.22,1,.36,1);}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.fgm-handle{width:36px;height:4px;background:var(--bdr);border-radius:2px;margin:0 auto 16px;}
+.fgm-title{font-size:17px;font-weight:800;margin-bottom:14px;color:var(--txt);}
+.fgm-item{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--bdr);}
+.fgm-item:last-child{border-bottom:none;}
+.fgm-icon{font-size:22px;width:36px;text-align:center;flex-shrink:0;margin-top:1px;}
+.fgm-info .fgm-name{font-size:14px;font-weight:700;margin-bottom:2px;}
+.fgm-info .fgm-desc{font-size:12px;color:var(--sub);line-height:1.5;}
+.fgm-close{width:100%;margin-top:16px;padding:12px;border-radius:12px;background:var(--pri);color:#fff;font-size:15px;font-weight:700;border:none;cursor:pointer;font-family:inherit;}
+.fgm-close:hover{background:var(--acc);}
+
 /* ══ 축제 뱃지 & 위젯 ══ */
 .festival-chip-badge{position:absolute;top:-7px;right:-4px;background:#e8580a;color:#fff;font-size:9px;font-weight:800;padding:1px 5px;border-radius:8px;white-space:nowrap;pointer-events:none;line-height:1.6;}
 .festival-widget{background:linear-gradient(135deg,rgba(232,88,10,.07),rgba(255,140,66,.05));border:1.5px solid rgba(232,88,10,.2);border-radius:14px;padding:14px 16px;margin-top:14px;}
@@ -945,6 +961,11 @@ body{overscroll-behavior-y:none;}
         <div class="chip" onclick="togAccomZone(this,'자연속')">🌿 자연 속</div>
         <div class="chip" onclick="togAccomZone(this,'치안중요')">🔒 치안 중요</div>
       </div>
+      <div class="fl" style="margin-bottom:8px;">숙소 이동 방식</div>
+      <div class="chips" id="accom-mobility-chips">
+        <div class="chip on" onclick="togSingle(this,'accom-mobility-chips','고정')">🏠 한 곳 고정</div>
+        <div class="chip" onclick="togSingle(this,'accom-mobility-chips','이동')">🔀 지역 따라 이동</div>
+      </div>
       <div class="fl" style="margin-bottom:8px;">체력 / 하루 여행 강도</div>
       <div class="chips" id="stamina-chips">
         <div class="chip" onclick="togSingle(this,'stamina-chips','최강')">💪 체력왕 (2만보+)</div>
@@ -1061,12 +1082,81 @@ body{overscroll-behavior-y:none;}
   <button class="btn btn-g mt" onclick="go('recommend')" style="margin-top:4px;">← 다시 추천받기</button>
 </div>
 
+<!-- 기능 안내 모달 -->
+<div id="feat-guide-modal" role="dialog" aria-modal="true" aria-label="기능 안내">
+  <div class="fgm-backdrop" onclick="closeFeatGuide()"></div>
+  <div class="fgm-sheet">
+    <div class="fgm-handle"></div>
+    <div class="fgm-title">❓ 기능 안내</div>
+    <div class="fgm-item">
+      <div class="fgm-icon">🔄</div>
+      <div class="fgm-info">
+        <div class="fgm-name">교체 버튼</div>
+        <div class="fgm-desc">스팟 카드 우측 상단의 🔄를 누르면 해당 장소를 다른 장소로 바꿔줘요. 마음에 들지 않는 곳만 쏙 교체할 수 있어요.</div>
+      </div>
+    </div>
+    <div class="fgm-item">
+      <div class="fgm-icon">🗺️</div>
+      <div class="fgm-info">
+        <div class="fgm-name">지도 버튼</div>
+        <div class="fgm-desc">스팟 카드 하단의 🗺️를 누르면 해당 장소의 위치를 지도에서 확인할 수 있어요.</div>
+      </div>
+    </div>
+    <div class="fgm-item">
+      <div class="fgm-icon">🔄</div>
+      <div class="fgm-info">
+        <div class="fgm-name">일정 재생성</div>
+        <div class="fgm-desc">하단의 🔄 일정 재생성을 누르면 동일한 조건으로 완전히 새로운 일정을 만들어줘요. 여러 번 눌러서 마음에 드는 일정을 찾아보세요!</div>
+      </div>
+    </div>
+    <div class="fgm-item">
+      <div class="fgm-icon">📸</div>
+      <div class="fgm-info">
+        <div class="fgm-name">이미지로 저장</div>
+        <div class="fgm-desc">전체 일정을 예쁜 이미지 파일로 저장해요. 카카오톡·인스타그램에 바로 공유할 수 있어요.</div>
+      </div>
+    </div>
+    <div class="fgm-item">
+      <div class="fgm-icon">🔗</div>
+      <div class="fgm-info">
+        <div class="fgm-name">링크 공유</div>
+        <div class="fgm-desc">현재 일정 설정을 링크로 만들어 클립보드에 복사해요. 친구에게 공유하면 같은 조건으로 일정을 확인할 수 있어요.</div>
+      </div>
+    </div>
+    <div class="fgm-item">
+      <div class="fgm-icon">💾</div>
+      <div class="fgm-info">
+        <div class="fgm-name">이 일정 저장</div>
+        <div class="fgm-desc">마음에 드는 일정을 앱 내에 저장해요. 홈 화면 → 저장된 일정에서 언제든 다시 볼 수 있어요.</div>
+      </div>
+    </div>
+    <div class="fgm-item">
+      <div class="fgm-icon">✓</div>
+      <div class="fgm-info">
+        <div class="fgm-name">추천 이유 태그</div>
+        <div class="fgm-desc">각 스팟 카드에 붙은 초록색 태그예요. AI가 왜 이 장소를 추천했는지 한눈에 알 수 있어요.</div>
+      </div>
+    </div>
+    <div class="fgm-item">
+      <div class="fgm-icon">🏨</div>
+      <div class="fgm-info">
+        <div class="fgm-name">숙소 선택 가이드</div>
+        <div class="fgm-desc">결과 상단의 숙소 가이드에서 예산·위치 별 대표 호텔 예시와 Booking.com·Google Hotels 바로가기 링크를 제공해요.</div>
+      </div>
+    </div>
+    <button class="fgm-close" onclick="closeFeatGuide()">확인</button>
+  </div>
+</div>
+
 <!-- RESULT -->
 <div class="screen" id="s-result">
   <div class="bar">
     <button class="ico" onclick="go('home')" aria-label="홈으로">🏠</button>
     <span style="font-weight:700;font-size:14px;">여행 계획</span>
-    <button class="ico" onclick="goBack()" style="font-size:14px;" aria-label="다시 계획하기" title="입력 화면으로 돌아가기">↩ 다시</button>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <button class="ico" onclick="openFeatGuide()" aria-label="기능 안내" title="기능 안내" style="font-size:15px;">❓</button>
+      <button class="ico" onclick="goBack()" style="font-size:14px;" aria-label="다시 계획하기" title="입력 화면으로 돌아가기">↩ 다시</button>
+    </div>
   </div>
   <div id="result-body"></div>
   <div style="display:flex;gap:10px;margin-bottom:10px;margin-top:4px;">
@@ -1665,7 +1755,7 @@ for(const[c,countries] of Object.entries(HIER)) for(const cities of Object.value
 const ST = {
   dest:'', dests:[], from:'', to:'', ppl:2,
   styleText:'', interests:[], budget:'중간', accom:'일반호텔',
-  stamina:'보통', accomZone:''
+  stamina:'보통', accomZone:'', accomMobility:'고정'
 };
 
 // ══════════════════════════════════════════════
@@ -1709,6 +1799,7 @@ function togSingle(el,groupId,val){
   el.classList.add('on');
   if(groupId==='budget-chips') ST.budget=val;
   else if(groupId==='stamina-chips') ST.stamina=val;
+  else if(groupId==='accom-mobility-chips') ST.accomMobility=val;
   else ST.accom=val;
 }
 function togAccomZone(el,val){
@@ -1904,7 +1995,7 @@ function findDest(q){
 // ══════════════════════════════════════════════
 function parseStyle(text){
   const t=text.toLowerCase();
-  const out={budget:'중간',accom:'일반호텔',pace:'보통',interests:[...ST.interests],stamina:ST.stamina,accomZone:ST.accomZone,companion:''};
+  const out={budget:'중간',accom:'일반호텔',pace:'보통',interests:[...ST.interests],stamina:ST.stamina,accomZone:ST.accomZone,accomMobility:ST.accomMobility,companion:''};
   if(/저렴|싸게|가성비|알뜰|게스트하우스|호스텔|도미토리|budget/.test(t)){out.budget='저예산';}
   if(/럭셔리|고급|5성|프리미엄|luxury|비즈니스/.test(t)){out.budget='럭셔리';}
   if(ST.budget!=='중간') out.budget=ST.budget;
@@ -2229,6 +2320,139 @@ function _resolveAccomZone(cityName, zone){
   if(ACCOM_ZONES[cityName]&&ACCOM_ZONES[cityName][zone]) return ACCOM_ZONES[cityName][zone];
   const generic={번화가:'시내 중심가 · 교통·관광 접근성 최고',조용한곳:'주거지·공원 인근 · 소음 없이 편안한 휴식',자연속:'근교 자연 지역 · 힐링과 경관을 즐길 수 있어요',치안중요:'관광객 밀집 구역 · 현지 검증된 안전한 구역'};
   return generic[zone]||null;
+}
+
+// ══════════════════════════════════════════════
+// 도시별 대표 호텔 예시 DB (예산·등급별)
+// 저예산: 게스트하우스·캡슐·비즈니스 호텔
+// 중간: 3~4성급 일반 호텔
+// 럭셔리: 5성급 럭셔리 호텔
+// ══════════════════════════════════════════════
+const HOTEL_EXAMPLES={
+  '도쿄':{
+    저예산:[{name:'카오산 도쿄 게스트하우스',area:'아사쿠사'},{name:'더 캡슐 호텔 아키하바라',area:'아키하바라'}],
+    중간:[{name:'도큐 스테이 신주쿠',area:'신주쿠'},{name:'콘포트 호텔 긴자',area:'긴자'}],
+    럭셔리:[{name:'파크 하얏트 도쿄',area:'신주쿠'},{name:'더 페닌슐라 도쿄',area:'히비야'}]
+  },
+  '오사카':{
+    저예산:[{name:'카오산 오사카 로비',area:'신사이바시'},{name:'오사카 백패커스',area:'난바'}],
+    중간:[{name:'크로스 호텔 오사카',area:'신사이바시'},{name:'더 빈스 호텔',area:'우메다'}],
+    럭셔리:[{name:'더 리츠칼튼 오사카',area:'우메다'},{name:'콘래드 오사카',area:'우쓰보'}]
+  },
+  '교토':{
+    저예산:[{name:'게스트하우스 교토 하나레',area:'기온'},{name:'사쿠라 유스 호스텔',area:'교토역'}],
+    중간:[{name:'더 가든 호텔 교토',area:'중심부'},{name:'교토 타워 호텔',area:'교토역'}],
+    럭셔리:[{name:'아만쿄토',area:'기타야마'},{name:'포 시즌스 호텔 교토',area:'히가시야마'}]
+  },
+  '후쿠오카':{
+    저예산:[{name:'하카타 칸포 게스트하우스',area:'하카타'},{name:'더 컨테이너 후쿠오카',area:'텐진'}],
+    중간:[{name:'APA 호텔 하카타역',area:'하카타'},{name:'JR 큐슈 호텔 블로썸 후쿠오카',area:'텐진'}],
+    럭셔리:[{name:'더 리츠칼튼 후쿠오카',area:'텐진'},{name:'힐튼 후쿠오카 씨호크',area:'고호쿠'}]
+  },
+  '삿포로':{
+    저예산:[{name:'삿포로 국제 유스 호스텔',area:'스스키노'},{name:'게스트하우스 노스필드',area:'오도리'}],
+    중간:[{name:'JR 타워 호텔 닛코 삿포로',area:'삿포로역'},{name:'호텔 몬테 에르마나 삿포로',area:'스스키노'}],
+    럭셔리:[{name:'더 삿포로 소코',area:'오도리'},{name:'JR 타워 호텔 닛코 삿포로 (프리미엄)',area:'삿포로역'}]
+  },
+  '서울':{
+    저예산:[{name:'이태원 게스트하우스',area:'이태원'},{name:'홍대 YHA 호스텔',area:'홍대'}],
+    중간:[{name:'롯데시티호텔 마포',area:'마포'},{name:'L7 홍대 바이 롯데',area:'홍대'}],
+    럭셔리:[{name:'파크 하얏트 서울',area:'강남'},{name:'더 신라 호텔',area:'장충동'}]
+  },
+  '부산':{
+    저예산:[{name:'게스트하우스 비프',area:'서면'},{name:'해운대 백패커스',area:'해운대'}],
+    중간:[{name:'노보텔 앰배서더 부산',area:'해운대'},{name:'파라다이스 호텔 부산',area:'해운대'}],
+    럭셔리:[{name:'시그니엘 부산',area:'해운대'},{name:'웨스틴 조선 부산',area:'해운대'}]
+  },
+  '제주':{
+    저예산:[{name:'제주 스타호스텔',area:'제주시'},{name:'더숲 게스트하우스',area:'서귀포'}],
+    중간:[{name:'한라산 그랜드 호텔',area:'제주시'},{name:'더클래식 500',area:'서귀포'}],
+    럭셔리:[{name:'해비치 호텔&리조트 제주',area:'표선'},{name:'앤트러사이트 호텔 제주',area:'협재'}]
+  },
+  '방콕':{
+    저예산:[{name:'NapPark 호스텔',area:'카오산 로드'},{name:'더 베드 아리',area:'아리'}],
+    중간:[{name:'센타라 그랜드 라마 9',area:'라마 9'},{name:'노보텔 수쿰빗 20',area:'아속'}],
+    럭셔리:[{name:'만다린 오리엔탈 방콕',area:'차오프라야 강변'},{name:'더 오리엔탈 방콕',area:'강변'}]
+  },
+  '싱가포르':{
+    저예산:[{name:'파이브풋웨이 인 차이나타운',area:'차이나타운'},{name:'더 우캡슐',area:'리틀 인디아'}],
+    중간:[{name:'호텔 G 싱가포르',area:'비치로드'},{name:'이비스 스타일 싱가포르 맥피어슨',area:'맥피어슨'}],
+    럭셔리:[{name:'마리나베이샌즈',area:'마리나베이'},{name:'라플스 싱가포르',area:'시티홀'}]
+  },
+  '파리':{
+    저예산:[{name:'생 크리스토퍼스 인 파리',area:'바스티유'},{name:'호텔 드 파 파리',area:'피갈'}],
+    중간:[{name:'호텔 인디고 파리 오페라',area:'오페라'},{name:'노보텔 파리 센터 에펠',area:'에펠탑 근처'}],
+    럭셔리:[{name:'리츠 파리',area:'방돔 광장'},{name:'르 무리스',area:'튈르리'}]
+  },
+  '런던':{
+    저예산:[{name:'세인트 크리스토퍼스 그리니치',area:'그리니치'},{name:'더 카텔란 호스텔',area:'킹스크로스'}],
+    중간:[{name:'더 라운드하우스 캠든',area:'캠든'},{name:'시트레이다인스 런던 킹스크로스',area:'킹스크로스'}],
+    럭셔리:[{name:'더 사보이',area:'코번트가든'},{name:'클라리지스',area:'메이페어'}]
+  },
+  '로마':{
+    저예산:[{name:'요로마 호스텔',area:'테르미니'},{name:'더 비하이브',area:'테르미니'}],
+    중간:[{name:'호텔 아르토 131',area:'트라스테베레'},{name:'더 베네토 호텔',area:'베네토'}],
+    럭셔리:[{name:'호텔 드 루시',area:'캄포 데 피오리'},{name:'더 그랜드 하얏트 로마',area:'EUR'}]
+  },
+  '바르셀로나':{
+    저예산:[{name:'더 배럭스 바르셀로나',area:'고딕 지구'},{name:'제너레이터 바르셀로나',area:'그라시아'}],
+    중간:[{name:'호텔 아르트스',area:'바르셀로네타'},{name:'갤리아 호텔',area:'그라시아'}],
+    럭셔리:[{name:'만다린 오리엔탈 바르셀로나',area:'파세이그 데 그라시아'},{name:'W 바르셀로나',area:'바르셀로네타'}]
+  },
+  '뉴욕':{
+    저예산:[{name:'더 베이직 NYC 호스텔',area:'어퍼 웨스트 사이드'},{name:'히 뉴욕시티',area:'첼시'}],
+    중간:[{name:'더 블레이클리 뉴욕',area:'미드타운'},{name:'호텔 인디고 맨해튼',area:'헬스키친'}],
+    럭셔리:[{name:'더 플라자',area:'센트럴파크 남측'},{name:'더 마크 호텔',area:'어퍼 이스트 사이드'}]
+  },
+  '발리':{
+    저예산:[{name:'무드 호스텔 우붓',area:'우붓'},{name:'쿠타 배드 앤 브렉퍼스트',area:'쿠타'}],
+    중간:[{name:'더 카마야 레기안',area:'레기안'},{name:'알라야 우붓',area:'우붓'}],
+    럭셔리:[{name:'포 시즌스 리조트 발리 짐바란',area:'짐바란'},{name:'아만다리',area:'우붓'}]
+  },
+  '홍콩':{
+    저예산:[{name:'메세나 게스트하우스',area:'몽콕'},{name:'더 웨스트 빌라',area:'침사추이'}],
+    중간:[{name:'더 랜드마크 만다린 오리엔탈',area:'센트럴'},{name:'하버 플라자 미드타운',area:'침사추이'}],
+    럭셔리:[{name:'더 페닌슐라 홍콩',area:'침사추이'},{name:'더 리츠칼튼 홍콩',area:'웨스트 카울룬'}]
+  },
+  '타이베이':{
+    저예산:[{name:'타이베이 게스트하우스',area:'시먼딩'},{name:'스타 호스텔 타이베이',area:'중정'}],
+    중간:[{name:'더 실린 타이베이',area:'다안'},{name:'아그로라 타이베이',area:'중산'}],
+    럭셔리:[{name:'포 시즌스 호텔 타이페이',area:'중산'},{name:'만다린 오리엔탈 타이페이',area:'중산'}]
+  },
+  '호놀룰루':{
+    저예산:[{name:'오하나 와이키키 이스트',area:'와이키키'},{name:'유스 호스텔 하와이',area:'다운타운'}],
+    중간:[{name:'힐튼 하와이안 빌리지',area:'와이키키'},{name:'쉐라톤 와이키키',area:'와이키키'}],
+    럭셔리:[{name:'더 모아나 서프라이더',area:'와이키키'},{name:'포 시즌스 오아후 코올리나',area:'코올리나'}]
+  },
+  '프라하':{
+    저예산:[{name:'미스 소피스 호스텔',area:'비노흐라디'},{name:'더 포스터 프라하',area:'올드타운'}],
+    중간:[{name:'호텔 자타 프라하',area:'올드타운'},{name:'안달루즈 호텔',area:'뉴타운'}],
+    럭셔리:[{name:'더 패어몬트 골든 프라하',area:'올드타운'},{name:'오거스틴 어 럭셔리 컬렉션 호텔',area:'말라 스트라나'}]
+  },
+  '이스탄불':{
+    저예산:[{name:'와우 호스텔 술탄아흐메트',area:'술탄아흐메트'},{name:'레이온 호스텔',area:'탁심'}],
+    중간:[{name:'더 하우스 호텔 보스포러스',area:'베식탁샤'},{name:'그랜드 하얏트 이스탄불',area:'탁심'}],
+    럭셔리:[{name:'시르케지 맨션',area:'시르케지'},{name:'더 포 시즌스 이스탄불 보스포러스',area:'베식탁샤'}]
+  },
+  '두바이':{
+    저예산:[{name:'XVA 아트 호텔',area:'데이라'},{name:'시타딘 메트로 두바이',area:'메트로'}],
+    중간:[{name:'힐튼 두바이 줌에이라',area:'줌에이라'},{name:'JW 매리어트 마르퀴스 두바이',area:'비즈니스베이'}],
+    럭셔리:[{name:'버즈 알 아랍',area:'줌에이라'},{name:'아틀란티스 더 팜',area:'팜 줌에이라'}]
+  },
+};
+
+// 예산 레벨 → HOTEL_EXAMPLES 키 매핑
+function _hotelBudgetKey(budget){
+  if(budget==='저예산'||budget==='게스트하우스') return '저예산';
+  if(budget==='럭셔리'||budget==='럭셔리호텔') return '럭셔리';
+  return '중간';
+}
+
+// 도시 + 예산 → 추천 호텔 배열 (최대 2개)
+function _getHotelExamples(cityKr, budget){
+  const key=_hotelBudgetKey(budget);
+  if(!HOTEL_EXAMPLES[cityKr]) return null;
+  return HOTEL_EXAMPLES[cityKr][key]||null;
 }
 
 // ── 동행자별 스팟 추천 이유 ──
@@ -2602,12 +2826,9 @@ function _runGenerate(){
   (()=>{
     const _zone=style.accomZone;
     const _accomType=style.accom;
+    const _mobility=style.accomMobility||'고정';
     const _accomEmoji={게스트하우스:'🏠',일반호텔:'🏨',에어비앤비:'🏡',럭셔리호텔:'🏆'};
     const _zoneEmoji={번화가:'🏙️',조용한곳:'🌙',자연속:'🌿',치안중요:'🔒'};
-    // 대표 도시 구역 찾기
-    const _firstDest=destKeys.map(k=>findDest(k)).find(d=>d&&d.kr);
-    const _cityZones=_firstDest?ACCOM_ZONES[_firstDest.kr]:null;
-    const _zoneRec=_zone&&_firstDest?_resolveAccomZone(_firstDest.kr,_zone):null;
     const _accomTips={
       게스트하우스:'번화가·대중교통 인근이 편리해요. 공용 공간에서 여행자를 만날 수 있어요.',
       일반호텔:'위치와 서비스를 균형 있게 누릴 수 있는 선택이에요.',
@@ -2620,18 +2841,102 @@ function _runGenerate(){
       자연속:'힐링과 자연 경관을 즐기고 싶다면 최적이에요.',
       치안중요:'치안이 검증된 구역으로, 안전하게 여행할 수 있어요.'
     };
-    const _lines=[];
-    if(_zoneRec) _lines.push(`<div style="font-size:14px;font-weight:800;color:var(--pri);margin-bottom:4px;">${_zoneEmoji[_zone]||'📍'} 추천 구역: <span style="color:var(--txt);">${_zoneRec}</span></div>`);
-    if(_zone&&_zoneTips[_zone]) _lines.push(`<div style="font-size:12px;color:var(--sub);margin-bottom:4px;">${_zoneTips[_zone]}</div>`);
-    if(!_zone&&_firstDest){
-      const _zoneKeys=['번화가','조용한곳','자연속','치안중요'];
-      const _preview=_zoneKeys.map(k=>{const v=_resolveAccomZone(_firstDest.kr,k);return v?`<span style="font-size:11px;background:rgba(99,102,241,.1);color:var(--pri);border-radius:20px;padding:2px 8px;margin-right:4px;margin-bottom:4px;display:inline-block;">${_zoneEmoji[k]||'📍'}${k}: ${v}</span>`:''}).join('');
-      if(_preview){
-        _lines.push('<div style="font-size:12px;color:var(--sub);margin-bottom:6px;">숙소 위치 선호를 선택하면 맞춤 구역을 안내해 드려요 · 참고 구역:</div>');
-        _lines.push(`<div style="display:flex;flex-wrap:wrap;">${_preview}</div>`);
+
+    // 호텔 예시 + 예약 링크 렌더 헬퍼
+    function _renderHotelBlock(cityObj, budgetKey){
+      if(!cityObj||!cityObj.kr) return '';
+      const hotels=_getHotelExamples(cityObj.kr, budgetKey);
+      const cityQ=encodeURIComponent(cityObj.kr);
+      const fromQ=ST.from||'';const toQ=ST.to||'';
+      const adultsN=ST.ppl||2;
+      const bcQ=encodeURIComponent(cityObj.bc||cityObj.kr);
+      // Booking.com 검색 링크
+      const bookingUrl=`https://www.booking.com/searchresults.html?ss=${bcQ}&checkin=${fromQ}&checkout=${toQ}&group_adults=${adultsN}&no_rooms=1&selected_currency=KRW&lang=ko`;
+      // Google Hotels 링크
+      const googleUrl=`https://www.google.com/travel/hotels/search?q=${cityQ}+호텔&dates=${fromQ},${toQ}&adults=${adultsN}`;
+      // Agoda 링크
+      const agodaQ=encodeURIComponent((cityObj.en||cityObj.kr).split(' ')[0]);
+      const agodaUrl=`https://www.agoda.com/search?city=${agodaQ}&checkIn=${fromQ}&checkOut=${toQ}&adults=${adultsN}&rooms=1&currencyCode=KRW&langCode=ko-kr`;
+
+      let h='';
+      if(hotels&&hotels.length>0){
+        h+=`<div style="font-size:12px;font-weight:700;color:var(--sub);margin:8px 0 5px;">🏨 ${cityObj.kr} 대표 호텔 예시 (${_hotelBudgetKey(budgetKey)}급)</div>`;
+        hotels.forEach(ht=>{
+          h+=`<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+            <span style="font-size:13px;font-weight:600;color:var(--txt);">${ht.name}</span>
+            <span style="font-size:11px;background:rgba(232,88,10,.1);color:var(--pri);border-radius:20px;padding:1px 8px;">${ht.area}</span>
+          </div>`;
+        });
       }
+      // 예약 바로가기 버튼
+      h+=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
+        <a href="${bookingUrl}" target="_blank" rel="noopener" style="font-size:11px;background:#003580;color:#fff;border-radius:8px;padding:5px 10px;text-decoration:none;font-weight:600;">🔵 Booking.com 검색</a>
+        <a href="${googleUrl}" target="_blank" rel="noopener" style="font-size:11px;background:#4285f4;color:#fff;border-radius:8px;padding:5px 10px;text-decoration:none;font-weight:600;">🔍 Google Hotels</a>
+        <a href="${agodaUrl}" target="_blank" rel="noopener" style="font-size:11px;background:#e31837;color:#fff;border-radius:8px;padding:5px 10px;text-decoration:none;font-weight:600;">🔴 Agoda</a>
+      </div>`;
+      return h;
     }
-    if(_accomTips[_accomType]) _lines.push(`<div style="font-size:12px;color:var(--sub);margin-top:6px;">${_accomEmoji[_accomType]||'🏨'} ${_accomType} 팁: ${_accomTips[_accomType]}</div>`);
+
+    const _lines=[];
+    const _firstDest=destKeys.map(k=>findDest(k)).find(d=>d&&d.kr);
+
+    // ── 이동 모드: 다중 도시 또는 단일 도시 4일+ ──
+    if(_mobility==='이동'){
+      if(isMulti){
+        // 다중 도시: 도시별 숙소 구역 안내
+        _lines.push(`<div style="font-size:12px;color:var(--sub);margin-bottom:8px;">🔀 지역 이동 플랜 · 도시별 추천 숙소 구역</div>`);
+        destKeys.forEach(k=>{
+          const dObj=findDest(k);
+          if(!dObj||!dObj.kr) return;
+          const zRec=_zone?_resolveAccomZone(dObj.kr,_zone):(ACCOM_ZONES[dObj.kr]?ACCOM_ZONES[dObj.kr]['번화가']:null);
+          const zLabel=_zone||'번화가';
+          _lines.push(`<div style="background:rgba(232,88,10,.06);border-radius:10px;padding:10px 12px;margin-bottom:8px;">
+            <div style="font-size:13px;font-weight:700;margin-bottom:4px;">${dObj.kr} ${_zoneEmoji[zLabel]||'📍'} ${zLabel}</div>
+            ${zRec?`<div style="font-size:12px;color:var(--sub);margin-bottom:6px;">추천 구역: ${zRec}</div>`:''}
+            ${_renderHotelBlock(dObj, style.budget)}
+          </div>`);
+        });
+      } else {
+        // 단일 도시 이동: 전반부/후반부 구역 분리 제안
+        const dObj=_firstDest;
+        if(dObj&&dObj.kr&&ACCOM_ZONES[dObj.kr]){
+          const zones=ACCOM_ZONES[dObj.kr];
+          const half1Zone='번화가'; const half2Zone='조용한곳';
+          _lines.push(`<div style="font-size:12px;color:var(--sub);margin-bottom:8px;">🔀 ${dObj.kr} 내 숙소 이동 플랜 · 전반부·후반부 구역 분리 추천</div>`);
+          _lines.push(`<div style="display:flex;gap:8px;margin-bottom:8px;">
+            <div style="flex:1;background:rgba(232,88,10,.06);border-radius:10px;padding:10px 12px;">
+              <div style="font-size:12px;font-weight:700;margin-bottom:3px;">${_zoneEmoji[half1Zone]} 전반부</div>
+              <div style="font-size:11px;color:var(--sub);">${zones[half1Zone]||half1Zone}</div>
+            </div>
+            <div style="flex:1;background:rgba(99,102,241,.06);border-radius:10px;padding:10px 12px;">
+              <div style="font-size:12px;font-weight:700;margin-bottom:3px;">${_zoneEmoji[half2Zone]} 후반부</div>
+              <div style="font-size:11px;color:var(--sub);">${zones[half2Zone]||half2Zone}</div>
+            </div>
+          </div>`);
+          _lines.push(_renderHotelBlock(dObj, style.budget));
+        } else if(dObj){
+          _lines.push(_renderHotelBlock(dObj, style.budget));
+        }
+      }
+    } else {
+      // ── 고정 모드: 기존 구역 추천 + 호텔 예시 ──
+      const _zoneRec=_zone&&_firstDest?_resolveAccomZone(_firstDest.kr,_zone):null;
+      if(_zoneRec) _lines.push(`<div style="font-size:14px;font-weight:800;color:var(--pri);margin-bottom:4px;">${_zoneEmoji[_zone]||'📍'} 추천 구역: <span style="color:var(--txt);">${_zoneRec}</span></div>`);
+      if(_zone&&_zoneTips[_zone]) _lines.push(`<div style="font-size:12px;color:var(--sub);margin-bottom:6px;">${_zoneTips[_zone]}</div>`);
+      if(!_zone&&_firstDest){
+        const _zoneKeys=['번화가','조용한곳','자연속','치안중요'];
+        const _preview=_zoneKeys.map(k=>{const v=_resolveAccomZone(_firstDest.kr,k);return v?`<span style="font-size:11px;background:rgba(99,102,241,.1);color:var(--pri);border-radius:20px;padding:2px 8px;margin-right:4px;margin-bottom:4px;display:inline-block;">${_zoneEmoji[k]||'📍'}${k}: ${v}</span>`:''}).join('');
+        if(_preview){
+          _lines.push('<div style="font-size:12px;color:var(--sub);margin-bottom:6px;">숙소 위치 선호를 선택하면 맞춤 구역을 안내해 드려요 · 참고 구역:</div>');
+          _lines.push(`<div style="display:flex;flex-wrap:wrap;">${_preview}</div>`);
+        }
+      }
+      // 호텔 예시 + 예약 링크
+      if(_firstDest) _lines.push(_renderHotelBlock(_firstDest, style.budget));
+    }
+
+    if(_accomTips[_accomType]) _lines.push(`<div style="font-size:12px;color:var(--sub);margin-top:8px;padding-top:8px;border-top:1px solid var(--bdr);">${_accomEmoji[_accomType]||'🏨'} ${_accomType} 팁: ${_accomTips[_accomType]}</div>`);
+
     if(_lines.length>0){
       html+=`<div style="background:var(--card);border:1.5px solid var(--bdr);border-radius:14px;padding:14px 16px;margin-top:12px;">
         <div style="font-size:13px;font-weight:700;color:var(--pri);margin-bottom:8px;">🏨 숙소 선택 가이드</div>
@@ -7732,6 +8037,20 @@ function showToast(msg,duration=3000){
   clearTimeout(_toastTimer);
   _toastTimer=setTimeout(()=>t.classList.remove('show'),duration);
 }
+
+// ══════════════════════════════════════════════
+// 기능 안내 모달
+// ══════════════════════════════════════════════
+function openFeatGuide(){
+  const m=document.getElementById('feat-guide-modal');
+  if(m){m.classList.add('on');document.body.style.overflow='hidden';}
+}
+function closeFeatGuide(){
+  const m=document.getElementById('feat-guide-modal');
+  if(m){m.classList.remove('on');document.body.style.overflow='';}
+}
+// ESC 키로도 닫기
+document.addEventListener('keydown',e=>{if(e.key==='Escape') closeFeatGuide();});
 
 // ══════════════════════════════════════════════
 // ⑤ 스팟 개별 재생성 (Re-roll)
