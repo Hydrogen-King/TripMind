@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <!-- 앱 메인 그라디언트 (#E8580A → #FF8C42, 135°) -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E8580A"/>
+      <stop offset="100%" stop-color="#FF8C42"/>
+    </linearGradient>
+    <!-- 상단 좌측 광택 오버레이 -->
+    <radialGradient id="shine" cx="28%" cy="24%" r="58%">
+      <stop offset="0%" stop-color="white" stop-opacity=".28"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- 배경 (iOS 스타일 라운드 사각형) -->
+  <rect width="64" height="64" rx="15" fill="url(#bg)"/>
+  <!-- 광택 오버레이 -->
+  <rect width="64" height="64" rx="15" fill="url(#shine)"/>
+
+  <!-- 비행기 (북동쪽↗ 방향, 순수 벡터) -->
+  <g transform="translate(32,32) rotate(45)">
+    <path fill="white" fill-opacity=".97"
+      d="M0,-14
+         C1.2,-14 3,-10 3,-6
+         L3,0
+         L15,8  L15,11  L3,5
+         L3,13
+         L6,16  L6,19
+         L0,17
+         L-6,19 L-6,16
+         L-3,13
+         L-3,5  L-15,11 L-15,8
+         L-3,0
+         L-3,-6
+         C-3,-10 -1.2,-14 0,-14 Z"/>
+  </g>
+
+  <!-- 출발지 점 (하단 좌측) -->
+  <circle cx="14" cy="50" r="3" fill="white" fill-opacity=".55"/>
+  <!-- 도착지 점 (상단 우측) -->
+  <circle cx="50" cy="14" r="3.5" fill="white" fill-opacity=".9"/>
+</svg>
