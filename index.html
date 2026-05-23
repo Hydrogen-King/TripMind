@@ -2262,17 +2262,17 @@ function _runGenerate(){
         // ── 도시 대표 이미지 배너 ──
         const heroUrl=CITY_IMG[cityName];
         const costSub=cityC?` · 약 ${Math.round(cityC.total/10000).toLocaleString()}만원`:'' ;
-        if(heroUrl){
-          html+=`<div class="city-hero">
-            <img src="${heroUrl}" alt="${cityName}" loading="lazy">
-            <div class="city-hero-overlay">
-              <div class="city-hero-text">
-                <div class="city-hero-name">${cityName}</div>
-                <div class="city-hero-sub">${countryStr} · ${cityDays}일 일정${costSub}</div>
-              </div>
+        const heroId='hero-'+key.replace(/[^a-zA-Z가-힣]/g,'').slice(0,6)+'-'+Date.now();
+        html+=`<div class="city-hero" id="${heroId}">
+          <img src="${heroUrl||''}" alt="${cityName}" loading="lazy" data-city-hero="${escHtml(cityName)}"
+            style="${heroUrl?'':'display:none;'}" onerror="this.style.display='none'">
+          <div class="city-hero-overlay">
+            <div class="city-hero-text">
+              <div class="city-hero-name">${cityName}</div>
+              <div class="city-hero-sub">${countryStr} · ${cityDays}일 일정${costSub}</div>
             </div>
-          </div>`;
-        }
+          </div>
+        </div>`;
         // ── 일정 생성 ──
         const {itin,suggestedDays:citySD}=buildItinerary(destObj,cityDays,style);
         const cityDailyCosts=cityC?buildDailyCosts(cityC,cityDays,itin,destObj.kr):null;
@@ -2356,17 +2356,16 @@ function _runGenerate(){
       }
       // ── 도시 대표 이미지 배너 ──
       const heroUrl=CITY_IMG[destObj.kr];
-      if(heroUrl){
-        html+=`<div class="city-hero">
-          <img src="${heroUrl}" alt="${destObj.kr}" loading="lazy">
-          <div class="city-hero-overlay">
-            <div class="city-hero-text">
-              <div class="city-hero-name">${destObj.kr}</div>
-              <div class="city-hero-sub">${destObj.country} · ${nights}박${days}일 · ${ST.ppl}명</div>
-            </div>
+      html+=`<div class="city-hero">
+        <img src="${heroUrl||''}" alt="${destObj.kr}" loading="lazy" data-city-hero="${escHtml(destObj.kr)}"
+          style="${heroUrl?'':'display:none;'}" onerror="this.style.display='none'">
+        <div class="city-hero-overlay">
+          <div class="city-hero-text">
+            <div class="city-hero-name">${destObj.kr}</div>
+            <div class="city-hero-sub">${destObj.country} · ${nights}박${days}일 · ${ST.ppl}명</div>
           </div>
-        </div>`;
-      }
+        </div>
+      </div>`;
       // ── 도시 내 이동경로 지도 ──
       const spotPairs=itin.flatMap(d=>d.spots.map(s=>s.n))
         .map(name=>({name,coord:SPOT_GEO[name]})).filter(p=>p.coord);
@@ -2421,6 +2420,9 @@ function _runGenerate(){
 
   document.getElementById('result-body').innerHTML=html;
   go('result');
+
+  // ── Wikipedia 이미지 동적 보강 ──
+  enhanceSpotImages();
 
   // ── 비동기 위젯 (날씨·환율) ──
   const _wDest=isMulti?findDest(destKeys[0]):findDest(destKeys[0]);
@@ -7381,6 +7383,121 @@ function renderSavedList(){
 }
 
 // ══════════════════════════════════════════════
+// ══════════════════════════════════════════════
+// Wikipedia 이미지 동적 보강
+// ══════════════════════════════════════════════
+const _wikiImgCache = Object.create(null);
+
+async function _fetchWikiThumb(title, lang) {
+  try {
+    const r = await fetch(
+      `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`,
+      { signal: AbortSignal.timeout(4000) }
+    );
+    if (!r.ok) return null;
+    const d = await r.json();
+    if (d.thumbnail && d.thumbnail.source) {
+      // 더 큰 해상도로 업스케일 (기본 300px → 600px)
+      return d.thumbnail.source.replace(/\/\d+px-/, '/600px-');
+    }
+  } catch(e) {}
+  return null;
+}
+
+async function fetchWikiImg(spotName, cityName) {
+  const key = spotName;
+  if (key in _wikiImgCache) return _wikiImgCache[key];
+
+  // 검색용 이름 정제: "A & B", "A · B" → "A"만
+  const cleanName = spotName.replace(/\s*[&·×+]\s*.+/, '').trim();
+  const withCity = cityName ? `${cleanName} ${cityName}` : cleanName;
+
+  // 순서대로 시도: 한국어 위키 → 영어 위키 → 도시명 조합
+  let url = null;
+  url = url || await _fetchWikiThumb(cleanName, 'ko');
+  url = url || await _fetchWikiThumb(cleanName, 'en');
+  if (!url && cleanName !== spotName) {
+    url = url || await _fetchWikiThumb(spotName, 'ko');
+    url = url || await _fetchWikiThumb(spotName, 'en');
+  }
+  url = url || await _fetchWikiThumb(withCity, 'en');
+
+  _wikiImgCache[key] = url;
+  return url;
+}
+
+async function enhanceCityHeroImages() {
+  const imgs = [...document.querySelectorAll('#result-body img[data-city-hero]')];
+  await Promise.all(imgs.map(async img => {
+    const cityName = img.dataset.cityHero;
+    if (!cityName) return;
+    // CITY_IMG에 있으면 이미 src 세팅됨, 없는 경우만 위키로
+    if (img.src && !img.src.endsWith('/') && img.style.display !== 'none') return;
+    const url = await fetchWikiImg(cityName, '');
+    if (url) {
+      img.style.transition = 'opacity .4s';
+      img.style.opacity = '0';
+      img.onload = () => { img.style.opacity = '1'; img.style.display = ''; };
+      img.onerror = () => { img.style.display = 'none'; };
+      img.src = url;
+      img.style.display = '';
+    }
+  }));
+}
+
+async function enhanceSpotImages() {
+  // 도시 hero 이미지 먼저 보강
+  enhanceCityHeroImages();
+
+  // 아직 위키 이미지 처리 안 된 스팟 블록만 수집
+  const blocks = [...document.querySelectorAll(
+    '#result-body .spot-block[data-spot-name]:not([data-wiki-done])'
+  )];
+  if (!blocks.length) return;
+
+  // 4개씩 병렬 처리 (API 부하 분산)
+  const BATCH = 4;
+  for (let i = 0; i < blocks.length; i += BATCH) {
+    const batch = blocks.slice(i, i + BATCH);
+    await Promise.all(batch.map(async block => {
+      block.dataset.wikiDone = '1';
+      const spotName = block.dataset.spotName;
+      const cityName = block.dataset.city;
+      if (!spotName) return;
+
+      const wikiUrl = await fetchWikiImg(spotName, cityName);
+      if (!wikiUrl) return;
+
+      let img = block.querySelector('.spot-thumb-img');
+      if (img) {
+        // 기존 이미지 페이드 교체
+        img.style.transition = 'opacity .3s';
+        img.style.opacity = '0';
+        img.onload = () => { img.style.opacity = '1'; };
+        img.onerror = () => { img.style.display = 'none'; };
+        img.src = wikiUrl;
+        img.style.display = '';
+      } else {
+        // 이미지 없던 카드에 새로 추가
+        img = document.createElement('img');
+        img.className = 'spot-thumb-img';
+        img.alt = spotName;
+        img.loading = 'lazy';
+        img.style.opacity = '0';
+        img.style.transition = 'opacity .3s';
+        img.onload = () => { img.style.opacity = '1'; };
+        img.onerror = () => { img.style.display = 'none'; };
+        img.src = wikiUrl;
+        block.insertBefore(img, block.firstChild);
+      }
+    }));
+    // 배치 사이 짧은 대기 (300ms)
+    if (i + BATCH < blocks.length) {
+      await new Promise(r => setTimeout(r, 300));
+    }
+  }
+}
+
 // 이미지 저장 & 공유
 // ══════════════════════════════════════════════
 async function exportItinerary(btn){
