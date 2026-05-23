@@ -452,6 +452,26 @@ textarea.fi2{resize:vertical;min-height:90px;}
 .export-btn:hover{border-color:var(--pri);color:var(--pri);box-shadow:0 4px 14px rgba(232,88,10,.15);}
 .export-btn:disabled{opacity:.5;cursor:not-allowed;}
 
+/* ══ 앱 설치 모달 ══ */
+.install-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:3000;display:flex;align-items:flex-end;justify-content:center;padding:0;}
+.install-modal{background:var(--bg);border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;padding:20px 18px 32px;box-shadow:0 -8px 32px rgba(0,0,0,.18);}
+.install-modal-handle{width:40px;height:4px;background:var(--bdr);border-radius:2px;margin:0 auto 16px;}
+.install-modal-title{font-size:17px;font-weight:800;margin-bottom:4px;}
+.install-modal-sub{font-size:13px;color:var(--sub);margin-bottom:18px;}
+.install-tab-row{display:flex;gap:6px;margin-bottom:18px;}
+.install-tab{flex:1;padding:8px 4px;border-radius:10px;border:1.5px solid var(--bdr);background:var(--card);font-size:12px;font-weight:700;cursor:pointer;text-align:center;transition:all .18s;color:var(--sub);}
+.install-tab.on{border-color:var(--pri);color:var(--pri);background:rgba(232,88,10,.07);}
+.install-steps{display:none;}
+.install-steps.on{display:block;}
+.install-step{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--bdr);}
+.install-step:last-child{border-bottom:none;}
+.install-step-num{width:26px;height:26px;border-radius:50%;background:var(--pri);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.install-step-text{font-size:13px;line-height:1.6;color:var(--txt);}
+.install-step-text strong{font-weight:800;color:var(--pri);}
+.install-step-text em{font-style:normal;background:var(--card2);border:1px solid var(--bdr);border-radius:5px;padding:1px 6px;font-size:12px;font-weight:700;}
+.install-tip{margin-top:14px;padding:10px 12px;background:rgba(232,88,10,.07);border-radius:10px;font-size:12px;color:var(--sub);line-height:1.6;}
+.install-btn-wrap{display:flex;gap:10px;margin-top:18px;}
+
 /* ══ 스팟 재생성 버튼 ══ */
 .spot-reroll{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;
   color:var(--sub);background:none;border:1px solid var(--bdr);border-radius:6px;
@@ -633,6 +653,89 @@ body{overscroll-behavior-y:none;}
 <!-- ── 토스트 알림 ── -->
 <div id="toast" role="alert" aria-live="assertive"></div>
 
+<!-- 앱 설치 가이드 모달 -->
+<div id="install-modal-backdrop" class="install-modal-backdrop" style="display:none;" onclick="closeInstallModal(event)" role="dialog" aria-modal="true" aria-label="앱 설치 가이드">
+  <div class="install-modal" onclick="event.stopPropagation()">
+    <div class="install-modal-handle"></div>
+    <div class="install-modal-title">📲 앱으로 설치하기</div>
+    <div class="install-modal-sub">홈 화면에 추가하면 앱처럼 바로 실행돼요. 무료예요!</div>
+
+    <!-- 기기 탭 -->
+    <div class="install-tab-row">
+      <button class="install-tab on" onclick="switchInstallTab(this,'ios')" aria-pressed="true">🍎 아이폰</button>
+      <button class="install-tab" onclick="switchInstallTab(this,'android')" aria-pressed="false">🤖 안드로이드</button>
+      <button class="install-tab" onclick="switchInstallTab(this,'pc')" aria-pressed="false">💻 PC</button>
+    </div>
+
+    <!-- 아이폰 -->
+    <div class="install-steps on" id="install-ios">
+      <div class="install-step">
+        <div class="install-step-num">1</div>
+        <div class="install-step-text"><strong>Safari</strong>로 접속해주세요<br><em>tripmind.kangjuno980126.workers.dev</em><br><span style="font-size:11px;color:var(--sub);">⚠️ 크롬·네이버앱은 안 돼요, 반드시 Safari!</span></div>
+      </div>
+      <div class="install-step">
+        <div class="install-step-num">2</div>
+        <div class="install-step-text">화면 하단 가운데 <strong>공유 버튼</strong>을 탭해요<br><em>□↑ 네모에 화살표 아이콘</em></div>
+      </div>
+      <div class="install-step">
+        <div class="install-step-num">3</div>
+        <div class="install-step-text">스크롤을 내려서 <strong>「홈 화면에 추가」</strong> 를 탭해요</div>
+      </div>
+      <div class="install-step">
+        <div class="install-step-num">4</div>
+        <div class="install-step-text">이름 확인 후 오른쪽 위 <strong>「추가」</strong> 탭하면 끝!<br><span style="font-size:11px;color:var(--sub);">홈 화면에 TripMind 아이콘이 생겨요 ✈️</span></div>
+      </div>
+      <div class="install-tip">💡 설치 후엔 인터넷 없이도 앱을 열 수 있어요. 일정 생성은 인터넷이 필요해요.</div>
+    </div>
+
+    <!-- 안드로이드 -->
+    <div class="install-steps" id="install-android">
+      <div class="install-step">
+        <div class="install-step-num">1</div>
+        <div class="install-step-text"><strong>Chrome</strong>으로 접속해주세요<br><em>tripmind.kangjuno980126.workers.dev</em></div>
+      </div>
+      <div class="install-step">
+        <div class="install-step-num">2</div>
+        <div class="install-step-text">화면 하단이나 주소창 옆에 <strong>「앱 설치」 팝업</strong>이 뜨면 탭해요<br><span style="font-size:11px;color:var(--sub);">안 보이면 3번으로!</span></div>
+      </div>
+      <div class="install-step">
+        <div class="install-step-num">3</div>
+        <div class="install-step-text">Chrome 오른쪽 위 <strong>⋮ 메뉴</strong> → <strong>「앱 설치」</strong> 또는 <strong>「홈 화면에 추가」</strong> 탭</div>
+      </div>
+      <div class="install-step">
+        <div class="install-step-num">4</div>
+        <div class="install-step-text"><strong>「설치」</strong> 버튼 탭하면 끝!<br><span style="font-size:11px;color:var(--sub);">홈 화면과 앱 서랍에 아이콘이 추가돼요 ✈️</span></div>
+      </div>
+      <div class="install-tip">💡 설치하면 전체화면으로 실행돼서 앱이랑 똑같이 느껴져요!</div>
+    </div>
+
+    <!-- PC -->
+    <div class="install-steps" id="install-pc">
+      <div class="install-step">
+        <div class="install-step-num">1</div>
+        <div class="install-step-text"><strong>Chrome</strong> 또는 <strong>Edge</strong>로 접속해주세요<br><em>tripmind.kangjuno980126.workers.dev</em></div>
+      </div>
+      <div class="install-step">
+        <div class="install-step-num">2</div>
+        <div class="install-step-text">주소창 오른쪽 끝에 <strong>컴퓨터 + ⊕ 아이콘</strong>을 클릭해요<br><span style="font-size:11px;color:var(--sub);">아이콘이 없으면 3번으로!</span></div>
+      </div>
+      <div class="install-step">
+        <div class="install-step-num">3</div>
+        <div class="install-step-text">Chrome: 오른쪽 위 <strong>⋮ 메뉴 → 「TripMind 설치」</strong><br>Edge: 오른쪽 위 <strong>… 메뉴 → 「앱 → 이 사이트를 앱으로 설치」</strong></div>
+      </div>
+      <div class="install-step">
+        <div class="install-step-num">4</div>
+        <div class="install-step-text"><strong>「설치」</strong> 클릭하면 바탕화면에 아이콘이 생겨요 ✈️</div>
+      </div>
+      <div class="install-tip">💡 설치하면 별도 창으로 실행돼서 진짜 앱처럼 쓸 수 있어요!</div>
+    </div>
+
+    <div class="install-btn-wrap">
+      <button class="btn btn-p" style="flex:1;" onclick="_closeInstallModalDirect()">확인했어요 👍</button>
+    </div>
+  </div>
+</div>
+
 <div class="bg"></div>
 <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
 <div id="app">
@@ -671,6 +774,9 @@ body{overscroll-behavior-y:none;}
     <span class="home-feat">✅ 예상 비용 계산</span>
     <span class="home-feat">✅ 취향 자연어 입력 지원</span>
   </div>
+  <button onclick="openInstallModal()" style="display:flex;align-items:center;gap:7px;margin:10px auto 0;padding:9px 18px;border-radius:30px;border:1.5px solid var(--pri);background:rgba(232,88,10,.07);color:var(--pri);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;" aria-label="앱으로 설치하는 방법">
+    📲 앱으로 설치하는 방법
+  </button>
 
   <!-- 최근 여행 복원 배너 -->
   <div id="restore-banner" role="region" aria-label="최근 여행 계획 복원">
@@ -7074,6 +7180,43 @@ function hideErr(el){
   el.classList.remove('on');
 }
 let _toastTimer=null;
+// ══════════════════════════════════════════════
+// 앱 설치 가이드 모달
+// ══════════════════════════════════════════════
+function openInstallModal(){
+  const el=document.getElementById('install-modal-backdrop');
+  if(el){el.style.display='flex';document.body.style.overflow='hidden';}
+  // 기기 자동 감지
+  const ua=navigator.userAgent;
+  const tab=(/iPhone|iPad|iPod/.test(ua))?'ios':(/Android/.test(ua))?'android':'pc';
+  const tabs=document.querySelectorAll('.install-tab');
+  const steps=document.querySelectorAll('.install-steps');
+  tabs.forEach(t=>{t.classList.remove('on');t.setAttribute('aria-pressed','false');});
+  steps.forEach(s=>s.classList.remove('on'));
+  const activeTab=document.querySelector(`.install-tab[onclick*="'${tab}'"]`);
+  if(activeTab){activeTab.classList.add('on');activeTab.setAttribute('aria-pressed','true');}
+  const activeSteps=document.getElementById('install-'+tab);
+  if(activeSteps) activeSteps.classList.add('on');
+}
+function closeInstallModal(e){
+  if(e&&e.target!==document.getElementById('install-modal-backdrop')) return;
+  const el=document.getElementById('install-modal-backdrop');
+  if(el){el.style.display='none';document.body.style.overflow='';}
+}
+function _closeInstallModalDirect(){
+  const el=document.getElementById('install-modal-backdrop');
+  if(el){el.style.display='none';document.body.style.overflow='';}
+}
+// 닫기 - backdrop 직접 클릭 or 버튼
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeInstallModal({target:document.getElementById('install-modal-backdrop')});});
+function switchInstallTab(btn,id){
+  document.querySelectorAll('.install-tab').forEach(t=>{t.classList.remove('on');t.setAttribute('aria-pressed','false');});
+  document.querySelectorAll('.install-steps').forEach(s=>s.classList.remove('on'));
+  btn.classList.add('on');btn.setAttribute('aria-pressed','true');
+  const s=document.getElementById('install-'+id);
+  if(s) s.classList.add('on');
+}
+
 function showToast(msg,duration=3000){
   const t=document.getElementById('toast');
   if(!t) return;
