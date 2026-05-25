@@ -526,6 +526,14 @@ textarea.fi2{resize:vertical;min-height:90px;}
 .spot-src-btn{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:3px 7px;border-radius:6px;border:1px solid var(--bdr);background:var(--card);color:var(--sub);text-decoration:none;transition:all .18s;}
 .spot-src-btn:hover{border-color:var(--pri);color:var(--pri);background:rgba(232,88,10,.06);}
 
+/* ══ Places API 실시간 정보 ══ */
+.spot-places-info{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:5px;min-height:0;}
+.spot-rating{display:inline-flex;align-items:center;gap:2px;font-size:11px;font-weight:700;color:#f59e0b;letter-spacing:.3px;}
+.spot-rating-count{font-size:10px;color:var(--sub);font-weight:400;}
+.spot-open-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;flex-shrink:0;}
+.spot-open-badge.open{background:rgba(22,163,74,.1);color:#16a34a;}
+.spot-open-badge.closed{background:rgba(220,38,38,.1);color:#dc2626;}
+
 /* ══ 저장 결과 ══ */
 .saved-banner{background:linear-gradient(135deg,rgba(34,139,34,.08),rgba(34,139,34,.04));
   border:1px solid rgba(34,139,34,.22);border-radius:var(--r);padding:14px 16px;margin-bottom:14px;
@@ -4844,6 +4852,7 @@ function _runGenerate(){
               <span class="spot-meta-badge">${e._transport}</span>
               <span class="spot-meta-badge spot-meta-food">${e._food} ${noFoodNote}</span>
             </div>
+            <div class="spot-places-info"></div>
             ${_srcLinks}
           </div>
         </div>`;
@@ -5062,8 +5071,11 @@ function _runGenerate(){
   document.getElementById('result-body').innerHTML=html;
   go('result');
 
-  // ── 실시간 이동시간 (Google Maps Directions API) ──
+  // ── 실시간 이동시간 (Google Maps Routes API) ──
   _fetchRealTransitTimes();
+
+  // ── 실시간 평점·영업상태 (Google Places API) ──
+  _fetchPlacesInfo();
 
   // ── Wikipedia 이미지 동적 보강 ──
   enhanceSpotImages();
@@ -5368,6 +5380,72 @@ async function _fetchRealTransitTimes(){
       htf.dataset.mode||'driving'
     );
     timeEl.textContent=dur||fallback;
+  }
+}
+
+// ══════════════════════════════════════════════
+// Places API — 실시간 평점·영업상태 조회
+// ══════════════════════════════════════════════
+const _placesCache=new Map(); // 중복 API 호출 방지
+
+async function _fetchPlacesInfoForBlock(block){
+  if(!GMAPS_KEY) return;
+  const name=(block.dataset.spotName||'').trim();
+  const city=(block.dataset.city||'').trim();
+  if(!name) return;
+  const infoEl=block.querySelector('.spot-places-info');
+  if(!infoEl) return;
+
+  const cacheKey=name+'|'+city;
+  let place=_placesCache.get(cacheKey);
+
+  if(!place){
+    try{
+      const res=await fetch('https://places.googleapis.com/v1/places:searchText',{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'X-Goog-Api-Key':GMAPS_KEY,
+          'X-Goog-FieldMask':'places.rating,places.userRatingCount,places.currentOpeningHours'
+        },
+        body:JSON.stringify({textQuery:`${name} ${city}`,languageCode:'ko',maxResultCount:1})
+      });
+      const data=await res.json();
+      place=data.places&&data.places[0]?data.places[0]:null;
+      _placesCache.set(cacheKey,place||false);
+    }catch(err){
+      _placesCache.set(cacheKey,false);
+      return;
+    }
+  }
+  if(!place) return;
+
+  let html='';
+  if(place.rating){
+    const r=Math.round(place.rating*2)/2; // 0.5 단위 반올림
+    const full=Math.floor(r);
+    const half=r%1>0;
+    const empty=5-full-(half?1:0);
+    const stars='★'.repeat(full)+(half?'½':'')+'☆'.repeat(empty);
+    html+=`<span class="spot-rating">${stars} ${place.rating.toFixed(1)}</span>`;
+    if(place.userRatingCount){
+      html+=`<span class="spot-rating-count">(${place.userRatingCount.toLocaleString()})</span>`;
+    }
+  }
+  const openNow=place.currentOpeningHours?.openNow;
+  if(openNow!==undefined){
+    html+=`<span class="spot-open-badge ${openNow?'open':'closed'}">${openNow?'🟢 영업중':'🔴 영업종료'}</span>`;
+  }
+  if(html) infoEl.innerHTML=html;
+}
+
+async function _fetchPlacesInfo(){
+  const container=document.getElementById('result-body');
+  if(!container||!GMAPS_KEY) return;
+  const blocks=container.querySelectorAll('.spot-block[data-spot-name]');
+  for(const block of blocks){
+    await _fetchPlacesInfoForBlock(block);
+    await new Promise(r=>setTimeout(r,120)); // 120ms throttle — API rate limit 방지
   }
 }
 
@@ -10048,9 +10126,11 @@ function rerollSpot(btn){
           <span class="spot-meta-badge">${enriched._transport}</span>
           <span class="spot-meta-badge spot-meta-food">${enriched._food}${!hasFoodData?' <span class="no-data-note">일반 추천</span>':''}</span>
         </div>
+        <div class="spot-places-info"></div>
       </div>`;
     block.style.opacity='1';
     showToast('✅ 스팟이 교체되었어요!',2000);
+    _fetchPlacesInfoForBlock(block);
   },200);
 }
 
