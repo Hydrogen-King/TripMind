@@ -4789,12 +4789,13 @@ function _runGenerate(){
         const _hotelEx=_getHotelExamples(cityName, style&&style.budget?style.budget:'중간');
         const _hotelArea=(_hotelEx&&_hotelEx[0])?_hotelEx[0].area:'숙소';
         const _ft=_spotTransit(_bspots[0].n||'',_bspots[0].d||'');
-        h+=`<div class="hotel-to-first">
+        const _htfMode=_ft.mode.includes('도보')?'walking':(_isTCity?'transit':'driving');
+        h+=`<div class="hotel-to-first" data-first-spot="${escHtml(_bspots[0].n||'')}" data-city="${escHtml(cityName)}" data-hotel-area="${escHtml(_hotelArea)}" data-mode="${_htfMode}">
           <span class="htf-badge">🏨 숙소 출발</span>
           <span style="font-weight:600;">${escHtml(_hotelArea)}</span>
           <span style="color:var(--pri);font-weight:700;flex-shrink:0;">→</span>
           <span style="font-weight:600;">${escHtml(_bspots[0].n||'')}</span>
-          <span style="flex-shrink:0;">${_ft.mode} ${_ft.time}</span>
+          <span class="htf-time" style="flex-shrink:0;">${_ft.mode} ${_ft.time}</span>
         </div>`;
       }
       _bspots.forEach((s,_si)=>{
@@ -4850,13 +4851,14 @@ function _runGenerate(){
         if(_si<_bspots.length-1){
           const _nxt=_bspots[_si+1];
           const _tr=_spotTransit(_nxt.n||'',_nxt.d||'');
-          h+=`<div class="transit-connector" aria-hidden="true">
+          const _tMode=_tr.mode.includes('도보')?'walking':(_isTCity?'transit':'driving');
+          h+=`<div class="transit-connector" aria-hidden="true" data-from="${escHtml(e.n)}" data-to="${escHtml(_nxt.n||'')}" data-mode="${_tMode}" data-city="${escHtml(cityName)}">
             <div class="transit-line-seg"></div>
             <div class="transit-info-chip">
               <span class="t-from">${escHtml(e.n)}</span>
               <span class="t-arr">→</span>
               <span class="t-mode">${_tr.mode}</span>
-              <span style="color:var(--sub);flex-shrink:0;">${_tr.time}</span>
+              <span class="t-time" style="color:var(--sub);flex-shrink:0;">${_tr.time}</span>
             </div>
             <div class="transit-line-seg"></div>
           </div>`;
@@ -5059,6 +5061,9 @@ function _runGenerate(){
 
   document.getElementById('result-body').innerHTML=html;
   go('result');
+
+  // ── 실시간 이동시간 (Google Maps Directions API) ──
+  _fetchRealTransitTimes();
 
   // ── Wikipedia 이미지 동적 보강 ──
   enhanceSpotImages();
@@ -5279,6 +5284,72 @@ const CITY_IMG={
 };
 
 // ══════════════════════════════════════════════
+// ── Google Maps API 키 ──
+const GMAPS_KEY='AIzaSyB00hEbEvFQAzO218CaSRrvIuBPuqH8Bs0';
+
+// ── Google Maps Directions API 실시간 이동시간 조회 ──
+async function _gmapsDuration(origin, destination, mode){
+  try{
+    const base='https://maps.googleapis.com/maps/api/directions/json';
+    const params=`origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&mode=${mode}&language=ko&key=${GMAPS_KEY}`;
+    const res=await fetch(`${base}?${params}`);
+    const data=await res.json();
+    if(data.status==='OK'&&data.routes&&data.routes[0]){
+      return data.routes[0].legs[0].duration.text;
+    }
+    // transit 실패 → driving 재시도
+    if(mode==='transit'){
+      const res2=await fetch(`${base}?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&mode=driving&language=ko&key=${GMAPS_KEY}`);
+      const data2=await res2.json();
+      if(data2.status==='OK'&&data2.routes&&data2.routes[0]){
+        return data2.routes[0].legs[0].duration.text+' (차량)';
+      }
+    }
+  }catch(e){}
+  return null;
+}
+
+async function _fetchRealTransitTimes(){
+  const container=document.getElementById('result-body');
+  if(!container||!GMAPS_KEY) return;
+
+  // ── 스팟 간 이동 화살표 실시간 업데이트 ──
+  const connectors=container.querySelectorAll('.transit-connector[data-from][data-to]');
+  for(const conn of connectors){
+    const fromCoord=SPOT_GEO[conn.dataset.from];
+    const toCoord=SPOT_GEO[conn.dataset.to];
+    if(!fromCoord||!toCoord) continue;
+    const timeEl=conn.querySelector('.t-time');
+    if(!timeEl) continue;
+    timeEl.textContent='⏳';
+    const dur=await _gmapsDuration(
+      `${fromCoord[0]},${fromCoord[1]}`,
+      `${toCoord[0]},${toCoord[1]}`,
+      conn.dataset.mode||'driving'
+    );
+    if(dur) timeEl.textContent=dur;
+    else timeEl.textContent=timeEl.dataset.fallback||timeEl.textContent;
+  }
+
+  // ── 숙소→첫관광지 실시간 업데이트 ──
+  const htfEls=container.querySelectorAll('.hotel-to-first[data-first-spot]');
+  for(const htf of htfEls){
+    const toCoord=SPOT_GEO[htf.dataset.firstSpot];
+    if(!toCoord) continue;
+    const timeEl=htf.querySelector('.htf-time');
+    if(!timeEl) continue;
+    timeEl.textContent='⏳';
+    const origin=`${htf.dataset.hotelArea||''} ${htf.dataset.city||''}`.trim();
+    const dur=await _gmapsDuration(
+      origin,
+      `${toCoord[0]},${toCoord[1]}`,
+      htf.dataset.mode||'driving'
+    );
+    if(dur) timeEl.textContent=dur;
+    else timeEl.textContent=timeEl.dataset.fallback||timeEl.textContent;
+  }
+}
+
 // 관광지 좌표 (도시 내 이동경로 지도용)
 // ══════════════════════════════════════════════
 const SPOT_GEO={
