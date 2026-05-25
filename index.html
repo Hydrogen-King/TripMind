@@ -5344,14 +5344,14 @@ async function _fetchRealTransitTimes(){
     const city=conn.dataset.city||'';
     const timeEl=conn.querySelector('.t-time');
     if(!timeEl) continue;
+    const fallback=timeEl.textContent;
     timeEl.textContent='⏳';
     const dur=await _gmapsDuration(
       `${conn.dataset.from} ${city}`.trim(),
       `${conn.dataset.to} ${city}`.trim(),
       conn.dataset.mode||'driving'
     );
-    if(dur) timeEl.textContent=dur;
-    else timeEl.textContent=timeEl.dataset.fallback||timeEl.textContent;
+    timeEl.textContent=dur||fallback;
   }
 
   // ── 숙소→첫관광지 실시간 업데이트 ──
@@ -5360,14 +5360,14 @@ async function _fetchRealTransitTimes(){
     const city=htf.dataset.city||'';
     const timeEl=htf.querySelector('.htf-time');
     if(!timeEl) continue;
+    const fallback=timeEl.textContent;
     timeEl.textContent='⏳';
     const dur=await _gmapsDuration(
       `${htf.dataset.hotelArea||''} ${city}`.trim(),
       `${htf.dataset.firstSpot} ${city}`.trim(),
       htf.dataset.mode||'driving'
     );
-    if(dur) timeEl.textContent=dur;
-    else timeEl.textContent=timeEl.dataset.fallback||timeEl.textContent;
+    timeEl.textContent=dur||fallback;
   }
 }
 
