@@ -3751,6 +3751,19 @@ const HOTEL_EXAMPLES={
   },
 };
 
+// ── HOTEL_EXAMPLES 키 별칭 (HIER 도시명 ↔ 호텔DB 키 불일치 해소) ──
+(function(){
+  const _a={
+    '제주도':'제주','하롱':'하롱베이','족자카르타':'욕야카르타',
+    '씨엠립':'시엠레아프','장자제':'장가계','LA':'로스앤젤레스',
+    '방갈로르':'뱅갈로르','빅토리아폭포':'빅토리아폴스','브뤼헤':'브뤼허',
+    '갈레':'갈','하와이':'호놀룰루','퀘벡시티':'퀘벡','광주':'광주'
+  };
+  for(const[hier,hotel] of Object.entries(_a)){
+    if(!HOTEL_EXAMPLES[hier]&&HOTEL_EXAMPLES[hotel]) HOTEL_EXAMPLES[hier]=HOTEL_EXAMPLES[hotel];
+  }
+})();
+
 // 예산 레벨 → HOTEL_EXAMPLES 키 매핑
 function _hotelBudgetKey(budget){
   if(budget==='저예산'||budget==='게스트하우스') return '저예산';
