@@ -509,6 +509,23 @@ textarea.fi2{resize:vertical;min-height:90px;}
 .spot-reroll:hover{border-color:var(--pri);color:var(--pri);background:rgba(232,88,10,.07);}
 .spot-reroll:disabled{opacity:.4;cursor:not-allowed;}
 
+/* ══ 스팟 간 이동 화살표 ══ */
+.transit-connector{display:flex;flex-direction:column;align-items:center;margin:4px 0;gap:0;}
+.transit-line-seg{width:2px;height:10px;background:var(--bdr);}
+.transit-info-chip{display:flex;align-items:center;gap:5px;background:var(--card);border:1px solid var(--bdr);border-radius:20px;padding:5px 10px;font-size:11px;color:var(--sub);white-space:nowrap;max-width:100%;overflow:hidden;}
+.transit-info-chip .t-from,.transit-info-chip .t-to{font-weight:600;color:var(--txt);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.transit-info-chip .t-arr{color:var(--pri);font-weight:700;flex-shrink:0;}
+.transit-info-chip .t-mode{flex-shrink:0;}
+
+/* ══ 숙소→첫관광지 ══ */
+.hotel-to-first{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--sub);background:rgba(232,88,10,.05);border:1px dashed rgba(232,88,10,.25);border-radius:8px;padding:6px 10px;margin-bottom:8px;flex-wrap:wrap;}
+.hotel-to-first .htf-badge{background:rgba(232,88,10,.1);color:var(--pri);font-weight:700;border-radius:5px;padding:2px 6px;font-size:10px;flex-shrink:0;}
+
+/* ══ 출처 링크 ══ */
+.spot-src-links{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap;}
+.spot-src-btn{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:3px 7px;border-radius:6px;border:1px solid var(--bdr);background:var(--card);color:var(--sub);text-decoration:none;transition:all .18s;}
+.spot-src-btn:hover{border-color:var(--pri);color:var(--pri);background:rgba(232,88,10,.06);}
+
 /* ══ 저장 결과 ══ */
 .saved-banner{background:linear-gradient(135deg,rgba(34,139,34,.08),rgba(34,139,34,.04));
   border:1px solid rgba(34,139,34,.22);border-radius:var(--r);padding:14px 16px;margin-bottom:14px;
@@ -4732,6 +4749,17 @@ function _runGenerate(){
       return sorted;
     }
 
+    // ── 이동 수단 판별 헬퍼 (renderDayColumns 공통) ──
+    const _transitCities=['도쿄','오사카','싱가포르','홍콩','파리','런던','베를린','뉴욕','상하이','타이베이','베이징','서울'];
+    const _isTCity=_transitCities.some(c=>cityName.includes(c));
+    function _spotTransit(sn,sd){
+      const isLong=/당일치기|섬|케이블카|왕복|페리|투어|버스투어|트레킹|래프팅/.test(sn+sd);
+      const isWalk=/해변|비치|공원|거리|골목|언덕|산책|광장|스트리트/.test(sn+sd);
+      if(isLong) return{mode:'🚌 버스/렌터카',time:'약 30~60분'};
+      if(isWalk) return{mode:'🚶 도보',time:'약 10~15분'};
+      if(_isTCity) return{mode:'🚇 지하철·버스',time:'약 15~25분'};
+      return{mode:'🚕 택시·버스',time:'약 15~30분'};
+    }
     let h=`<div class="itinerary-scroll" role="region" aria-label="일정 컬럼"><div class="days-row">`;
     itin.forEach((day,i)=>{
       const dn=startDayNum+i;
@@ -4754,13 +4782,35 @@ function _runGenerate(){
           ${noNearbyNote}
         </div>`;
       }
-      _balancePeriods(day.spots).forEach(s=>{
+      // ── 스팟 렌더링 (이동 화살표 + 숙소→첫관광지 + 출처 링크 포함) ──
+      const _bspots=_balancePeriods(day.spots);
+      // 숙소→첫관광지 정보
+      if(_bspots.length>0){
+        const _hotelEx=_getHotelExamples(cityName, style&&style.budget?style.budget:'중간');
+        const _hotelArea=(_hotelEx&&_hotelEx[0])?_hotelEx[0].area:'숙소';
+        const _ft=_spotTransit(_bspots[0].n||'',_bspots[0].d||'');
+        h+=`<div class="hotel-to-first">
+          <span class="htf-badge">🏨 숙소 출발</span>
+          <span style="font-weight:600;">${escHtml(_hotelArea)}</span>
+          <span style="color:var(--pri);font-weight:700;flex-shrink:0;">→</span>
+          <span style="font-weight:600;">${escHtml(_bspots[0].n||'')}</span>
+          <span style="flex-shrink:0;">${_ft.mode} ${_ft.time}</span>
+        </div>`;
+      }
+      _bspots.forEach((s,_si)=>{
         const e=enrichSpot(s,destObj,foodState);
         const noFoodNote=(!hasFoodData)?'<span class="no-data-note">일반 추천</span>':'';
         const spotImg=resolveSpotImg(e.n, destObj&&(destObj.kr||destObj.en));
         const spotDet=resolveSpotDetail(e.n, e.d);
         const _sCat=s.cat||'문화/역사';
         const _reason=_getSpotReason(_sCat, style&&style.interests, style&&style.companion);
+        // 출처 링크
+        const _ytQ=encodeURIComponent((e.n||'')+' '+(cityName||'')+' 여행');
+        const _nbQ=encodeURIComponent((e.n||'')+' '+(cityName||'')+' 여행');
+        const _srcLinks=`<div class="spot-src-links">
+          <a class="spot-src-btn" href="https://www.youtube.com/results?search_query=${_ytQ}" target="_blank" rel="noopener noreferrer">🎬 유튜브</a>
+          <a class="spot-src-btn" href="https://search.naver.com/search.naver?where=blog&query=${_nbQ}" target="_blank" rel="noopener noreferrer">📝 블로그</a>
+        </div>`;
         h+=`<div class="spot-block" role="article" aria-label="${e.n}" data-city="${escHtml(cityName)}" data-cat="${escHtml(_sCat)}" data-spot-name="${escHtml(e.n)}">
           ${spotImg?`<img class="spot-thumb-img" src="${spotImg}" alt="${e.n}" loading="lazy" onerror="this.style.display='none'">`:''}
           <div class="spot-block-inner">
@@ -4793,8 +4843,24 @@ function _runGenerate(){
               <span class="spot-meta-badge">${e._transport}</span>
               <span class="spot-meta-badge spot-meta-food">${e._food} ${noFoodNote}</span>
             </div>
+            ${_srcLinks}
           </div>
         </div>`;
+        // ── 스팟 간 이동 화살표 (마지막 스팟 제외) ──
+        if(_si<_bspots.length-1){
+          const _nxt=_bspots[_si+1];
+          const _tr=_spotTransit(_nxt.n||'',_nxt.d||'');
+          h+=`<div class="transit-connector" aria-hidden="true">
+            <div class="transit-line-seg"></div>
+            <div class="transit-info-chip">
+              <span class="t-from">${escHtml(e.n)}</span>
+              <span class="t-arr">→</span>
+              <span class="t-mode">${_tr.mode}</span>
+              <span style="color:var(--sub);flex-shrink:0;">${_tr.time}</span>
+            </div>
+            <div class="transit-line-seg"></div>
+          </div>`;
+        }
       });
       h+=`</div></div>`;
     });
