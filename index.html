@@ -5296,7 +5296,16 @@ function _fmtSecs(secs){
 }
 
 async function _gmapsDuration(origin, destination, mode){
+  // TRANSIT은 departureTime 필수
+  const _depTime=()=>{const d=new Date();d.setDate(d.getDate()+1);d.setHours(9,0,0,0);return d.toISOString();};
   const _call=async(travelMode)=>{
+    const body={
+      origin:{address:origin},
+      destination:{address:destination},
+      travelMode,
+      languageCode:'ko'
+    };
+    if(travelMode==='TRANSIT') body.departureTime=_depTime();
     const res=await fetch('https://routes.googleapis.com/directions/v2:computeRoutes',{
       method:'POST',
       headers:{
@@ -5304,12 +5313,7 @@ async function _gmapsDuration(origin, destination, mode){
         'X-Goog-Api-Key':GMAPS_KEY,
         'X-Goog-FieldMask':'routes.duration'
       },
-      body:JSON.stringify({
-        origin:{address:origin},
-        destination:{address:destination},
-        travelMode,
-        languageCode:'ko'
-      })
+      body:JSON.stringify(body)
     });
     return res.json();
   };
