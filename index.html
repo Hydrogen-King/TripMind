@@ -556,6 +556,17 @@ textarea.fi2{resize:vertical;min-height:90px;}
 /* ══ 스팟 태그 ══ */
 .spot-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;}
 .spot-reason-tag{display:inline-block;font-size:10px;font-weight:700;color:var(--pri);background:rgba(99,102,241,.1);border-radius:20px;padding:2px 8px;margin-bottom:4px;letter-spacing:0.02em;}
+
+/* ══ 추천 이유 섹션 ══ */
+.spot-why{background:rgba(99,102,241,.04);border:1px solid rgba(99,102,241,.14);border-radius:8px;padding:7px 10px;margin-bottom:6px;}
+.spot-why-header{font-size:10px;font-weight:700;color:rgba(99,102,241,.8);margin-bottom:5px;letter-spacing:.02em;}
+.spot-why-chips{display:flex;flex-wrap:wrap;gap:4px;}
+.spot-why-chip{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 7px;border-radius:12px;font-weight:600;line-height:1.4;}
+.spot-why-chip.companion{background:rgba(232,88,10,.1);color:var(--pri);border:1px solid rgba(232,88,10,.2);}
+.spot-why-chip.interest{background:rgba(22,163,74,.1);color:#16a34a;border:1px solid rgba(22,163,74,.2);}
+.spot-why-chip.category{background:rgba(99,102,241,.1);color:rgba(79,82,221,1);border:1px solid rgba(99,102,241,.2);}
+/* ══ 출처 배지 ══ */
+.spot-src-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:3px 7px;border-radius:6px;background:rgba(232,88,10,.08);border:1px solid rgba(232,88,10,.2);color:var(--pri);}
 .spot-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;
   background:rgba(232,88,10,.09);border:1px solid rgba(232,88,10,.2);color:var(--pri);
   white-space:nowrap;}
@@ -4304,6 +4315,49 @@ function _getSpotReason(cat, interests, companion){
   return null;
 }
 
+// 카테고리별 이모지·설명
+const _CAT_META={
+  'food':        {icon:'🍜', label:'현지 맛집'},
+  '쇼핑':        {icon:'🛍️', label:'쇼핑 명소'},
+  '문화/역사':   {icon:'🏯', label:'문화·역사 명소'},
+  '자연':        {icon:'🌿', label:'자연·경관'},
+  '야경':        {icon:'🌃', label:'야경 명소'},
+  '카페':        {icon:'☕', label:'카페·디저트'},
+  '액티비티':    {icon:'🎢', label:'액티비티'},
+  '힐링/스파':   {icon:'💆', label:'힐링·스파'},
+  '힐링':        {icon:'💆', label:'힐링 코스'},
+};
+const _COMPANION_ICON={'부모님':'👨‍👩‍👦','어린이':'👶','커플':'💑','혼행':'🎒','친구들':'👯','회사/단체':'🏢'};
+
+function _buildSpotWhy(cat, interests, companion){
+  const chips=[];
+
+  // ① 카테고리 칩 (항상)
+  const meta=_CAT_META[cat]||{icon:'📍',label:cat};
+  chips.push(`<span class="spot-why-chip category">${meta.icon} ${meta.label}</span>`);
+
+  // ② 관심사 매칭 칩
+  if(interests&&interests.includes(cat)){
+    chips.push(`<span class="spot-why-chip interest">✓ ${meta.label} 관심사 반영</span>`);
+  }
+
+  // ③ 동행자 맞춤 이유 칩
+  if(companion&&_COMPANION_REASON[companion]&&_COMPANION_REASON[companion][cat]){
+    const icon=_COMPANION_ICON[companion]||'👥';
+    const txt=_COMPANION_REASON[companion][cat];
+    chips.push(`<span class="spot-why-chip companion">${icon} ${txt}</span>`);
+  } else if(companion&&_COMPANION_ICON[companion]){
+    // 동행자는 있지만 해당 카테고리 매핑 없을 때 — 간단 표시
+    chips.push(`<span class="spot-why-chip companion">${_COMPANION_ICON[companion]} ${companion} 여행 코스</span>`);
+  }
+
+  if(!chips.length) return '';
+  return `<div class="spot-why">
+    <div class="spot-why-header">💡 이 스팟을 추천한 이유</div>
+    <div class="spot-why-chips">${chips.join('')}</div>
+  </div>`;
+}
+
 // ══════════════════════════════════════════════
 // GENERATE ITINERARY
 // ══════════════════════════════════════════════
@@ -4562,9 +4616,12 @@ function generate(skipDomRead){
   },30));
 }
 
+let _lastStyle=null; // rerollSpot에서 추천 이유 표시용 캐시
+
 function _runGenerate(){
   destroyAllMaps(); // ③ 이전 지도 인스턴스 제거 (메모리 누수 방지)
   const style=parseStyle(ST.styleText);
+  _lastStyle=style; // 전역 캐시
   const days=Math.round((new Date(ST.to)-new Date(ST.from))/86400000)+1;
   const nights=days-1;
   const ko=n=>n.toLocaleString('ko-KR');
@@ -4812,11 +4869,15 @@ function _runGenerate(){
         const spotImg=resolveSpotImg(e.n, destObj&&(destObj.kr||destObj.en));
         const spotDet=resolveSpotDetail(e.n, e.d);
         const _sCat=s.cat||'문화/역사';
-        const _reason=_getSpotReason(_sCat, style&&style.interests, style&&style.companion);
+        // 추천 이유 HTML
+        const _whyHTML=_buildSpotWhy(_sCat, style&&style.interests, style&&style.companion);
         // 출처 링크
         const _ytQ=encodeURIComponent((e.n||'')+' '+(cityName||'')+' 여행');
         const _nbQ=encodeURIComponent((e.n||'')+' '+(cityName||'')+' 여행');
+        const _wkQ=encodeURIComponent(e.n||'');
         const _srcLinks=`<div class="spot-src-links">
+          <span class="spot-src-badge">🔖 TripMind 큐레이션</span>
+          <a class="spot-src-btn" href="https://ko.wikipedia.org/w/index.php?search=${_wkQ}" target="_blank" rel="noopener noreferrer">📖 위키백과</a>
           <a class="spot-src-btn" href="https://www.youtube.com/results?search_query=${_ytQ}" target="_blank" rel="noopener noreferrer">🎬 유튜브</a>
           <a class="spot-src-btn" href="https://search.naver.com/search.naver?where=blog&query=${_nbQ}" target="_blank" rel="noopener noreferrer">📝 블로그</a>
         </div>`;
@@ -4834,7 +4895,7 @@ function _runGenerate(){
                 title="Google Maps에서 보기" aria-label="${e.n} 지도 보기"
                 onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.6">🗺️</a>
             </div>
-            ${_reason?`<div class="spot-reason-tag">✓ ${_reason}</div>`:''}
+            ${_whyHTML}
             <div class="spot-block-desc">${e.d}</div>
             ${spotDet?`<div class="spot-detail-wrap">
               <div class="spot-detail-sec">
@@ -10094,6 +10155,12 @@ function rerollSpot(btn){
   block.style.transition='opacity .2s';
   block.style.opacity='0';
   setTimeout(()=>{
+    const _rerollCat=cat;
+    const _rerollStyle=_lastStyle||{};
+    const _rerollWhyHTML=_buildSpotWhy(_rerollCat,_rerollStyle.interests,_rerollStyle.companion);
+    const _rerollYtQ=encodeURIComponent(enriched.n+' '+cityKr+' 여행');
+    const _rerollNbQ=encodeURIComponent(enriched.n+' '+cityKr+' 여행');
+    const _rerollWkQ=encodeURIComponent(enriched.n);
     block.dataset.spotName=enriched.n;
     block.innerHTML=`
       ${spotImg?`<img class="spot-thumb-img" src="${spotImg}" alt="${escHtml(enriched.n)}" loading="lazy" onerror="this.style.display='none'">`:''}
@@ -10109,6 +10176,7 @@ function rerollSpot(btn){
             title="Google Maps" aria-label="${escHtml(enriched.n)} 지도"
             onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.6">🗺️</a>
         </div>
+        ${_rerollWhyHTML}
         <div class="spot-block-desc">${escHtml(enriched.d)}</div>
         ${spotDet?`<div class="spot-detail-wrap">
           <div class="spot-detail-sec">
@@ -10127,6 +10195,12 @@ function rerollSpot(btn){
           <span class="spot-meta-badge spot-meta-food">${enriched._food}${!hasFoodData?' <span class="no-data-note">일반 추천</span>':''}</span>
         </div>
         <div class="spot-places-info"></div>
+        <div class="spot-src-links">
+          <span class="spot-src-badge">🔖 TripMind 큐레이션</span>
+          <a class="spot-src-btn" href="https://ko.wikipedia.org/w/index.php?search=${_rerollWkQ}" target="_blank" rel="noopener noreferrer">📖 위키백과</a>
+          <a class="spot-src-btn" href="https://www.youtube.com/results?search_query=${_rerollYtQ}" target="_blank" rel="noopener noreferrer">🎬 유튜브</a>
+          <a class="spot-src-btn" href="https://search.naver.com/search.naver?where=blog&query=${_rerollNbQ}" target="_blank" rel="noopener noreferrer">📝 블로그</a>
+        </div>
       </div>`;
     block.style.opacity='1';
     showToast('✅ 스팟이 교체되었어요!',2000);
