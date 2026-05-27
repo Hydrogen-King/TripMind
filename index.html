@@ -663,6 +663,67 @@ textarea.fi2{resize:vertical;min-height:90px;}
 }
 
 /* ══════════════════════════════════════
+   💻 데스크탑 레이아웃 (min-width: 860px)
+   ══════════════════════════════════════ */
+@media(min-width:860px){
+  /* 전체 너비 확장 */
+  #app{max-width:min(1400px,96vw);padding:0 40px;}
+
+  /* 기본 폰트 사이즈 업 */
+  body{font-size:15px;}
+  .pg-t{font-size:26px;margin-bottom:14px;}
+  .sec-title{font-size:20px;}
+  .fl{font-size:14px;}
+
+  /* 도시 칩 크게 */
+  .chip{font-size:14px;padding:8px 15px;}
+  .dest-city-scroll{max-height:none;overflow:visible;}
+
+  /* 입력 폼: 날짜·인원 가로 확장 */
+  .trip-row{gap:20px;}
+  .trip-field-lbl{font-size:13px;}
+  .trip-row input[type=date]{font-size:15px;}
+
+  /* 여행 스타일 섹션 항상 펼쳐짐 */
+  #style-collapse{display:block !important;overflow:visible !important;}
+  .style-toggle-arrow{display:none !important;}
+  .style-section-toggle{cursor:default;pointer-events:none;}
+
+  /* 결과 화면: 일정 카드 3열 */
+  .days-row{grid-template-columns:repeat(3,1fr);gap:16px;}
+  .day-col{min-width:unset;max-width:unset;}
+  .day-col-head{font-size:14px;padding:13px 16px;}
+  .itinerary-scroll{overflow:visible;}
+
+  /* 스팟 카드 폰트 */
+  .spot-block-name{font-size:15px;}
+  .spot-block-desc{font-size:13px;}
+  .spot-meta-badge{font-size:11px;}
+
+  /* 결과 상단 그리드 */
+  .result-info-grid{grid-template-columns:repeat(4,1fr);}
+  .result-info-val{font-size:13px;}
+
+  /* 홈 화면 */
+  .home-grid{grid-template-columns:repeat(4,1fr);}
+  .home-card-title{font-size:13px;}
+
+  /* 비용 카드 */
+  .cost-card{font-size:14px;}
+
+  /* 체크리스트 항상 펼침 */
+  .checklist-body{display:block !important;}
+  .checklist-toggle-arrow{display:none !important;}
+}
+
+@media(min-width:1200px){
+  /* 4열 레이아웃 */
+  .days-row{grid-template-columns:repeat(4,1fr);}
+  #app{padding:0 56px;}
+  .spot-block-name{font-size:16px;}
+}
+
+/* ══════════════════════════════════════
    iOS / 아이폰 최적화
    ══════════════════════════════════════ */
 
@@ -10031,14 +10092,16 @@ function enrichSpot(s, destObj, foodState){
       const arr=cr.m; food='🍽 맛집 추천: '+arr[fs._mi%arr.length]; fs._mi++;
     }
   } else {
-    // 도시별 데이터 없으면 타입 기반
-    if(/시장|마켓|야시장|포차|야타이|도톤보리|먹자/.test(n+d)) food='🍜 현장 로컬 먹거리 탐방';
-    else if(/박물관|미술관|기념관/.test(n+d)) food='☕ 인근 뮤지엄 카페·레스토랑';
-    else if(/궁전|성|사원|신사|사찰|성당|왕궁/.test(n+d)) food='🍱 주변 전통 식당 추천';
-    else if(/해변|비치|선셋|야경|전망대/.test(n+d)) food='🌅 뷰 좋은 루프탑 레스토랑';
-    else if(/쇼핑|몰|백화점/.test(n+d)) food='🛍️ 푸드코트 & 주변 맛집';
-    else if(/온천|스파|마사지|힐링/.test(n+d)) food='🫖 근처 전통 찻집·카페';
-    else food='🍽️ 도보권 현지 인기 식당';
+    // 도시별 데이터 없으면 타입 기반 — 모두 Google Maps 검색 링크 포함
+    const _foodMapQ=(keyword)=>encodeURIComponent(keyword+' '+(city||'')+' '+n);
+    const _flink=(label,kw)=>`${label} <a href="https://www.google.com/maps/search/?q=${_foodMapQ(kw)}" target="_blank" rel="noopener noreferrer" style="font-size:9px;color:var(--pri);font-weight:700;text-decoration:none;">지도검색→</a>`;
+    if(/시장|마켓|야시장|포차|야타이|도톤보리|먹자/.test(n+d))      food=_flink('🍜 현장 로컬 먹거리','로컬 먹거리 식당');
+    else if(/박물관|미술관|기념관/.test(n+d))                         food=_flink('☕ 인근 뮤지엄 카페','카페 레스토랑');
+    else if(/궁전|성|사원|신사|사찰|성당|왕궁/.test(n+d))            food=_flink('🍱 주변 전통 식당','전통 식당');
+    else if(/해변|비치|선셋|야경|전망대/.test(n+d))                   food=_flink('🌅 뷰 좋은 레스토랑','뷰 레스토랑');
+    else if(/쇼핑|몰|백화점/.test(n+d))                              food=_flink('🛍️ 푸드코트 & 맛집','맛집 식당');
+    else if(/온천|스파|마사지|힐링/.test(n+d))                        food=_flink('🫖 근처 찻집·카페','카페 찻집');
+    else                                                              food=_flink('🍽️ 주변 맛집','맛집 레스토랑');
   }
   // 구글 지도 검색 링크 추가
   const mapQ=encodeURIComponent(n+(city?' '+city:''));
