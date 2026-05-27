@@ -951,7 +951,7 @@ body{overscroll-behavior-y:none;}
     <div id="selected-dests-chips" style="display:flex;flex-wrap:wrap;gap:2px;"></div>
     <!-- 도시별 방문 일수 직접 설정 (다중 도시 시 표시) -->
     <div id="city-days-section" style="display:none;">
-      <div class="city-days-toggle" id="city-days-toggle" onclick="toggleCityDays()">✏️ 도시별 방문 일수 직접 설정</div>
+      <div class="city-days-toggle" id="city-days-toggle" onclick="toggleCityDays()">✏️ 도시별 방문 일수 직접 설정 <span style="font-size:10px;opacity:.7;">(선택사항)</span></div>
       <div class="city-days-box" id="city-days-box">
         <div id="city-days-rows"></div>
         <div class="city-days-total" id="city-days-total"></div>
@@ -2114,11 +2114,18 @@ function renderCityDaysRows(){
   const totalDays=_getTotalDays();
 
   // 기본값: 아직 설정 안 된 도시는 균등 배분
-  if(Object.keys(ST.customDays).length===0 && totalDays>0){
-    const base=Math.floor(totalDays/ST.dests.length);
-    const rem=totalDays%ST.dests.length;
-    ST.dests.forEach((c,i)=>{ ST.customDays[c]=base+(i<rem?1:0); });
-  }
+  // totalDays가 0이어도 1일씩 기본값으로 설정
+  ST.dests.forEach((c,i)=>{
+    if(!ST.customDays[c]){
+      if(totalDays>0){
+        const base=Math.floor(totalDays/ST.dests.length);
+        const rem=totalDays%ST.dests.length;
+        ST.customDays[c]=base+(i<rem?1:0);
+      } else {
+        ST.customDays[c]=1;
+      }
+    }
+  });
 
   rowsEl.innerHTML=ST.dests.map(city=>{
     const days=ST.customDays[city]||1;
@@ -4970,12 +4977,25 @@ function _runGenerate(){
     let h=`<div class="itinerary-scroll" role="region" aria-label="일정 컬럼"><div class="days-row">`;
     itin.forEach((day,i)=>{
       const dn=startDayNum+i;
+      // 실제 날짜 계산
+      let _dateStr='';
+      if(ST.from){
+        const _d=new Date(ST.from);
+        _d.setDate(_d.getDate()+dn-1);
+        _dateStr=_d.toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
+      }
+      // 라벨: "Day 1 — 도착 & 첫 탐험" → Day번호 교체 + 날짜 추가
       const lbl=day.label.replace(/Day \d+/,`Day ${dn}`);
+      const _suffix=lbl.replace(/^Day \d+\s*[—\-]?\s*/,'').trim();
+      const _headMain=`<div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-weight:800;">Day ${dn}${_suffix?` — ${_suffix}`:''}</span>
+        ${_dateStr?`<span style="font-size:11px;font-weight:700;color:var(--pri);white-space:nowrap;">${_dateStr}</span>`:''}
+      </div>`;
       const dayCost=Array.isArray(dailyCosts)?dailyCosts[i]:(dailyCosts||0);
       const costBadge=dayCost
         ?`<span style="font-size:10px;color:var(--pri);font-weight:700;display:block;margin-top:3px;letter-spacing:0;">~${dayCost.toLocaleString('ko-KR')}원 예상</span>`
         :'';
-      h+=`<div class="day-col" role="article" aria-label="${lbl}"><div class="day-col-head">${lbl}${costBadge}</div><div class="day-col-body">`;
+      h+=`<div class="day-col" role="article" aria-label="${lbl}"><div class="day-col-head">${_headMain}${costBadge}</div><div class="day-col-body">`;
       if(day.spots.length===0){
         // 자유 탐험의 날
         const suggestions=hasNearbyData
