@@ -252,6 +252,24 @@ textarea.fi2{resize:vertical;min-height:90px;}
   font-size:12px;font-weight:600;color:#FF8C42;margin:2px;}
 .sel-city-x{cursor:pointer;font-size:15px;opacity:.7;line-height:1;padding-left:1px;}
 .sel-city-x:hover{opacity:1;}
+/* ── 도시별 일수 설정 ── */
+.city-days-toggle{display:inline-flex;align-items:center;gap:5px;margin-top:8px;font-size:11px;font-weight:700;color:var(--sub);cursor:pointer;padding:4px 8px;border:1px dashed var(--bdr);border-radius:8px;transition:all .15s;}
+.city-days-toggle:hover{border-color:var(--pri);color:var(--pri);}
+.city-days-toggle.active{border-style:solid;border-color:var(--pri);color:var(--pri);background:rgba(232,88,10,.05);}
+.city-days-box{margin-top:8px;background:var(--card2);border:1px solid var(--bdr);border-radius:10px;padding:10px 12px;display:none;}
+.city-days-box.show{display:block;}
+.city-days-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid var(--bdr);}
+.city-days-row:last-of-type{border-bottom:none;}
+.city-days-name{font-size:12px;font-weight:600;color:var(--txt);flex:1;}
+.city-days-ctrl{display:flex;align-items:center;gap:6px;}
+.city-days-btn{width:26px;height:26px;border:1px solid var(--bdr);border-radius:6px;background:var(--card);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--txt);transition:all .15s;flex-shrink:0;}
+.city-days-btn:hover{border-color:var(--pri);color:var(--pri);}
+.city-days-num{font-size:14px;font-weight:700;color:var(--txt);min-width:28px;text-align:center;}
+.city-days-unit{font-size:11px;color:var(--sub);}
+.city-days-total{margin-top:8px;font-size:11px;text-align:right;font-weight:600;}
+.city-days-total.ok{color:#16a34a;}
+.city-days-total.over{color:#dc2626;}
+.city-days-total.under{color:#d97706;}
 /* ── 결과화면: 2열 세로 그리드 (좌우 스크롤 없음) ── */
 .itinerary-scroll{margin-bottom:16px;}
 .days-row{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;align-items:start;}
@@ -931,6 +949,14 @@ body{overscroll-behavior-y:none;}
   <div id="selected-dests-area" class="sel-dests-area" style="display:none;">
     <div class="sel-dests-label">선택된 도시</div>
     <div id="selected-dests-chips" style="display:flex;flex-wrap:wrap;gap:2px;"></div>
+    <!-- 도시별 방문 일수 직접 설정 (다중 도시 시 표시) -->
+    <div id="city-days-section" style="display:none;">
+      <div class="city-days-toggle" id="city-days-toggle" onclick="toggleCityDays()">✏️ 도시별 방문 일수 직접 설정</div>
+      <div class="city-days-box" id="city-days-box">
+        <div id="city-days-rows"></div>
+        <div class="city-days-total" id="city-days-total"></div>
+      </div>
+    </div>
   </div>
 
   <!-- ② 날짜+인원 가로 카드 -->
@@ -1935,7 +1961,8 @@ for(const[c,countries] of Object.entries(HIER)) for(const cities of Object.value
 const ST = {
   dest:'', dests:[], from:'', to:'', ppl:2,
   styleText:'', interests:[], budget:'중간', accom:'일반호텔',
-  stamina:'보통', accomZone:'', accomMobility:'고정'
+  stamina:'보통', accomZone:'', accomMobility:'고정',
+  customDays:{} // 도시별 방문 일수 직접 설정 {도시명: 일수}
 };
 
 // ══════════════════════════════════════════════
@@ -2048,10 +2075,98 @@ function renderSelectedDests(){
     const flag=d?d.country.replace(/[^🇦-🇿\u{1F1E0}-\u{1F1FF}]/gu,'').trim():'';
     return `<span class="sel-city-tag">${flag} ${city}<span class="sel-city-x" onclick="removeCity('${city}')">×</span></span>`;
   }).join('');
+
+  // 다중 도시일 때만 일수 설정 섹션 표시
+  const sec=document.getElementById('city-days-section');
+  if(!sec) return;
+  if(ST.dests.length<2){sec.style.display='none';return;}
+  sec.style.display='block';
+
+  // 없어진 도시 customDays에서 제거
+  Object.keys(ST.customDays).forEach(c=>{if(!ST.dests.includes(c)) delete ST.customDays[c];});
+
+  // 박스가 열려있으면 rows 갱신
+  const box=document.getElementById('city-days-box');
+  if(box&&box.classList.contains('show')) renderCityDaysRows();
+}
+
+function toggleCityDays(){
+  const toggle=document.getElementById('city-days-toggle');
+  const box=document.getElementById('city-days-box');
+  if(!toggle||!box) return;
+  const opening=!box.classList.contains('show');
+  box.classList.toggle('show',opening);
+  toggle.classList.toggle('active',opening);
+  if(opening) renderCityDaysRows();
+}
+
+function _getTotalDays(){
+  const f=document.getElementById('i-from')?.value;
+  const t=document.getElementById('i-to')?.value;
+  if(!f||!t) return 0;
+  return Math.round((new Date(t)-new Date(f))/86400000)+1;
+}
+
+function renderCityDaysRows(){
+  const rowsEl=document.getElementById('city-days-rows');
+  const totalEl=document.getElementById('city-days-total');
+  if(!rowsEl) return;
+  const totalDays=_getTotalDays();
+
+  // 기본값: 아직 설정 안 된 도시는 균등 배분
+  if(Object.keys(ST.customDays).length===0 && totalDays>0){
+    const base=Math.floor(totalDays/ST.dests.length);
+    const rem=totalDays%ST.dests.length;
+    ST.dests.forEach((c,i)=>{ ST.customDays[c]=base+(i<rem?1:0); });
+  }
+
+  rowsEl.innerHTML=ST.dests.map(city=>{
+    const days=ST.customDays[city]||1;
+    const d=DB[city];
+    const flag=d?d.country.replace(/[^🇦-🇿\u{1F1E0}-\u{1F1FF}]/gu,'').trim():'';
+    return `<div class="city-days-row">
+      <span class="city-days-name">${flag} ${city}</span>
+      <div class="city-days-ctrl">
+        <button class="city-days-btn" onclick="adjustCityDays('${city}',-1)">−</button>
+        <span class="city-days-num" id="cdn-${city}">${days}</span>
+        <button class="city-days-btn" onclick="adjustCityDays('${city}',+1)">＋</button>
+        <span class="city-days-unit">일</span>
+      </div>
+    </div>`;
+  }).join('');
+  updateCityDaysTotal();
+}
+
+function adjustCityDays(city, delta){
+  const cur=ST.customDays[city]||1;
+  const next=Math.max(1,cur+delta);
+  ST.customDays[city]=next;
+  const el=document.getElementById('cdn-'+city);
+  if(el) el.textContent=next;
+  updateCityDaysTotal();
+}
+
+function updateCityDaysTotal(){
+  const totalEl=document.getElementById('city-days-total');
+  if(!totalEl) return;
+  const totalDays=_getTotalDays();
+  const sum=ST.dests.reduce((acc,c)=>acc+(ST.customDays[c]||1),0);
+  if(totalDays<=0){totalEl.textContent='';return;}
+  if(sum===totalDays){
+    totalEl.className='city-days-total ok';
+    totalEl.textContent=`✅ 합계 ${sum}일 = 전체 일정 ${totalDays}일`;
+  } else if(sum>totalDays){
+    totalEl.className='city-days-total over';
+    totalEl.textContent=`⚠️ 합계 ${sum}일 > 전체 일정 ${totalDays}일 (${sum-totalDays}일 초과)`;
+  } else {
+    totalEl.className='city-days-total under';
+    totalEl.textContent=`💡 합계 ${sum}일 < 전체 일정 ${totalDays}일 (${totalDays-sum}일 남음)`;
+  }
 }
 function removeCity(city){
   ST.dests=ST.dests.filter(c=>c!==city);
   ST.dest=ST.dests[0]||'';
+  delete ST.customDays[city];
   document.querySelectorAll('#city-chips .chip').forEach(c=>{
     if(c.textContent.trim()===city) c.classList.remove('on');
   });
@@ -2119,6 +2234,8 @@ function calcNights(){
   const diff=Math.round((new Date(tVal)-new Date(fVal))/(1000*60*60*24));
   if(diff>0){lbl.textContent=diff+'박'+(diff+1)+'일';lbl.style.display='inline-block';}
   else{lbl.style.display='none';}
+  // 다중 도시 일수 합계 갱신
+  if(document.getElementById('city-days-box')?.classList.contains('show')) updateCityDaysTotal();
 }
 
 function goStyle(){
@@ -4966,8 +5083,10 @@ function _runGenerate(){
   }
 
   if(isMulti){
-    const daysPerCity=Math.floor(days/destKeys.length);
-    const remainder=days%destKeys.length;
+    // customDays가 설정된 경우 사용, 아니면 균등 배분
+    const _hasCustom=Object.keys(ST.customDays).length>0&&destKeys.every(k=>ST.customDays[k]>0);
+    const daysPerCity=_hasCustom?0:Math.floor(days/destKeys.length);
+    const remainder=_hasCustom?0:days%destKeys.length;
     html+=`<div class="sec-title">📅 추천 여행 일정</div>`;
     let globalDay=1;
     let totalCost={flight:0,hotel:0,food:0,tr:0,act:0,total:0};
@@ -4975,7 +5094,7 @@ function _runGenerate(){
 
     destKeys.forEach((key,ci)=>{
       const destObj=findDest(key);
-      const cityDays=daysPerCity+(ci<remainder?1:0);
+      const cityDays=_hasCustom?(ST.customDays[key]||1):(daysPerCity+(ci<remainder?1:0));
       if(cityDays===0) return;
       let cityC=null, perDayCost=0;
       if(destObj){
