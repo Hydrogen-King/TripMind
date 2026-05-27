@@ -726,6 +726,36 @@ textarea.fi2{resize:vertical;min-height:90px;}
 
   /* ⑫ 숙소·링크 버튼 */
   .link-btn{font-size:14px !important;}
+
+  /* ⑬ 홈 화면 데스크탑 전용 — 중앙 정렬·여백 최소화 */
+  #s-home{display:flex !important;flex-direction:column !important;align-items:center !important;text-align:center !important;}
+  #s-home .bar{width:100% !important;}
+  /* 로고/히어로 확대 */
+  #s-home .logo{margin:20px 0 28px !important;}
+  #s-home .logo .logo-em{font-size:68px !important;display:block;}
+  #s-home .logo .logo-t{font-size:52px !important;letter-spacing:-2.5px !important;}
+  #s-home .logo .logo-s{font-size:17px !important;margin-top:8px !important;}
+  /* 메인 카드 2열 고정, 충분히 크게 */
+  #s-home .home-grid{grid-template-columns:repeat(2,1fr) !important;max-width:900px !important;width:100% !important;gap:24px !important;margin-bottom:20px !important;}
+  #s-home .home-card{padding:44px 36px !important;min-height:210px !important;display:flex !important;flex-direction:column !important;align-items:center !important;text-align:center !important;}
+  #s-home .home-card-icon{font-size:52px !important;margin-bottom:14px !important;}
+  #s-home .home-card-title{font-size:26px !important;line-height:1.2 !important;margin-bottom:10px !important;}
+  #s-home .home-card-desc{font-size:15px !important;line-height:1.6 !important;margin-bottom:14px !important;}
+  #s-home .home-card-cta{font-size:16px !important;margin-top:auto !important;}
+  /* 특징 배지 중앙 */
+  #s-home .home-feats{justify-content:center !important;max-width:860px !important;padding:14px 20px !important;}
+  #s-home .home-feat{font-size:14px !important;}
+  /* 설치 버튼 */
+  #s-home > button[onclick="openInstallModal()"]{font-size:14px !important;padding:11px 24px !important;}
+  /* 사용법 3열 가로 배치 */
+  #s-home .home-howto{max-width:920px !important;width:100% !important;padding:22px 28px !important;margin-top:20px !important;}
+  #s-home .home-howto-title{font-size:15px !important;margin-bottom:16px !important;}
+  #s-home .home-howto-steps-wrap{display:grid !important;grid-template-columns:repeat(3,1fr) !important;gap:20px !important;}
+  #s-home .home-howto-step{flex-direction:column !important;align-items:center !important;text-align:center !important;padding:0 !important;border-bottom:none !important;gap:10px !important;}
+  #s-home .home-howto-step-title{font-size:16px !important;}
+  #s-home .home-howto-step-desc{font-size:13px !important;}
+  /* 저장된 일정 */
+  #s-home #saved-section{max-width:920px !important;width:100% !important;}
 }
 
 @media(min-width:1200px){
@@ -951,6 +981,7 @@ body{overscroll-behavior-y:none;}
   <!-- 사용 가이드 -->
   <div class="home-howto">
     <div class="home-howto-title">📖 이렇게 사용하세요</div>
+    <div class="home-howto-steps-wrap">
     <div class="home-howto-step">
       <div class="home-howto-num">1</div>
       <div>
@@ -971,6 +1002,7 @@ body{overscroll-behavior-y:none;}
         <div class="home-howto-step-title">일정 & 예약 링크 확인</div>
         <div class="home-howto-step-desc">날짜별 상세 일정 + 항공·숙소·액티비티 링크까지 한번에!</div>
       </div>
+    </div>
     </div>
   </div>
 
