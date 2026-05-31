@@ -16,7 +16,7 @@
 <meta property="og:image" content="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=1200&h=630&fit=crop&auto=format">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:url" content="https://tripmind.netlify.app">
+<meta property="og:url" content="https://hydrogen-king.github.io/TripMind">
 <meta property="og:site_name" content="TripMind">
 <meta property="og:locale" content="ko_KR">
 <!-- Twitter Card -->
@@ -43,11 +43,10 @@
 <!-- PWA -->
 <meta name="theme-color" content="#E8580A">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TripMind">
+<!-- ↑ apple-mobile-web-app-* 는 위(line 33~35)에서 이미 선언됨 — 중복 제거 -->
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23E8580A'/%3E%3Ctext y='.9em' font-size='80' x='10'%3E✈️%3C/text%3E%3C/svg%3E">
-<!-- Google Analytics 4 ※ G-XXXXXXXXXX 를 본인 측정 ID로 교체하세요 -->
+<!-- Google Analytics 4 — G-XXXXXXXXXX 를 실제 측정 ID로 교체 후 아래 주석 해제하세요 -->
+<!--
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
 <script>
 window.dataLayer=window.dataLayer||[];
@@ -55,6 +54,9 @@ function gtag(){dataLayer.push(arguments);}
 gtag('js',new Date());
 gtag('config','G-XXXXXXXXXX');
 </script>
+-->
+<!-- gtag stub — Analytics 비활성 시에도 gtag 호출 코드가 오류 없이 실행되도록 -->
+<script>window.gtag=window.gtag||function(){};</script>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -767,6 +769,48 @@ textarea.fi2{resize:vertical;min-height:90px;}
 }
 
 /* ══════════════════════════════════════
+   모바일 스크롤 카드 우측 여백 보정
+   ══════════════════════════════════════ */
+@media(max-width:640px){
+  .itinerary-scroll{padding-right:18px;}
+}
+
+/* ══════════════════════════════════════
+   맨 위로 버튼
+   ══════════════════════════════════════ */
+#back-to-top{
+  position:fixed;bottom:72px;right:18px;width:44px;height:44px;
+  border-radius:50%;background:var(--pri);color:#fff;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:19px;
+  box-shadow:0 4px 18px rgba(232,88,10,.4);z-index:900;
+  opacity:0;pointer-events:none;
+  transition:opacity .25s,transform .25s;transform:translateY(10px);
+}
+#back-to-top.visible{opacity:1;pointer-events:auto;transform:translateY(0);}
+
+/* ══════════════════════════════════════
+   다크모드 (prefers-color-scheme: dark)
+   ══════════════════════════════════════ */
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#0F1117;--card:#1A1D2E;--card2:#1E2133;
+    --txt:#E8EAF6;--sub:rgba(232,234,246,.52);--bdr:rgba(232,234,246,.13);
+    --shadow:0 2px 14px rgba(0,0,0,.4);
+  }
+  .bg{background:linear-gradient(135deg,#0F1117 0%,#141728 55%,#0F1117 100%);}
+  .o1{opacity:.07;} .o2{opacity:.06;} .o3{opacity:.05;}
+  .logo-t{background:linear-gradient(135deg,#FF8C42,#FFB07A);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  input[type=date],input[type=number],input[type=text],textarea,select{
+    background:var(--card2)!important;color:var(--txt)!important;border-color:var(--bdr)!important;}
+  .spot-src-btn{background:rgba(232,234,246,.06)!important;color:var(--sub)!important;}
+  .spot-why{background:rgba(99,102,241,.07)!important;}
+  .link-btn{background:#22253A!important;}
+  .ico{background:var(--card)!important;}
+  #back-to-top{box-shadow:0 4px 18px rgba(0,0,0,.5);}
+}
+
+/* ══════════════════════════════════════
    iOS / 아이폰 최적화
    ══════════════════════════════════════ */
 
@@ -1344,7 +1388,22 @@ body{overscroll-behavior-y:none;}
 </div>
 
 </div>
+<!-- 맨 위로 버튼 (결과 화면 스크롤용) -->
+<button id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="맨 위로">↑</button>
 <script>
+// ── 맨 위로 버튼 스크롤 감지 ──
+(function(){
+  let _bttTimer;
+  window.addEventListener('scroll',function(){
+    clearTimeout(_bttTimer);
+    _bttTimer=setTimeout(function(){
+      const btn=document.getElementById('back-to-top');
+      if(!btn) return;
+      const onResult=document.getElementById('s-result')&&document.getElementById('s-result').classList.contains('on');
+      btn.classList.toggle('visible', window.scrollY>300 && onResult);
+    },50);
+  },{passive:true});
+})();
 // ══════════════════════════════════════════════
 // 보안: XSS 방어용 HTML 이스케이프
 // ══════════════════════════════════════════════
@@ -5074,7 +5133,10 @@ function _runGenerate(){
     }
 
     // ── 이동 수단 판별 헬퍼 (renderDayColumns 공통) ──
-    const _transitCities=['도쿄','오사카','싱가포르','홍콩','파리','런던','베를린','뉴욕','상하이','타이베이','베이징','서울'];
+    const _transitCities=['도쿄','오사카','싱가포르','홍콩','파리','런던','베를린','뉴욕','상하이','타이베이','베이징','서울',
+    '암스테르담','빈','프라하','부다페스트','바르셀로나','마드리드','로마','밀라노','뮌헨','취리히',
+    '스톡홀름','코펜하겐','헬싱키','오슬로','브뤼셀','리스본','방콕','쿠알라룸푸르','치앙마이',
+    'LA','로스앤젤레스','시카고','보스턴','시드니','멜버른','시애틀','샌프란시스코'];
     const _isTCity=_transitCities.some(c=>cityName.includes(c));
     function _spotTransit(sn,sd){
       const isLong=/당일치기|섬|케이블카|왕복|페리|투어|버스투어|트레킹|래프팅/.test(sn+sd);
@@ -5566,7 +5628,22 @@ const GEO={
   부에노스아이레스:[-34.604,-58.382],리우데자네이루:[-22.907,-43.173],
   시드니:[-33.869,151.209],멜버른:[-37.814,144.963],골드코스트:[-28.017,153.400],퀸스타운:[-45.031,168.663],
   서울:[37.567,126.978],부산:[35.180,129.076],제주도:[33.500,126.531],
-  괌:[13.444,144.794],마라케시:[31.630,-7.981],케이프타운:[-33.925,18.424],카이로:[30.044,31.236]
+  전주:[35.820,127.150],인천:[37.456,126.705],
+  괌:[13.444,144.794],마라케시:[31.630,-7.981],케이프타운:[-33.925,18.424],카이로:[30.044,31.236],
+  // 이탈리아 추가
+  볼자노:[46.498,11.355],돌로미티:[46.494,11.920],나폴리:[40.851,14.268],아말피:[40.634,14.603],
+  베로나:[45.438,10.992],볼로냐:[44.494,11.343],토리노:[45.070,7.687],팔레르모:[38.116,13.362],
+  // 유럽 추가
+  헬싱키:[60.169,24.938],오슬로:[59.913,10.740],브뤼셀:[50.851,4.352],브뤼헤:[51.209,3.225],
+  탈린:[59.437,24.754],크라쿠프:[50.062,19.937],바르샤바:[52.230,21.011],
+  뒤셀도르프:[51.228,6.773],함부르크:[53.551,9.993],프랑크푸르트:[50.110,8.682],쾰른:[50.938,6.960],
+  류블랴나:[46.051,14.506],스플리트:[43.508,16.440],
+  // 아시아 추가
+  로스앤젤레스:[34.052,-118.244],시애틀:[47.606,-122.332],보스턴:[42.360,-71.059],워싱턴DC:[38.907,-77.037],
+  토론토:[43.651,-79.347],밴쿠버:[49.283,-123.121],몬트리올:[45.501,-73.567],
+  멕시코시티:[19.433,-99.133],칸쿤:[21.162,-86.802],
+  쿠스코:[-13.532,-71.968],리마:[-12.044,-77.028],부에노스아이레스:[-34.604,-58.382],
+  오클랜드:[-36.852,174.763],퀸스타운:[-45.031,168.663]
 };
 
 // ══════════════════════════════════════════════
@@ -5628,6 +5705,40 @@ const CITY_IMG={
   하와이:'https://images.unsplash.com/photo-1484821582734-6692f7f5fc5f?w=900&h=240&fit=crop&q=80',
   제주도:'https://images.unsplash.com/photo-1539768942893-daf53489b0f5?w=900&h=240&fit=crop&q=80',
   괌:'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=900&h=240&fit=crop&q=80',
+  // 유럽 추가
+  빈:'https://images.unsplash.com/photo-1519677100203-a0e668c92439?w=900&h=240&fit=crop&q=80',
+  뮌헨:'https://images.unsplash.com/photo-1595867818082-083862f3d630?w=900&h=240&fit=crop&q=80',
+  베를린:'https://images.unsplash.com/photo-1599946347371-68eb71b16afc?w=900&h=240&fit=crop&q=80',
+  부다페스트:'https://images.unsplash.com/photo-1551867633-194f125bddfa?w=900&h=240&fit=crop&q=80',
+  이스탄불:'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=900&h=240&fit=crop&q=80',
+  산토리니:'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=900&h=240&fit=crop&q=80',
+  리스본:'https://images.unsplash.com/photo-1588693522479-6eea7b8a6e5d?w=900&h=240&fit=crop&q=80',
+  포르투:'https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=900&h=240&fit=crop&q=80',
+  잘츠부르크:'https://images.unsplash.com/photo-1573599852326-2d4da0bbe613?w=900&h=240&fit=crop&q=80',
+  브뤼헤:'https://images.unsplash.com/photo-1491557345352-5929e343eb89?w=900&h=240&fit=crop&q=80',
+  두브로브니크:'https://images.unsplash.com/photo-1555990538-c54d640b5a07?w=900&h=240&fit=crop&q=80',
+  // 이탈리아 추가
+  볼자노:'https://images.unsplash.com/photo-1582234372722-50d7ccc30ebd?w=900&h=240&fit=crop&q=80',
+  돌로미티:'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=900&h=240&fit=crop&q=80',
+  나폴리:'https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?w=900&h=240&fit=crop&q=80',
+  // 동남아 추가
+  치앙마이:'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=900&h=240&fit=crop&q=80',
+  쿠알라룸푸르:'https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=900&h=240&fit=crop&q=80',
+  하노이:'https://images.unsplash.com/photo-1509030450996-dd1a26dda07a?w=900&h=240&fit=crop&q=80',
+  호치민:'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=900&h=240&fit=crop&q=80',
+  // 오세아니아 추가
+  시드니:'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=900&h=240&fit=crop&q=80',
+  멜버른:'https://images.unsplash.com/photo-1497864149936-d3163f0c0f4b?w=900&h=240&fit=crop&q=80',
+  // 아메리카 추가
+  로스앤젤레스:'https://images.unsplash.com/photo-1534190760961-74e8c1c5c3da?w=900&h=240&fit=crop&q=80',
+  샌프란시스코:'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=900&h=240&fit=crop&q=80',
+  시카고:'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=900&h=240&fit=crop&q=80',
+  마이애미:'https://images.unsplash.com/photo-1503891450247-ee5f8ec46dc3?w=900&h=240&fit=crop&q=80',
+  // 중동 추가
+  아부다비:'https://images.unsplash.com/photo-1512632578888-169bbbc64f33?w=900&h=240&fit=crop&q=80',
+  // 국내 추가
+  부산:'https://images.unsplash.com/photo-1598614419806-cc40a78c8f78?w=900&h=240&fit=crop&q=80',
+  서울:'https://images.unsplash.com/photo-1601621915196-2621bfb0cd6e?w=900&h=240&fit=crop&q=80',
 };
 
 // ══════════════════════════════════════════════
@@ -5685,6 +5796,8 @@ async function _fetchRealTransitTimes(){
   const container=document.getElementById('result-body');
   if(!container||!GMAPS_KEY) return;
 
+  const _routeDelay=()=>new Promise(r=>setTimeout(r,180)); // API quota 보호용 딜레이
+
   // ── 스팟 간 이동 화살표 실시간 업데이트 ──
   const connectors=container.querySelectorAll('.transit-connector[data-from][data-to]');
   for(const conn of connectors){
@@ -5699,6 +5812,7 @@ async function _fetchRealTransitTimes(){
       conn.dataset.mode||'driving'
     );
     timeEl.textContent=dur||fallback;
+    await _routeDelay();
   }
 
   // ── 숙소→첫관광지 실시간 업데이트 ──
@@ -5715,6 +5829,7 @@ async function _fetchRealTransitTimes(){
       htf.dataset.mode||'driving'
     );
     timeEl.textContent=dur||fallback;
+    await _routeDelay();
   }
 }
 
@@ -5756,6 +5871,7 @@ async function dlSpotImg(btn){
 
 // ══════════════════════════════════════════════
 const _placesCache=new Map(); // 중복 API 호출 방지
+const _PLACES_CACHE_MAX=150; // 메모리 누수 방지용 최대 항목 수
 
 async function _fetchPlacesInfoForBlock(block){
   if(!GMAPS_KEY) return;
@@ -5765,10 +5881,13 @@ async function _fetchPlacesInfoForBlock(block){
   const infoEl=block.querySelector('.spot-places-info');
   if(!infoEl) return;
 
+  // 로딩 스켈레톤
+  infoEl.innerHTML='<span style="color:var(--sub);font-size:10px;letter-spacing:2px;">···</span>';
+
   const cacheKey=name+'|'+city;
   let place=_placesCache.get(cacheKey);
 
-  if(!place){
+  if(place===undefined){
     try{
       const res=await fetch('https://places.googleapis.com/v1/places:searchText',{
         method:'POST',
@@ -5781,13 +5900,18 @@ async function _fetchPlacesInfoForBlock(block){
       });
       const data=await res.json();
       place=data.places&&data.places[0]?data.places[0]:null;
+      // 캐시 크기 제한: LRU 방식으로 오래된 항목 제거
+      if(_placesCache.size>=_PLACES_CACHE_MAX){
+        _placesCache.delete(_placesCache.keys().next().value);
+      }
       _placesCache.set(cacheKey,place||false);
     }catch(err){
       _placesCache.set(cacheKey,false);
+      infoEl.innerHTML=''; // 실패 시 스켈레톤 제거
       return;
     }
   }
-  if(!place) return;
+  if(!place){infoEl.innerHTML='';return;} // 결과 없으면 스켈레톤 제거
 
   let html='';
   if(place.rating){
@@ -11380,12 +11504,13 @@ function validateSchema(){
 // ══════════════════════════════════════════════
 document.addEventListener('keydown',function(e){
   const t=e.target;
-  // chip 요소에서 Enter / Space → click
-  if((e.key==='Enter'||e.key===' ')&&t.classList.contains('chip')){
+  // chip / home-card / role=button 요소에서 Enter / Space → click
+  const isActivatable=t.classList.contains('chip')||t.classList.contains('home-card')||
+    (t.getAttribute('role')==='button'&&t.tagName!=='BUTTON');
+  if((e.key==='Enter'||e.key===' ')&&isActivatable){
     e.preventDefault();
     t.click();
   }
-  // Escape → 로딩 중엔 무시, 아니면 뒤로가기 없음 (UX 보류)
 });
 // chip에 keyboard focus 지원
 document.addEventListener('DOMContentLoaded',function(){
