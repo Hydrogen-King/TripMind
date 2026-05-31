@@ -2075,8 +2075,11 @@ const ST = {
 // NAV
 // ══════════════════════════════════════════════
 function go(id){
+  try{
+  const target=document.getElementById('s-'+id);
+  if(!target){console.error('[TripMind] go(): screen not found →',id);return;}
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
-  document.getElementById('s-'+id).classList.add('on');
+  target.classList.add('on');
   // 결과화면일 때 앱 컨테이너 확장
   document.getElementById('app').classList.toggle('wide', id==='result');
   window.scrollTo(0,0);
@@ -2092,6 +2095,7 @@ function go(id){
     const dots=document.querySelectorAll('#s-input .step-dot');
     dots.forEach((d,i)=>{d.classList.remove('active','done');if(i===0)d.classList.add('active');});
   }
+  }catch(e){console.error('[TripMind] go() error:',e);}
 }
 function goBack(){
   // result → pick (discover mode) or input (plan mode)
@@ -11427,6 +11431,25 @@ document.addEventListener('DOMContentLoaded',function(){
 <script src="db_extra6.js" onerror="_dbLoadErr++"></script>
 <script src="db_extra7.js" onerror="_dbLoadErr++"></script>
 <!-- 모든 DB 로드 완료 후 스키마 검증 + 로드 실패 배너 -->
+<script>
+// ── 전역 에러 핸들러: 어떤 JS 오류가 나도 앱 UI는 살아있도록 ──
+window.onerror=function(msg,src,line,col,err){
+  console.error('[TripMind] 전역 오류',msg,'at',src,line+':'+col,err);
+  // 홈화면은 항상 접근 가능하도록 유지
+  try{
+    const home=document.getElementById('s-home');
+    if(home&&!home.classList.contains('on')){
+      // 현재 보이는 화면이 없으면 홈으로 복구
+      const anyOn=document.querySelector('.screen.on');
+      if(!anyOn){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on')); home.classList.add('on'); }
+    }
+  }catch(e2){}
+  return false; // 브라우저 기본 오류 보고도 유지
+};
+window.addEventListener('unhandledrejection',function(ev){
+  console.error('[TripMind] 처리되지 않은 Promise 오류:',ev.reason);
+});
+</script>
 <script>
 if(typeof validateSchema==='function' && typeof HIER!=='undefined') validateSchema();
 
