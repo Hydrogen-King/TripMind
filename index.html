@@ -2200,18 +2200,24 @@ function selCont(el, cont){
   if(si) si.value='';
   if(!HIER[cont]){return;}
   const el2=document.getElementById('country-chips');
-  // 이미 선택된 도시가 있는 국가에는 ✓N 뱃지 표시
+  // 이미 선택된 도시가 있는 국가에는 ✓N 뱃지 표시 (data-sel-badge 속성으로 통일)
   el2.innerHTML=Object.keys(HIER[cont]).map(c=>{
     const selCount=HIER[cont][c].filter(city=>ST.dests.includes(city)).length;
     const badge=selCount>0
-      ?`<span style="display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;background:var(--pri);color:#fff;border-radius:99px;font-size:9px;font-weight:800;padding:0 4px;margin-left:4px;">✓${selCount}</span>`
+      ?`<span data-sel-badge="1" style="display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;background:var(--pri);color:#fff;border-radius:99px;font-size:9px;font-weight:800;padding:0 4px;margin-left:4px;">✓${selCount}</span>`
       :'';
     return `<div class="chip${selCount>0?' on':''}" data-cont="${cont}" data-country="${c}" onclick="selCountry(this)">${c}${badge}</div>`;
   }).join('');
   document.getElementById('fg-country').style.display='';
 }
 function selCountry(el){
-  document.querySelectorAll('#country-chips .chip').forEach(c=>c.classList.remove('on'));
+  // 선택된 도시가 있는 국가는 .on 유지, 없는 것만 제거
+  document.querySelectorAll('#country-chips .chip[data-country]').forEach(c=>{
+    const cont2=c.dataset.cont, country2=c.dataset.country;
+    const hasSel=cont2&&country2&&HIER[cont2]&&HIER[cont2][country2]&&
+      HIER[cont2][country2].some(city=>ST.dests.includes(city));
+    if(!hasSel) c.classList.remove('on');
+  });
   el.classList.add('on');
   const cont=el.dataset.cont, country=el.dataset.country;
   const si=document.getElementById('city-search-input');
