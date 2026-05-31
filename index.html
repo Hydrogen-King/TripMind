@@ -1072,8 +1072,11 @@ body{overscroll-behavior-y:none;}
 
   <!-- ① 목적지 카드 -->
   <div class="dest-card">
+    <div style="font-size:11px;color:var(--sub);margin-bottom:8px;line-height:1.5;">
+      🌍 대륙을 바꿔가며 여러 나라·도시를 자유롭게 추가하세요 — 이미 선택한 도시는 유지돼요
+    </div>
     <div class="dest-row">
-      <span class="dest-row-lbl">대륙</span>
+      <span class="dest-row-lbl">대륙 탐색</span>
       <div class="dest-row-chips" id="cont-tabs">
         <div class="chip" role="button" tabindex="0" onclick="selCont(this,'아시아·태평양')">🌏 아시아</div>
         <div class="chip" role="button" tabindex="0" onclick="selCont(this,'유럽')">🌍 유럽</div>
@@ -2188,21 +2191,23 @@ function togAccomZone(el,val){
 // ══════════════════════════════════════════════
 // ── Cascading Destination Selector ──
 function selCont(el, cont){
-  // 이미 선택된 대륙 재클릭이면 dests 유지 (단, 다른 대륙으로 바뀔 때만 초기화)
-  const wasAlreadyActive = el.classList.contains('on');
+  // 대륙 칩은 "탐색 모드" — 클릭해도 기존 선택 도시 유지
   document.querySelectorAll('#cont-tabs .chip').forEach(c=>c.classList.remove('on'));
   el.classList.add('on');
-  if(!wasAlreadyActive){
-    // 대륙이 바뀔 때만 선택 초기화
-    ST.dest=''; ST.dests=[];
-    renderSelectedDests();
-  }
+  // ▶ 대륙이 바뀌어도 ST.dests 초기화 안 함 (다국가 여행 지원)
   document.getElementById('fg-city').style.display='none';
   const si=document.getElementById('city-search-input');
   if(si) si.value='';
   if(!HIER[cont]){return;}
   const el2=document.getElementById('country-chips');
-  el2.innerHTML=Object.keys(HIER[cont]).map(c=>`<div class="chip" data-cont="${cont}" data-country="${c}" onclick="selCountry(this)">${c}</div>`).join('');
+  // 이미 선택된 도시가 있는 국가에는 ✓N 뱃지 표시
+  el2.innerHTML=Object.keys(HIER[cont]).map(c=>{
+    const selCount=HIER[cont][c].filter(city=>ST.dests.includes(city)).length;
+    const badge=selCount>0
+      ?`<span style="display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;background:var(--pri);color:#fff;border-radius:99px;font-size:9px;font-weight:800;padding:0 4px;margin-left:4px;">✓${selCount}</span>`
+      :'';
+    return `<div class="chip${selCount>0?' on':''}" data-cont="${cont}" data-country="${c}" onclick="selCountry(this)">${c}${badge}</div>`;
+  }).join('');
   document.getElementById('fg-country').style.display='';
 }
 function selCountry(el){
@@ -2231,6 +2236,7 @@ function selCity(el,city){
     el.classList.add('on');
   }
   ST.dest=ST.dests[0]||'';
+  _refreshCountryBadges();
   renderSelectedDests();
 }
 function renderSelectedDests(){
@@ -2239,10 +2245,14 @@ function renderSelectedDests(){
   if(!area||!chipsEl) return;
   if(ST.dests.length===0){area.style.display='none';return;}
   area.style.display='block';
+  // 다국가 여부 판단 (국가 종류 2개 이상이면 국가명 표시)
+  const _uniqueCountries=new Set(ST.dests.map(c=>DB[c]?DB[c].country:'').filter(Boolean));
+  const _showCountry=_uniqueCountries.size>1;
   chipsEl.innerHTML=ST.dests.map(city=>{
     const d=DB[city];
     const flag=d?d.country.replace(/[^🇦-🇿\u{1F1E0}-\u{1F1FF}]/gu,'').trim():'';
-    return `<span class="sel-city-tag">${flag} ${city}<span class="sel-city-x" onclick="removeCity('${city}')">×</span></span>`;
+    const countryName=_showCountry&&d?`<span style="font-size:9px;opacity:.7;margin-left:2px;">${d.country.replace(/🇦-🇿|\u{1F1E0}-\u{1F1FF}/gu,'').trim().split(' ')[0]||''}</span>`:'';
+    return `<span class="sel-city-tag">${flag} ${city}${countryName}<span class="sel-city-x" onclick="removeCity('${city}')">×</span></span>`;
   }).join('');
 
   // 다중 도시일 때만 일수 설정 섹션 표시
@@ -2339,6 +2349,29 @@ function updateCityDaysTotal(){
     totalEl.textContent=`💡 합계 ${sum}일 < 전체 일정 ${totalDays}일 (${totalDays-sum}일 남음)`;
   }
 }
+// 현재 표시 중인 국가 칩의 ✓N 뱃지 갱신 (다국가 선택 시 실시간 반영)
+function _refreshCountryBadges(){
+  document.querySelectorAll('#country-chips .chip[data-country]').forEach(chip=>{
+    const cont=chip.dataset.cont;
+    const country=chip.dataset.country;
+    if(!cont||!country||!HIER[cont]||!HIER[cont][country]) return;
+    const selCount=HIER[cont][country].filter(city=>ST.dests.includes(city)).length;
+    // 기존 뱃지 제거 후 재생성
+    const oldBadge=chip.querySelector('span[data-sel-badge]');
+    if(oldBadge) oldBadge.remove();
+    if(selCount>0){
+      chip.classList.add('on');
+      const badge=document.createElement('span');
+      badge.dataset.selBadge='1';
+      badge.style.cssText='display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;background:var(--pri);color:#fff;border-radius:99px;font-size:9px;font-weight:800;padding:0 4px;margin-left:4px;';
+      badge.textContent=`✓${selCount}`;
+      chip.appendChild(badge);
+    } else {
+      chip.classList.remove('on');
+    }
+  });
+}
+
 function removeCity(city){
   ST.dests=ST.dests.filter(c=>c!==city);
   ST.dest=ST.dests[0]||'';
@@ -2346,6 +2379,7 @@ function removeCity(city){
   document.querySelectorAll('#city-chips .chip').forEach(c=>{
     if(c.textContent.trim()===city) c.classList.remove('on');
   });
+  _refreshCountryBadges();
   renderSelectedDests();
 }
 
