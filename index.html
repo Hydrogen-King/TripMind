@@ -255,6 +255,34 @@ textarea.fi2{resize:vertical;min-height:90px;}
 .date-header-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;}
 .date-city-suggest-item{padding:10px 12px;cursor:pointer;border-radius:8px;font-size:14px;font-weight:600;}
 .date-city-suggest-item:hover{background:var(--card2);}
+.date-dep-sug{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--card);border:1px solid var(--bdr);border-radius:10px;padding:4px;max-height:160px;overflow-y:auto;z-index:200;box-shadow:var(--shadow);}
+.date-dep-sug-item{padding:9px 12px;cursor:pointer;border-radius:7px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;}
+.date-dep-sug-item:hover{background:var(--card2);}
+.date-area-chip{display:inline-flex;align-items:center;padding:7px 14px;border-radius:20px;border:1.5px solid var(--bdr);background:var(--card);font-size:13px;font-weight:700;cursor:pointer;transition:all .18s;gap:4px;}
+.date-area-chip:hover,.date-area-chip.on{border-color:#ec4899;background:rgba(236,72,153,.1);color:#ec4899;}
+/* 데이트 — 최적 동선 카드 */
+.date-route-card{background:rgba(236,72,153,.06);border:1px solid rgba(236,72,153,.22);border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:12px;}
+.date-route-title{font-weight:800;margin-bottom:7px;color:#ec4899;font-size:13px;}
+.date-route-row{color:var(--sub);margin-top:3px;display:flex;align-items:center;flex-wrap:wrap;gap:4px;line-height:1.6;}
+.date-route-arrow{color:#ec4899;font-weight:800;margin:0 2px;}
+.date-route-km{font-size:10px;font-weight:700;padding:1px 7px;border-radius:12px;background:rgba(236,72,153,.12);color:#ec4899;}
+.date-route-meet{margin-top:8px;padding-top:8px;border-top:1px dashed rgba(236,72,153,.25);color:#ec4899;font-weight:700;line-height:1.55;}
+/* 데이트 — 오늘의 동선 칩 */
+.date-flow-wrap{margin-bottom:18px;}
+.date-flow-label{font-size:12px;font-weight:800;color:var(--sub);margin-bottom:7px;}
+.date-flow-chips{display:flex;flex-wrap:wrap;align-items:center;gap:3px;}
+.date-flow-chip{font-size:11px;font-weight:700;padding:4px 10px;border-radius:14px;background:var(--card);border:1px solid var(--bdr);color:var(--ink);}
+.date-flow-sep{color:#ec4899;font-weight:800;font-size:11px;margin:0 1px;}
+/* 데이트 — 시간대 밴드 */
+.date-band{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:4px 0 12px;padding:7px 12px;border-radius:10px;background:linear-gradient(135deg,rgba(236,72,153,.08),rgba(129,140,248,.06));border:1px solid rgba(236,72,153,.14);}
+.date-band-icon{font-size:16px;}
+.date-band-name{font-size:13px;font-weight:900;color:#ec4899;}
+.date-band-tip{font-size:11px;color:var(--sub);flex:1;min-width:140px;line-height:1.5;}
+/* 데이트 — 지도 링크 / TIP */
+.date-map-link{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(3,199,90,.1);color:#03C75A;border:1px solid rgba(3,199,90,.25);text-decoration:none;}
+.date-tip-card{background:var(--card);border:1px solid var(--bdr);border-radius:14px;padding:14px 16px;margin-top:16px;}
+.date-tip-title{font-size:13px;font-weight:800;margin-bottom:8px;}
+.date-tip-body{font-size:12px;color:var(--sub);line-height:1.85;}
 .home-card-icon{font-size:30px;margin-bottom:4px;}
 .home-card-title{font-size:17px;font-weight:800;line-height:1.3;}
 .home-card-desc{font-size:12px;color:var(--sub);line-height:1.55;flex:1;margin-top:3px;}
@@ -1495,45 +1523,99 @@ body{overscroll-behavior-y:none;}
     <span class="step-lbl">💑 데이트 코스</span>
     <div style="width:42px"></div>
   </div>
-  <div class="pg-t">어디서 데이트할까요?</div>
-  <div class="pg-s">도시와 분위기를 선택하면 완벽한 하루 코스를 만들어드려요 💕</div>
+  <div class="pg-t">오늘 어디서 만날까요?</div>
+  <div class="pg-s">두 분의 출발지를 입력하면 딱 맞는 데이트 코스를 추천해드려요 💕</div>
 
-  <!-- 도시 검색 -->
-  <div class="dest-card" style="margin-bottom:12px;">
-    <div class="dest-row">
-      <span class="dest-row-lbl">📍 도시</span>
-      <div style="flex:1;">
-        <input class="dest-city-search" id="date-city-input" placeholder="도시를 검색하세요 (예: 서울, 도쿄, 파리)" oninput="filterDateCity(this.value)" autocomplete="off" style="margin-bottom:6px;">
-        <div id="date-city-suggestions" style="display:none;background:var(--card);border:1px solid var(--bdr);border-radius:10px;padding:6px;max-height:180px;overflow-y:auto;"></div>
-        <div id="date-city-selected" style="display:none;margin-top:6px;"></div>
+  <!-- 출발지 카드 -->
+  <div class="dest-card" style="margin-bottom:10px;">
+    <div class="dest-row" style="align-items:flex-start;">
+      <span class="dest-row-lbl" style="padding-top:8px;">🧑 나</span>
+      <div style="flex:1;position:relative;">
+        <input class="dest-city-search" id="date-dep1" placeholder="내 출발지 (예: 홍대, 수원역, 강남구)" oninput="filterDepLoc(this,'date-dep1-sug',1)" autocomplete="off">
+        <div id="date-dep1-sug" class="date-dep-sug"></div>
       </div>
     </div>
-    <div class="dest-row" style="margin-top:10px;">
-      <span class="dest-row-lbl">📅 날짜</span>
-      <input type="date" id="date-when" style="flex:1;border:1px solid var(--bdr);border-radius:10px;padding:9px 12px;background:var(--card2);color:var(--txt);font-size:14px;font-family:inherit;">
+    <div class="dest-row" style="margin-top:8px;align-items:flex-start;">
+      <span class="dest-row-lbl" style="padding-top:8px;">💑 상대방</span>
+      <div style="flex:1;position:relative;">
+        <input class="dest-city-search" id="date-dep2" placeholder="상대방 출발지 (예: 잠실, 분당, 인천)" oninput="filterDepLoc(this,'date-dep2-sug',2)" autocomplete="off">
+        <div id="date-dep2-sug" class="date-dep-sug"></div>
+      </div>
     </div>
   </div>
 
-  <!-- 분위기 선택 -->
-  <div class="sec-title" style="margin-bottom:8px;">✨ 데이트 분위기</div>
-  <div class="chips" id="date-mood-chips" style="margin-bottom:16px;">
-    <div class="chip on" onclick="togDateMood(this,'설레는')" data-mood="설레는">🌸 설레는 첫 데이트</div>
-    <div class="chip" onclick="togDateMood(this,'로맨틱')" data-mood="로맨틱">🌃 로맨틱 나이트</div>
-    <div class="chip" onclick="togDateMood(this,'문화')" data-mood="문화">🎨 문화·예술 탐방</div>
-    <div class="chip" onclick="togDateMood(this,'액티브')" data-mood="액티브">🌿 야외·액티브</div>
-    <div class="chip" onclick="togDateMood(this,'미식')" data-mood="미식">🍷 미식·맛집 투어</div>
+  <!-- 날짜 + 시간 -->
+  <div class="trip-card" style="margin-bottom:10px;">
+    <div class="trip-row">
+      <div class="trip-field">
+        <span class="trip-field-lbl">📅 날짜</span>
+        <input type="date" id="date-when" onchange="updateDateDayLabel()">
+        <span id="date-day-label" style="font-size:11px;color:var(--pri);font-weight:700;margin-top:3px;display:none;"></span>
+      </div>
+      <div class="trip-field">
+        <span class="trip-field-lbl">⏰ 시작 시간</span>
+        <select id="date-start-time" style="border:1px solid var(--bdr);border-radius:10px;padding:8px 10px;background:var(--card2);color:var(--txt);font-size:14px;font-family:inherit;font-weight:600;width:100%;">
+          <option value="09:00">오전 9:00</option>
+          <option value="10:00" selected>오전 10:00</option>
+          <option value="11:00">오전 11:00</option>
+          <option value="12:00">오후 12:00 (점심부터)</option>
+          <option value="13:00">오후 1:00</option>
+          <option value="14:00">오후 2:00 (오후만)</option>
+          <option value="17:00">오후 5:00 (저녁부터)</option>
+          <option value="18:00">오후 6:00 (저녁·야경)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- 추천 지역 (출발지 입력 후 자동 표시) -->
+  <div id="date-area-section" style="display:none;margin-bottom:10px;">
+    <div class="sec-title" style="margin-bottom:8px;">📍 추천 데이트 지역</div>
+    <div style="font-size:11px;color:var(--sub);margin-bottom:8px;">두 분의 중간 지점 기준으로 추천했어요. 직접 선택도 가능해요!</div>
+    <div id="date-area-chips" class="chips" style="margin-bottom:4px;"></div>
+  </div>
+
+  <!-- 지역 직접 선택 (항상 표시) -->
+  <div style="margin-bottom:10px;">
+    <div class="sec-title" style="margin-bottom:8px;">🗺️ 데이트 지역 선택</div>
+    <div id="date-region-tabs" class="chips" style="margin-bottom:8px;flex-wrap:wrap;">
+      <div class="chip on" onclick="showDateRegion(this,'서울')">서울</div>
+      <div class="chip" onclick="showDateRegion(this,'경기·인천')">경기·인천</div>
+      <div class="chip" onclick="showDateRegion(this,'강원')">강원</div>
+      <div class="chip" onclick="showDateRegion(this,'충청')">충청</div>
+      <div class="chip" onclick="showDateRegion(this,'전라')">전라</div>
+      <div class="chip" onclick="showDateRegion(this,'경상')">경상</div>
+      <div class="chip" onclick="showDateRegion(this,'제주')">제주</div>
+    </div>
+    <div id="date-area-list" class="chips" style="flex-wrap:wrap;gap:6px;"></div>
+  </div>
+
+  <!-- 선택된 지역 표시 -->
+  <div id="date-selected-area" style="display:none;margin-bottom:10px;padding:10px 14px;background:rgba(236,72,153,.08);border:1.5px solid rgba(236,72,153,.25);border-radius:12px;">
+    <span style="font-size:13px;font-weight:700;color:#ec4899;">📍 선택됨: <span id="date-selected-area-label"></span></span>
+    <span onclick="clearDateArea()" style="margin-left:8px;cursor:pointer;font-size:12px;color:var(--sub);">변경</span>
+  </div>
+
+  <!-- 분위기 -->
+  <div class="sec-title" style="margin-bottom:8px;">✨ 분위기</div>
+  <div class="chips" id="date-mood-chips" style="margin-bottom:12px;">
+    <div class="chip on" onclick="togDateMood(this,'설레는')">🌸 설레는</div>
+    <div class="chip" onclick="togDateMood(this,'로맨틱')">🌃 로맨틱</div>
+    <div class="chip" onclick="togDateMood(this,'문화')">🎨 문화탐방</div>
+    <div class="chip" onclick="togDateMood(this,'액티브')">🌿 야외액티브</div>
+    <div class="chip" onclick="togDateMood(this,'미식')">🍷 미식투어</div>
   </div>
 
   <!-- 예산 -->
-  <div class="sec-title" style="margin-bottom:8px;">💸 예산 (1인 기준)</div>
+  <div class="sec-title" style="margin-bottom:8px;">💸 예산 (1인)</div>
   <div class="chips" id="date-budget-chips" style="margin-bottom:16px;">
-    <div class="chip on" onclick="togDateBudget(this,'절약')" data-budget="절약">💸 알뜰 (~5만원)</div>
-    <div class="chip" onclick="togDateBudget(this,'일반')" data-budget="일반">💰 일반 (~10만원)</div>
-    <div class="chip" onclick="togDateBudget(this,'스페셜')" data-budget="스페셜">💎 스페셜 (~20만+)</div>
+    <div class="chip on" onclick="togDateBudget(this,'절약')">💸 알뜰 (~5만)</div>
+    <div class="chip" onclick="togDateBudget(this,'일반')">💰 일반 (~10만)</div>
+    <div class="chip" onclick="togDateBudget(this,'스페셜')">💎 스페셜 (~20만+)</div>
   </div>
 
   <div id="date-input-err" class="err-msg"></div>
-  <button class="btn btn-p" onclick="generateDateCourse()" style="margin-top:4px;">💑 데이트 코스 만들기</button>
+  <button class="btn btn-p" onclick="generateDateCourse()" style="margin-top:4px;font-size:16px;">💑 데이트 코스 만들기</button>
 </div>
 
 <!-- DATE RESULT -->
@@ -9691,336 +9773,8 @@ function _getVisaBadge(cityKr){
 }
 
 // ══════════════════════════════════════════════
-// 💑 데이트 코스 DB & 생성 로직
+// 💑 데이트 코스 로직 → 외부 파일 _date_new.js 로 분리됨
 // ══════════════════════════════════════════════
-
-// 도시별 데이트 스팟 DB
-// 구조: { 카페: [], 오전활동: [], 점심: [], 오후활동: [], 저녁: [], 야경: [] }
-// 각 항목: { name, desc, emoji, duration, cost: {절약,일반,스페셜}, mapQ, mood:[] }
-const CITY_DATE_SPOTS={
-  '서울':{
-    카페:[
-      {name:'성수동 카페거리',desc:'힙한 공장 개조 카페 — 인증샷 성지, 브런치 메뉴',emoji:'☕',duration:'1h30m',cost:{절약:15000,일반:25000,스페셜:40000},mood:['설레는','미식']},
-      {name:'북촌 한옥마을 카페',desc:'한옥 속 정통 전통차 or 핸드드립 — 고즈넉한 분위기',emoji:'🍵',duration:'1h',cost:{절약:12000,일반:20000,스페셜:30000},mood:['설레는','문화']},
-      {name:'한남동 루프탑 카페',desc:'남산 & 한강 뷰 루프탑 — 인생샷 보장',emoji:'☕',duration:'1h',cost:{절약:18000,일반:28000,스페셜:42000},mood:['로맨틱','설레는']},
-    ],
-    오전활동:[
-      {name:'경복궁 & 한복 체험',desc:'조선 왕궁 + 한복 대여 — 독특한 커플 사진',emoji:'🏯',duration:'2h',cost:{절약:20000,일반:35000,스페셜:60000},mood:['문화','설레는']},
-      {name:'남산 둘레길 산책',desc:'N서울타워 뷰 & 자물쇠 잠그기 — 커플 필수 코스',emoji:'🌿',duration:'1h30m',cost:{절약:0,일반:0,스페셜:0},mood:['액티브','설레는']},
-      {name:'창덕궁 후원 투어',desc:'유네스코 비밀 정원 — 계절마다 달라지는 풍경',emoji:'🌸',duration:'2h',cost:{절약:12000,일반:12000,스페셜:12000},mood:['문화','로맨틱']},
-    ],
-    점심:[
-      {name:'광장시장 먹자골목',desc:'빈대떡·마약김밥·육회 — 활기찬 전통시장',emoji:'🍜',duration:'1h',cost:{절약:15000,일반:25000,스페셜:40000},mood:['미식','설레는']},
-      {name:'이태원 다국적 레스토랑',desc:'세계 각국 요리 밀집 — 이색 미식 데이트',emoji:'🍽️',duration:'1h30m',cost:{절약:25000,일반:45000,스페셜:80000},mood:['미식','로맨틱']},
-      {name:'서촌 정식 한정식',desc:'고즈넉한 한옥 골목 한정식 — 정갈한 한식',emoji:'🍱',duration:'1h30m',cost:{절약:20000,일반:40000,스페셜:70000},mood:['문화','로맨틱']},
-    ],
-    오후활동:[
-      {name:'DDP (동대문디자인플라자)',desc:'자하 하디드 미래 건축 + 전시 — 독특한 포토스팟',emoji:'🎨',duration:'2h',cost:{절약:0,일반:10000,스페셜:20000},mood:['문화','설레는']},
-      {name:'한강 자전거 & 돗자리',desc:'여의도·반포한강공원 — 치맥이나 아이스크림 피크닉',emoji:'🚴',duration:'2h',cost:{절약:10000,일반:20000,스페셜:30000},mood:['액티브','설레는']},
-      {name:'홍대 버스킹 거리',desc:'라이브 공연 구경 & 독립 서점 · 소품샵 쇼핑',emoji:'🎸',duration:'2h',cost:{절약:10000,일반:20000,스페셜:30000},mood:['설레는','미식']},
-    ],
-    저녁:[
-      {name:'을지로 레트로 이자카야',desc:'힙스터 골목 작은 이자카야 — 레트로 감성 안주',emoji:'🍶',duration:'2h',cost:{절약:30000,일반:55000,스페셜:90000},mood:['설레는','미식']},
-      {name:'한남동 파인다이닝',desc:'미슐랭 후보 레스토랑 — 코스 요리로 특별한 저녁',emoji:'🍷',duration:'2h',cost:{절약:60000,일반:100000,스페셜:180000},mood:['로맨틱','스페셜']},
-      {name:'남산 뷰 레스토랑',desc:'N서울타워 야경 보며 저녁 — 고급 뷰 레스토랑',emoji:'🌃',duration:'2h',cost:{절약:40000,일반:70000,스페셜:120000},mood:['로맨틱']},
-    ],
-    야경:[
-      {name:'N서울타워 야경',desc:'360도 서울 야경 + 자물쇠 벽 — 커플 필수',emoji:'🌃',duration:'1h30m',cost:{절약:12000,일반:12000,스페셜:12000},mood:['로맨틱','설레는']},
-      {name:'반포 달빛 분수 야경',desc:'세빛섬 & 무지개 분수 — 한강에서 야경 데이트',emoji:'⛲',duration:'1h',cost:{절약:0,일반:0,스페셜:0},mood:['로맨틱','액티브']},
-    ],
-  },
-  '도쿄':{
-    카페:[
-      {name:'오모테산도 카페 거리',desc:'세계 최고 수준 스페셜티 카페 — 계절 한정 메뉴',emoji:'☕',duration:'1h',cost:{절약:18000,일반:28000,스페셜:45000},mood:['설레는','미식']},
-      {name:'시모키타자와 빈티지 카페',desc:'레코드판 흐르는 힙스터 카페 — 도쿄 청춘 문화',emoji:'🎵',duration:'1h30m',cost:{절약:15000,일반:22000,스페셜:35000},mood:['설레는','문화']},
-      {name:'우에노 공원 카페',desc:'호수뷰 야외 카페 — 봄 벚꽃·가을 단풍 최고',emoji:'🌸',duration:'1h',cost:{절약:12000,일반:20000,스페셜:30000},mood:['로맨틱','설레는']},
-    ],
-    오전활동:[
-      {name:'아사쿠사 전통 거리',desc:'나리타산 & 나카미세 거리 — 유카타 대여 커플 포토',emoji:'⛩️',duration:'2h',cost:{절약:10000,일반:30000,스페셜:50000},mood:['문화','설레는']},
-      {name:'하라주쿠 & 다케시타 거리',desc:'일본 팝컬처 패션 — 도라에몽 크레페',emoji:'🛍️',duration:'2h',cost:{절약:20000,일반:40000,스페셜:70000},mood:['설레는','미식']},
-      {name:'요코하마 미나토미라이',desc:'항구 뷰 & 관람차 — 낭만적인 베이사이드',emoji:'🎡',duration:'2h30m',cost:{절약:15000,일반:35000,스페셜:60000},mood:['로맨틱','설레는']},
-    ],
-    점심:[
-      {name:'신주쿠 오모이데 요코초',desc:'레트로 골목 야키토리 & 라멘 — 昭和 감성',emoji:'🍢',duration:'1h30m',cost:{절약:20000,일반:40000,스페셜:70000},mood:['미식','설레는']},
-      {name:'긴자 런치 코스',desc:'긴자 스시·일식 런치 세트 — 고급 일식 경험',emoji:'🍣',duration:'1h30m',cost:{절약:30000,일반:60000,스페셜:120000},mood:['미식','로맨틱']},
-    ],
-    오후활동:[
-      {name:'팀랩 디지털 아트',desc:'몰입형 빛·음악 아트 — 커플 인생샷 성지',emoji:'🎨',duration:'2h',cost:{절약:40000,일반:40000,스페셜:40000},mood:['문화','로맨틱','설레는']},
-      {name:'아키하바라 or 이케부쿠로',desc:'일본 서브컬처 성지 — 함께 플레이',emoji:'🎮',duration:'2h',cost:{절약:20000,일반:40000,스페셜:60000},mood:['설레는','액티브']},
-    ],
-    저녁:[
-      {name:'도쿄 타워 뷰 레스토랑',desc:'도쿄 타워 배경 스카이라인 뷰 — 와인 코스',emoji:'🗼',duration:'2h',cost:{절약:50000,일반:90000,스페셜:160000},mood:['로맨틱']},
-      {name:'시부야 크로스 뷰 레스토랑',desc:'세계 최대 교차로 뷰 — 현대 일식 or 프렌치',emoji:'🌆',duration:'2h',cost:{절약:40000,일반:75000,스페셜:130000},mood:['로맨틱','미식']},
-    ],
-    야경:[
-      {name:'롯폰기 힐스 전망대',desc:'도쿄 야경 360도 — 럭셔리 전망대',emoji:'🌃',duration:'1h30m',cost:{절약:25000,일반:25000,스페셜:25000},mood:['로맨틱']},
-      {name:'오다이바 일루미네이션',desc:'레인보우 브리지 & 자유의 여신상 야경',emoji:'🌉',duration:'1h',cost:{절약:0,일반:0,스페셜:0},mood:['로맨틱','설레는']},
-    ],
-  },
-  '파리':{
-    카페:[
-      {name:'생제르맹 카페 드 플로르',desc:'사르트르·보부아르 단골 카페 — 크루아상 & 카페오레',emoji:'☕',duration:'1h',cost:{절약:25000,일반:40000,스페셜:60000},mood:['문화','설레는']},
-      {name:'몽마르트 골목 카페',desc:'에스프레소 한 잔과 화가 골목 산책 — 파리지앵 분위기',emoji:'🎨',duration:'1h30m',cost:{절약:20000,일반:32000,스페셜:50000},mood:['로맨틱','문화']},
-    ],
-    오전활동:[
-      {name:'루브르 박물관',desc:'모나리자·밀로의 비너스 — 세계 최대 미술관',emoji:'🖼️',duration:'3h',cost:{절약:22000,일반:22000,스페셜:22000},mood:['문화']},
-      {name:'마레 지구 산책',desc:'유대인 거리 + 빈티지숍 + 피카소 미술관',emoji:'🛍️',duration:'2h',cost:{절약:0,일반:20000,스페셜:50000},mood:['문화','설레는']},
-    ],
-    점심:[
-      {name:'몽파르나스 브래스리',desc:'프랑스 전통 오니옹 수프·크로크무슈 — 현지 분위기',emoji:'🥐',duration:'1h30m',cost:{절약:30000,일반:55000,스페셜:90000},mood:['미식','로맨틱']},
-      {name:'센강 크루즈 런치',desc:'센강 위 식사 — 에펠탑 바라보며',emoji:'⛵',duration:'2h',cost:{절약:60000,일반:100000,스페셜:160000},mood:['로맨틱']},
-    ],
-    오후활동:[
-      {name:'에펠탑 & 트로카데로',desc:'에펠탑 배경 커플 사진 & 샹드마르스 피크닉',emoji:'🗼',duration:'2h',cost:{절약:0,일반:30000,스페셜:60000},mood:['로맨틱','설레는']},
-      {name:'베르사유 궁전',desc:'루이 14세 황금 궁전 & 정원 산책',emoji:'🏰',duration:'3h',cost:{절약:25000,일반:25000,스페셜:25000},mood:['문화','로맨틱']},
-    ],
-    저녁:[
-      {name:'생제르맹 파인다이닝',desc:'미슐랭 프렌치 코스 — 파리 최고의 저녁',emoji:'🍷',duration:'2h30m',cost:{절약:70000,일반:130000,스페셜:250000},mood:['로맨틱','미식']},
-      {name:'몽마르트 레스토랑',desc:'사크레쾨르 언덕 뷰 레스토랑 — 파리 야경',emoji:'🌃',duration:'2h',cost:{절약:50000,일반:90000,스페셜:160000},mood:['로맨틱']},
-    ],
-    야경:[
-      {name:'에펠탑 야경 & 일루미네이션',desc:'매 시간 점등하는 에펠탑 빛쇼 — 파리 낭만 절정',emoji:'✨',duration:'1h',cost:{절약:0,일반:0,스페셜:0},mood:['로맨틱','설레는']},
-      {name:'센강 야경 유람선',desc:'파리 야경 크루즈 — 에펠탑·노트르담·루브르',emoji:'🚢',duration:'1h30m',cost:{절약:20000,일반:35000,스페셜:60000},mood:['로맨틱']},
-    ],
-  },
-  '오사카':{
-    카페:[
-      {name:'호리에 카페거리',desc:'인스타 감성 카페 — 오사카 브런치 성지',emoji:'☕',duration:'1h',cost:{절약:15000,일반:25000,스페셜:38000},mood:['설레는','미식']},
-      {name:'나카노시마 강변 카페',desc:'강변 야외 카페 — 유럽 감성 오사카',emoji:'🌊',duration:'1h',cost:{절약:15000,일반:22000,스페셜:35000},mood:['로맨틱','설레는']},
-    ],
-    오전활동:[
-      {name:'오사카 성 & 성터 공원',desc:'봄 벚꽃·가을 단풍 — 역사와 자연 동시에',emoji:'🏯',duration:'2h',cost:{절약:10000,일반:10000,스페셜:10000},mood:['문화','설레는','액티브']},
-      {name:'도톤보리 아침 산책',desc:'유명 간판들 & 구이코 시장 — 아침 타코야키',emoji:'🐙',duration:'1h30m',cost:{절약:10000,일반:20000,스페셜:35000},mood:['미식','설레는']},
-    ],
-    점심:[
-      {name:'쿠로몬 시장 해산물',desc:'오사카 부엌 — 신선 굴·참치·해산물 런치',emoji:'🦪',duration:'1h',cost:{절약:25000,일반:45000,스페셜:80000},mood:['미식']},
-    ],
-    오후활동:[
-      {name:'유니버설 스튜디오',desc:'해리포터·미니언 — 커플 테마파크',emoji:'🎢',duration:'6h',cost:{절약:80000,일반:100000,스페셜:130000},mood:['액티브','설레는']},
-      {name:'나라 사슴 공원',desc:'사슴과 교류 — 도다이지 대불 유네스코',emoji:'🦌',duration:'3h',cost:{절약:10000,일반:20000,스페셜:30000},mood:['설레는','액티브']},
-    ],
-    저녁:[
-      {name:'신사이바시 야키니쿠',desc:'오사카 와규 야키니쿠 — 숯불구이 & 생맥주',emoji:'🥩',duration:'2h',cost:{절약:35000,일반:65000,스페셜:120000},mood:['미식','설레는']},
-    ],
-    야경:[
-      {name:'헵파이브 대관람차 야경',desc:'오사카 시내 야경 대관람차 — 2인 곤돌라',emoji:'🎡',duration:'30m',cost:{절약:8000,일반:8000,스페셜:8000},mood:['로맨틱','설레는']},
-      {name:'도톤보리 운하 야경',desc:'빛나는 간판들 & 운하 보트 — 오사카의 밤',emoji:'🌃',duration:'1h',cost:{절약:0,일반:8000,스페셜:8000},mood:['로맨틱','설레는']},
-    ],
-  },
-  '방콕':{
-    카페:[
-      {name:'아리 카페거리',desc:'방콕 힙스터 동네 스페셜티 카페',emoji:'☕',duration:'1h',cost:{절약:8000,일반:15000,스페셜:25000},mood:['설레는','미식']},
-      {name:'차오프라야 리버뷰 카페',desc:'왕궁 배경 강변 뷰 카페 — 선셋 포인트',emoji:'🌅',duration:'1h',cost:{절약:12000,일반:20000,스페셜:35000},mood:['로맨틱']},
-    ],
-    오전활동:[
-      {name:'왓 포 & 왓 아룬',desc:'와불 사원 & 새벽 사원 — 강 건너 선셋',emoji:'🛕',duration:'2h',cost:{절약:10000,일반:10000,스페셜:10000},mood:['문화']},
-    ],
-    점심:[
-      {name:'아이콘시암 푸드홀',desc:'강변 럭셔리몰 수상시장 — 현지 음식 100여 종',emoji:'🍜',duration:'1h30m',cost:{절약:15000,일반:30000,스페셜:55000},mood:['미식']},
-    ],
-    오후활동:[
-      {name:'짜뚜짝 시장 탐방',desc:'세계 최대 주말 시장 — 패션·공예·빈티지',emoji:'🛍️',duration:'3h',cost:{절약:20000,일반:40000,스페셜:80000},mood:['설레는','액티브']},
-      {name:'루프탑 수영장 & 스파',desc:'방콕 럭셔리 호텔 데이 패스 — 인피니티 풀',emoji:'🏊',duration:'3h',cost:{절약:40000,일반:80000,스페셜:150000},mood:['로맨틱','액티브']},
-    ],
-    저녁:[
-      {name:'살라 림남 디너 크루즈',desc:'차오프라야 강 야경 크루즈 + 태국 공연 디너',emoji:'⛵',duration:'2h',cost:{절약:70000,일반:100000,스페셜:160000},mood:['로맨틱','미식']},
-    ],
-    야경:[
-      {name:'루프탑 바 야경',desc:'방콕 스카이라인 뷰 루프탑 칵테일',emoji:'🌃',duration:'2h',cost:{절약:30000,일반:55000,스페셜:100000},mood:['로맨틱','미식']},
-    ],
-  },
-};
-
-// 나머지 도시용 범용 데이트 스팟 생성 (DB 활용)
-function _getFallbackDateSpots(cityKr){
-  const dbEntry=DB[cityKr]||findDest(cityKr);
-  if(!dbEntry||!dbEntry.spots) return null;
-  const s=dbEntry.spots;
-  return {
-    카페:   (s['카페']||s['힐링/스파']||[]).slice(0,2).map(x=>({name:x.n,desc:x.d,emoji:'☕',duration:'1h',cost:{절약:15000,일반:25000,스페셜:40000},mood:['설레는']})),
-    오전활동:(s['문화/역사']||s['자연']||[]).slice(0,2).map(x=>({name:x.n,desc:x.d,emoji:'🏛️',duration:'2h',cost:{절약:10000,일반:20000,스페셜:30000},mood:['문화','설레는']})),
-    점심:   (s['food']||[]).slice(0,2).map(x=>({name:x.n,desc:x.d,emoji:'🍽️',duration:'1h30m',cost:{절약:20000,일반:40000,스페셜:70000},mood:['미식']})),
-    오후활동:(s['쇼핑']||s['액티비티']||s['자연']||[]).slice(0,2).map(x=>({name:x.n,desc:x.d,emoji:'🎯',duration:'2h',cost:{절약:15000,일반:30000,스페셜:50000},mood:['설레는','액티브']})),
-    저녁:   (s['food']||[]).slice(2,4).map(x=>({name:x.n,desc:x.d,emoji:'🍷',duration:'2h',cost:{절약:30000,일반:55000,스페셜:90000},mood:['로맨틱','미식']})),
-    야경:   (s['야경']||s['힐링/스파']||[]).slice(0,2).map(x=>({name:x.n,desc:x.d,emoji:'🌃',duration:'1h30m',cost:{절약:0,일반:15000,스페셜:30000},mood:['로맨틱']})),
-  };
-}
-
-// ── 데이트 코스 입력 상태 ──
-const DST={city:'',mood:'설레는',budget:'일반'};
-
-function togDateMood(el,mood){
-  document.querySelectorAll('#date-mood-chips .chip').forEach(c=>c.classList.remove('on'));
-  el.classList.add('on');
-  DST.mood=mood;
-}
-function togDateBudget(el,budget){
-  document.querySelectorAll('#date-budget-chips .chip').forEach(c=>c.classList.remove('on'));
-  el.classList.add('on');
-  DST.budget=budget;
-}
-
-// 도시 검색 자동완성
-function filterDateCity(q){
-  const sugEl=document.getElementById('date-city-suggestions');
-  if(!q||q.length<1){sugEl.style.display='none';return;}
-  const qL=q.toLowerCase();
-  const all=Object.keys(DB).concat(Object.keys(ALIAS||{}));
-  const matches=[...new Set(all)].filter(c=>c.includes(q)||c.toLowerCase().includes(qL)).slice(0,8);
-  if(!matches.length){sugEl.style.display='none';return;}
-  sugEl.innerHTML=matches.map(c=>`<div class="date-city-suggest-item" onclick="selectDateCity('${escHtml(c)}')">${c}</div>`).join('');
-  sugEl.style.display='block';
-}
-function selectDateCity(city){
-  // alias 해소
-  const resolved=(ALIAS&&ALIAS[city])?ALIAS[city]:city;
-  DST.city=resolved;
-  document.getElementById('date-city-input').value=resolved;
-  document.getElementById('date-city-suggestions').style.display='none';
-  const sel=document.getElementById('date-city-selected');
-  sel.innerHTML=`<span style="display:inline-flex;align-items:center;gap:5px;background:rgba(236,72,153,.1);color:#ec4899;border:1px solid rgba(236,72,153,.25);border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700;">💑 ${resolved} <span onclick="clearDateCity()" style="cursor:pointer;margin-left:2px;opacity:.7;">×</span></span>`;
-  sel.style.display='block';
-}
-function clearDateCity(){
-  DST.city='';
-  document.getElementById('date-city-input').value='';
-  document.getElementById('date-city-selected').style.display='none';
-}
-
-// ── 데이트 코스 생성 ──
-function generateDateCourse(){
-  const errEl=document.getElementById('date-input-err');
-  if(!DST.city){
-    if(errEl){errEl.textContent='📍 도시를 선택해주세요';errEl.classList.add('on');}
-    return;
-  }
-  if(errEl) errEl.classList.remove('on');
-
-  const spots=CITY_DATE_SPOTS[DST.city]||_getFallbackDateSpots(DST.city);
-  if(!spots||(!spots.카페?.length&&!spots.오전활동?.length)){
-    if(errEl){errEl.textContent='⚠️ 해당 도시 데이터가 아직 없어요. 다른 도시를 선택해주세요.';errEl.classList.add('on');}
-    return;
-  }
-
-  go('date-result');
-  const dateWhen=document.getElementById('date-when')?.value;
-  const dateLabel=dateWhen?new Date(dateWhen).toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'}):'';
-  const moodLabel={'설레는':'🌸 설레는 첫 데이트','로맨틱':'🌃 로맨틱 나이트','문화':'🎨 문화·예술 탐방','액티브':'🌿 야외·액티브','미식':'🍷 미식·맛집 투어'}[DST.mood]||DST.mood;
-  const budgetLabel={'절약':'💸 알뜰형','일반':'💰 일반형','스페셜':'💎 스페셜'}[DST.budget]||DST.budget;
-
-  // 분위기에 맞는 스팟 선택 (mood 매칭 우선, 없으면 랜덤)
-  function pickSpot(arr){
-    if(!arr||!arr.length) return null;
-    const moodMatch=arr.filter(s=>s.mood&&s.mood.includes(DST.mood));
-    const pool=moodMatch.length?moodMatch:arr;
-    return pool[Math.floor(Math.random()*pool.length)];
-  }
-
-  const cafeSpot=pickSpot(spots.카페);
-  const morningSpot=pickSpot(spots.오전활동);
-  const lunchSpot=pickSpot(spots.점심);
-  const afternoonSpot=pickSpot(spots.오후활동);
-  const dinnerSpot=pickSpot(spots.저녁);
-  const nightSpot=pickSpot(spots.야경);
-
-  // 총 예상 비용
-  const bdg=DST.budget;
-  const totalCost=[cafeSpot,morningSpot,lunchSpot,afternoonSpot,dinnerSpot,nightSpot]
-    .filter(Boolean).reduce((sum,s)=>sum+(s.cost?.[bdg]||0),0);
-
-  // 이동 방법 (간단히 거리·시간 추정)
-  const _transit=(a,b)=>{
-    if(!a||!b) return null;
-    return ['🚇 지하철 약 15분','🚶 도보 약 10분','🚕 택시 약 10분','🚇 지하철 약 20분','🚶 도보 약 15분'][Math.floor(Math.random()*5)];
-  };
-
-  const slots=[
-    {time:'10:00',spot:cafeSpot,type:'카페'},
-    {time:'11:30',spot:morningSpot,type:'오전 활동'},
-    {time:'13:30',spot:lunchSpot,type:'점심'},
-    {time:'15:00',spot:afternoonSpot,type:'오후 활동'},
-    {time:'18:30',spot:dinnerSpot,type:'저녁 식사'},
-    {time:'20:30',spot:nightSpot,type:'야경·마무리'},
-  ].filter(s=>s.spot);
-
-  let html=`
-  <div class="date-header-card">
-    <div class="date-header-city">💑 ${DST.city} 데이트 코스</div>
-    <div class="date-header-sub">${dateLabel?dateLabel+' · ':''}${moodLabel} · ${budgetLabel}</div>
-    <div class="date-header-tags">
-      <span class="date-slot-badge pink">👫 1인 예상 ${totalCost.toLocaleString('ko-KR')}원</span>
-      <span class="date-slot-badge">⏰ 약 ${slots.length*2}시간</span>
-      <span class="date-slot-badge green">📍 ${slots.length}개 스팟</span>
-    </div>
-  </div>
-  <div class="date-timeline">`;
-
-  slots.forEach((s,i)=>{
-    const cost=s.spot.cost?.[bdg];
-    const costLabel=cost?`~${cost.toLocaleString('ko-KR')}원`:'무료';
-    const mapQ=encodeURIComponent((s.spot.name||'')+' '+(DST.city||''));
-    const transit=i<slots.length-1?_transit(s.spot,slots[i+1]?.spot):null;
-    html+=`
-    <div class="date-slot">
-      <div class="date-slot-line">
-        <div class="date-slot-dot"></div>
-        ${i<slots.length-1?'<div class="date-slot-line-seg"></div>':''}
-      </div>
-      <div class="date-slot-content">
-        <div class="date-slot-time">${s.time} · ${s.type}</div>
-        <div class="date-slot-card">
-          <div class="date-slot-emoji">${s.spot.emoji}</div>
-          <div class="date-slot-name">${escHtml(s.spot.name)}</div>
-          <div class="date-slot-desc">${escHtml(s.spot.desc)}</div>
-          <div class="date-slot-meta">
-            <span class="date-slot-badge">⏱ ${s.spot.duration}</span>
-            <span class="date-slot-badge ${cost===0?'green':''}">${costLabel}</span>
-            <a href="https://www.google.com/maps/search/?q=${mapQ}" target="_blank" rel="noopener" style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(66,133,244,.1);color:#4285f4;border:1px solid rgba(66,133,244,.25);text-decoration:none;">🗺️ 지도</a>
-          </div>
-        </div>
-        ${transit?`<div class="date-transit">↓ ${transit}</div>`:''}
-      </div>
-    </div>`;
-  });
-
-  html+=`</div>
-  <div style="background:var(--card);border:1px solid var(--bdr);border-radius:14px;padding:14px 16px;margin-top:16px;">
-    <div style="font-size:13px;font-weight:800;margin-bottom:8px;">💡 데이트 TIP</div>
-    ${_getDateTip(DST.city,DST.mood)}
-  </div>`;
-
-  document.getElementById('date-result-body').innerHTML=html;
-}
-
-function _getDateTip(city,mood){
-  const tips={
-    '로맨틱':'야경 포인트에서 미리 꽃다발이나 간식을 준비하면 특별한 순간이 돼요 🌹',
-    '설레는':'처음 가는 곳이라면 카카오맵으로 미리 동선을 확인하고 여유 있게 이동하세요 🗺️',
-    '문화':'전시나 박물관은 사전 예약이 필수예요. 주말은 웨이팅이 길 수 있어요 🎟️',
-    '액티브':'편한 운동화 필수! 날씨 앱 확인도 잊지 마세요 👟',
-    '미식':'인기 맛집은 평일 방문이나 오픈 런을 추천해요. 네이버·카카오맵 예약 먼저 확인하세요 🍽️',
-  };
-  const cityTips={
-    '서울':'대중교통이 편리해요. T-머니 카드 하나면 지하철·버스 다 돼요 🚇',
-    '도쿄':'IC 카드(스이카·파스모) 미리 충전하세요. 자판기에서 음료 사서 산책도 도쿄 데이트 필수 🗾',
-    '파리':'점심은 현지인처럼 브래스리에서, 저녁은 미리 예약 필수예요 🥐',
-  };
-  const moodTip=tips[mood]||'여유롭게 이동하며 대화하는 시간도 중요한 데이트 코스예요 💬';
-  const cityTip=cityTips[city]||'현지 교통카드나 택시 앱을 미리 설치해 두면 이동이 편해요 🚕';
-  return `<div style="font-size:12px;color:var(--sub);line-height:1.7;">${moodTip}<br>${cityTip}</div>`;
-}
-
-function shareDateCourse(){
-  const dest=DST.city||'';
-  const text=`💑 TripMind로 ${dest} 데이트 코스를 만들었어요!\n분위기: ${DST.mood} | 예산: ${DST.budget}\n무료로 나만의 데이트 코스를 만들어보세요!`;
-  if(navigator.share){
-    navigator.share({title:`TripMind — ${dest} 데이트 코스`,text,url:location.href}).catch(()=>{});
-  } else {
-    navigator.clipboard.writeText(text+'\n'+location.href)
-      .then(()=>showToast('🔗 링크 복사됨!'))
-      .catch(()=>showToast('공유 기능을 지원하지 않는 브라우저예요'));
-  }
-}
 
 // ══════════════════════════════════════════════
 // 🎉 축제 DB & 위젯
@@ -10589,6 +10343,7 @@ document.addEventListener('DOMContentLoaded',function(){
 <script src="db_extra8.js" onerror="_dbLoadErr++"></script>
 <script src="db_extra9.js" onerror="_dbLoadErr++"></script>
 <script src="hotel_data.js" onerror="console.warn('[TripMind] hotel_data.js 로드 실패 — 호텔 예시 비표시')"></script>
+<script src="_date_new.js" onerror="console.warn('[TripMind] _date_new.js 로드 실패 — 데이트 코스 비활성')"></script>
 <!-- 모든 DB 로드 완료 후 스키마 검증 + 로드 실패 배너 -->
 <script>
 // ── 전역 에러 핸들러: 어떤 JS 오류가 나도 앱 UI는 살아있도록 ──
