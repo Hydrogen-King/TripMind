@@ -708,6 +708,44 @@ const INDOOR_NIGHT=[
 const _OUT_RE=/산책|자전거|한강|해변|해수욕|피크닉|공원|트레킹|둘레길|성곽|성벽|일출|일몰|노을|야경|분수|갈대|억새|호수|폭포|오름|등산|서핑|보트|유람선|케이블카|섬|항구|해안|벚꽃|단풍|꽃|스카이워크|캠핑|레일바이크|돌담길|올레|정원/;
 function _isOutdoor(s){ return !!s && _OUT_RE.test((s.name||'')+(s.desc||'')); }
 
+// ── 실데이터(네이버/구글) 연동 — Worker 프록시 (선택) ──
+// index.html 의 window.TRIPMIND_DATE_API 에 Worker 주소를 넣으면 켜짐. 없으면 큐레이션만 동작.
+const DATE_API_URL=(typeof window!=='undefined' && window.TRIPMIND_DATE_API) || '';
+async function _loadRealSpots(area){
+  const host=document.getElementById('date-real-data');
+  if(!host) return;
+  if(!DATE_API_URL){ host.innerHTML=''; return; }
+  host.innerHTML='<div class="date-real-loading">⏳ 이 동네 실제 인기 가게 불러오는 중…</div>';
+  try{
+    const base=DATE_API_URL.replace(/\/+$/,'');
+    const a=encodeURIComponent((area||'').split('·')[0]);
+    const [cafe,food]=await Promise.all([
+      fetch(`${base}/spots?area=${a}&cat=카페&n=5`).then(r=>r.ok?r.json():null).catch(()=>null),
+      fetch(`${base}/spots?area=${a}&cat=맛집&n=5`).then(r=>r.ok?r.json():null).catch(()=>null),
+    ]);
+    const html=_realBlock('☕ 실제 인기 카페 TOP',cafe)+_realBlock('🍽️ 실제 인기 맛집 TOP',food);
+    host.innerHTML=html;
+  }catch(_){ host.innerHTML=''; }
+}
+function _realBlock(title,data){
+  if(!data||!Array.isArray(data.items)||!data.items.length) return '';
+  const rows=data.items.map((it,i)=>{
+    const star=(it.googleRating!=null)?`⭐ ${it.googleRating} (${Number(it.googleReviews||0).toLocaleString()})`:'';
+    const blog=(it.blogTotal!=null&&it.blogTotal>0)?`📝 블로그 ${Number(it.blogTotal).toLocaleString()}`:'';
+    const meta=[star,blog,esc(it.category||'')].filter(Boolean).join(' · ');
+    const q=encodeURIComponent(it.name+' '+(data.area||''));
+    return `<div class="date-real-row">
+      <span class="date-real-rank">${i+1}</span>
+      <div class="date-real-info">
+        <div class="date-real-name">${esc(it.name)}</div>
+        ${meta?`<div class="date-real-meta">${meta}</div>`:''}
+      </div>
+      <a href="https://map.naver.com/v5/search/${q}" target="_blank" rel="noopener" class="date-ext date-ext-map">지도</a>
+    </div>`;
+  }).join('');
+  return `<div class="date-real-card"><div class="date-real-title">${esc(title)} <span class="date-real-src">네이버·구글 실데이터</span></div>${rows}</div>`;
+}
+
 function generateDateCourse(){
   const errEl=document.getElementById('date-input-err');
   if(!DST.area){if(errEl){errEl.textContent='📍 데이트 지역을 선택해주세요';errEl.classList.add('on');}return;}
@@ -838,7 +876,9 @@ function generateDateCourse(){
           <div class="date-slot-meta">
             <span class="date-slot-badge">⏱ ${_durLabel(s.spot.dur||60)}</span>
             <span class="date-slot-badge ${cost===0?'green':''}">${costStr}</span>
-            <a href="https://map.naver.com/v5/search/${mapQ}" target="_blank" rel="noopener" class="date-map-link">🗺️ 네이버지도</a>
+            <a href="https://map.naver.com/v5/search/${mapQ}" target="_blank" rel="noopener" class="date-ext date-ext-map">🗺️ 지도</a>
+            <a href="https://www.youtube.com/results?search_query=${mapQ}" target="_blank" rel="noopener" class="date-ext date-ext-yt">▶ 유튜브</a>
+            <a href="https://search.naver.com/search.naver?where=blog&query=${mapQ}" target="_blank" rel="noopener" class="date-ext date-ext-blog">📝 블로그</a>
           </div>
         </div>
         ${!isLast?`<div class="date-transit">↓ 도보·이동 약 ${travelMins[timeSlots[i+1]?.type]||15}분</div>`:''}
@@ -846,12 +886,14 @@ function generateDateCourse(){
     </div>`;
   });
   html+=`</div>
+  <div id="date-real-data"></div>
   <div class="date-tip-card">
     <div class="date-tip-title">💡 데이트 TIP</div>
     ${_getDateTip(DST.area,DST.mood,startH,rain)}
   </div>`;
   const body=document.getElementById('date-result-body');
   if(body) body.innerHTML=html;
+  _loadRealSpots(DST.area);
 }
 
 function _getDateTip(area,mood,startH,rain){
