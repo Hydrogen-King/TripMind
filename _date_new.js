@@ -664,9 +664,10 @@ function updateDateDayLabel(){
 // ══════════════════════════════════════════════
 // 입력 상태
 // ══════════════════════════════════════════════
-const DST={area:'',mood:'설레는',budget:'일반'};
+const DST={area:'',mood:'설레는',budget:'일반',weather:'맑음'};
 function togDateMood(el,mood){document.querySelectorAll('#date-mood-chips .chip').forEach(c=>c.classList.remove('on'));if(el)el.classList.add('on');DST.mood=mood;}
 function togDateBudget(el,b){document.querySelectorAll('#date-budget-chips .chip').forEach(c=>c.classList.remove('on'));if(el)el.classList.add('on');DST.budget=b;}
+function togDateWeather(el,w){document.querySelectorAll('#date-weather-chips .chip').forEach(c=>c.classList.remove('on'));if(el)el.classList.add('on');DST.weather=w;}
 
 // ══════════════════════════════════════════════
 // 시간 계산
@@ -686,6 +687,27 @@ function _timeBand(timeStr){
 // ══════════════════════════════════════════════
 // 코스 생성
 // ══════════════════════════════════════════════
+// 실내 활동 풀(영화·도서관·전시 등) — 실내 보강 & 비 오는 날 대안
+const INDOOR_POOL=[
+  {name:'영화관 (CGV·메가박스)',desc:'최신 영화 한 편 — 비 오는 날·휴식 타이밍에 딱',emoji:'🎬',dur:130,cost:{절약:24000,일반:34000,스페셜:52000},mood:['설레는','로맨틱','문화']},
+  {name:'북카페·동네 책방',desc:'조용히 책 고르며 서로 취향 엿보기 — 대화 코스',emoji:'📚',dur:80,cost:{절약:12000,일반:22000,스페셜:38000},mood:['문화','설레는','로맨틱']},
+  {name:'전시·미술관 관람',desc:'기획 전시·갤러리 — 실내 문화 데이트',emoji:'🖼️',dur:100,cost:{절약:8000,일반:20000,스페셜:38000},mood:['문화','설레는']},
+  {name:'보드게임 카페',desc:'머리 맞대고 게임 한판 — 자연스럽게 친해지는 코스',emoji:'🎲',dur:120,cost:{절약:16000,일반:26000,스페셜:42000},mood:['설레는','액티브']},
+  {name:'방탈출 카페',desc:'제한시간 협동 추리 — 케미 폭발 액티비티',emoji:'🗝️',dur:90,cost:{절약:22000,일반:32000,스페셜:48000},mood:['설레는','액티브']},
+  {name:'실내 클라이밍·스포츠',desc:'볼더링·실내 스포츠 — 활동적인 커플 추천',emoji:'🧗',dur:110,cost:{절약:20000,일반:34000,스페셜:55000},mood:['액티브','설레는']},
+  {name:'원데이 클래스·공방',desc:'향수·도자기·쿠킹 클래스 — 함께 만드는 추억',emoji:'🧑‍🎨',dur:120,cost:{절약:35000,일반:55000,스페셜:90000},mood:['문화','로맨틱','설레는']},
+  {name:'아쿠아리움·실내 테마',desc:'아쿠아리움·실내 테마파크 — 날씨 무관 명소',emoji:'🐠',dur:100,cost:{절약:25000,일반:35000,스페셜:55000},mood:['설레는','로맨틱']},
+];
+// 실내 마무리 풀(비 오는 밤 야경 대체)
+const INDOOR_NIGHT=[
+  {name:'감성 와인바·재즈바',desc:'조용한 실내 바에서 와인 한잔 — 비 오는 밤의 마무리',emoji:'🍷',dur:90,cost:{절약:28000,일반:45000,스페셜:80000},mood:['로맨틱','미식']},
+  {name:'심야 영화 한 편',desc:'하루를 마무리하는 심야 영화',emoji:'🎬',dur:130,cost:{절약:24000,일반:34000,스페셜:52000},mood:['로맨틱','설레는']},
+  {name:'실내 전망대 야경',desc:'통창 전망대에서 보는 야경 — 비 와도 OK',emoji:'🌃',dur:80,cost:{절약:20000,일반:29000,스페셜:45000},mood:['로맨틱','설레는']},
+];
+// 야외 스팟 판별 — 비 모드에서 제외/실내 대체
+const _OUT_RE=/산책|자전거|한강|해변|해수욕|피크닉|공원|트레킹|둘레길|성곽|성벽|일출|일몰|노을|야경|분수|갈대|억새|호수|폭포|오름|등산|서핑|보트|유람선|케이블카|섬|항구|해안|벚꽃|단풍|꽃|스카이워크|캠핑|레일바이크|돌담길|올레|정원/;
+function _isOutdoor(s){ return !!s && _OUT_RE.test((s.name||'')+(s.desc||'')); }
+
 function generateDateCourse(){
   const errEl=document.getElementById('date-input-err');
   if(!DST.area){if(errEl){errEl.textContent='📍 데이트 지역을 선택해주세요';errEl.classList.add('on');}return;}
@@ -714,20 +736,30 @@ function generateDateCourse(){
   const sp=areaData.spots;
   const act=sp.활동||sp.자연||[]; // 활동 또는 자연
   const used=new Set();
+  const rain=DST.weather==='비';                      // 날씨 대안: 비·실내 위주
+  const hasNature=!!sp.자연;                           // 자연 여행지 여부
+  const areaIndoorAct=act.filter(s=>!_isOutdoor(s));   // 지역 내 실내 활동만
+  // 1차(시그니처) 활동 풀 — 맑으면 지역 스팟, 비오면 실내
+  const pool1=rain ? (areaIndoorAct.length?areaIndoorAct.concat(INDOOR_POOL):INDOOR_POOL.slice()) : act.slice();
+  // 2차(오후) 활동 풀 — 도심은 실내 다양성(영화·도서관 등) 추가, 자연 지역은 지역 스팟 유지
+  const pool2=rain ? INDOOR_POOL.concat(areaIndoorAct) : (hasNature ? act.slice() : act.concat(INDOOR_POOL));
+  // 마무리 풀 — 맑으면 야경, 비오면 실내 마무리
+  const nightPool=rain ? INDOOR_NIGHT.slice() : (sp.야경||[]).slice();
 
-  // ── 시작 시간에 따라 시간대별 슬롯 구성 ──
+  // ── 시작 시간 + 날씨에 따라 시간대별 슬롯 구성 ──
   const plan=[];
   function add(type,label,spot){ if(spot){plan.push({type,label,spot});used.add(spot);} }
   if(sp.카페?.length && startH<=11)  add('카페','☕ 카페 타임', pickSpot(sp.카페,used));
-  if(act.length && startH<=13)        add('활동','🎯 오전·낮 활동', pickSpot(act,used));
+  if(pool1.length && startH<=13)      add('활동', rain?'🏠 실내 활동':'🎯 오전·낮 활동', pickSpot(pool1,used));
   if(sp.식사?.length && startH<=14)   add('점심','🍜 점심 식사', pickSpot(sp.식사,used));
-  if(act.length && startH<=16)        add('활동2','🎨 오후 활동', pickSpot(act,used));
+  if(pool2.length && startH<=16)      add('활동2', rain?'🎬 실내 활동':'🎨 오후 활동', pickSpot(pool2,used));
   if(sp.카페?.length && startH>11 && startH<=15) add('카페2','☕ 카페·디저트', pickSpot(sp.카페,used));
   if(sp.식사?.length && startH<=19)   add('저녁','🍽️ 저녁 식사', pickSpot(sp.식사,used));
-  if(sp.야경?.length)                  add('야경','🌃 야경·마무리', pickSpot(sp.야경,used));
+  if(nightPool.length)                 add('야경', rain?'🏙️ 실내 마무리':'🌃 야경·마무리', pickSpot(nightPool,used));
   // 슬롯이 너무 적으면(늦은 시작) 활동 보강
-  if(plan.filter(p=>p.spot).length<3 && act.length){
-    const extra=pickSpot(act,used); if(extra) add('활동3','✨ 추가 활동',extra);
+  if(plan.filter(p=>p.spot).length<3){
+    const xp=rain?INDOOR_POOL:(act.length?act:INDOOR_POOL);
+    const extra=pickSpot(xp,used); if(extra) add('활동3','✨ 추가 활동',extra);
   }
 
   // ── 타임라인 + 이동시간 ──
@@ -767,7 +799,7 @@ function generateDateCourse(){
   let html=`
   <div class="date-header-card">
     <div class="date-header-city">${moodEmoji} ${esc(DST.area)}</div>
-    <div class="date-header-sub">${dateLabel?esc(dateLabel)+' · ':''}${startTime} 시작 · ${esc(DST.mood)} · ${esc(bdg)}형</div>
+    <div class="date-header-sub">${dateLabel?esc(dateLabel)+' · ':''}${startTime} 시작 · ${rain?'☔ 실내 · ':''}${esc(DST.mood)} · ${esc(bdg)}형</div>
     <div class="date-header-tags">
       <span class="date-slot-badge pink">👫 1인 ~${totalCost.toLocaleString()}원</span>
       <span class="date-slot-badge">⏱ ${startTime}~${endTime} (총 ${_durLabel(totalMin)})</span>
@@ -816,13 +848,13 @@ function generateDateCourse(){
   html+=`</div>
   <div class="date-tip-card">
     <div class="date-tip-title">💡 데이트 TIP</div>
-    ${_getDateTip(DST.area,DST.mood,startH)}
+    ${_getDateTip(DST.area,DST.mood,startH,rain)}
   </div>`;
   const body=document.getElementById('date-result-body');
   if(body) body.innerHTML=html;
 }
 
-function _getDateTip(area,mood,startH){
+function _getDateTip(area,mood,startH,rain){
   const tips={'설레는':'첫 스팟에서 여유롭게 대화하며 긴장을 푸는 게 가장 중요해요 💬','로맨틱':'야경 포인트에서 작은 선물이나 꽃 한 송이를 준비하면 특별해져요 🌹','문화':'전시·공연·궁궐은 주말 사전 예약을 권장해요 🎟️','액티브':'편한 운동화와 날씨 체크는 필수예요 👟','미식':'인기 맛집은 네이버·캐치테이블 예약을 미리 해두세요 🍽️'};
   const timeTip=startH>=15?'늦게 시작했다면 저녁·야경 위주로 알차게! 점심은 가볍게 패스해도 좋아요 ⏰':startH<=9?'일찍 시작하면 오전 카페가 한적해서 좋아요. 점심·저녁 사이 충분히 즐겨보세요 🌅':'';
   const areaTips={
@@ -837,7 +869,8 @@ function _getDateTip(area,mood,startH){
   };
   const t=tips[mood]||'여유롭게 이동하며 대화하는 시간이 가장 소중해요 💑';
   const a=areaTips[area]||`${area.split('·')[0]} 지역 교통편은 네이버지도에서 미리 확인하세요 🚇`;
-  return `<div class="date-tip-body">${t}<br>${a}${timeTip?'<br>'+timeTip:''}</div>`;
+  const rainTip=rain?'☔ 비 예보엔 우산 챙기고, 야외 대신 실내 위주로 동선을 짰어요 🏠':'';
+  return `<div class="date-tip-body">${rainTip?rainTip+'<br>':''}${t}<br>${a}${timeTip?'<br>'+timeTip:''}</div>`;
 }
 
 function shareDateCourse(){
@@ -863,6 +896,6 @@ else setTimeout(_initDateRegion,100);
 
 Object.assign(window,{
   filterDepLoc,selectDepLoc,showDateRegion,selectDateArea,clearDateArea,
-  updateDateDayLabel,togDateMood,togDateBudget,generateDateCourse,shareDateCourse
+  updateDateDayLabel,togDateMood,togDateBudget,togDateWeather,generateDateCourse,shareDateCourse
 });
 })();

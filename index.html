@@ -1614,6 +1614,13 @@ body{overscroll-behavior-y:none;}
     <div class="chip" onclick="togDateBudget(this,'스페셜')">💎 스페셜 (~20만+)</div>
   </div>
 
+  <!-- 날씨 (실내/야외 자동 대안) -->
+  <div class="sec-title" style="margin-bottom:8px;">🌦️ 날씨</div>
+  <div class="chips" id="date-weather-chips" style="margin-bottom:16px;">
+    <div class="chip on" onclick="togDateWeather(this,'맑음')">☀️ 맑음 (야외·실내)</div>
+    <div class="chip" onclick="togDateWeather(this,'비')">☔ 비·실내 위주</div>
+  </div>
+
   <div id="date-input-err" class="err-msg"></div>
   <button class="btn btn-p" onclick="generateDateCourse()" style="margin-top:4px;font-size:16px;">💑 데이트 코스 만들기</button>
 </div>
