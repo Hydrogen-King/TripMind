@@ -711,39 +711,74 @@ function _isOutdoor(s){ return !!s && _OUT_RE.test((s.name||'')+(s.desc||'')); }
 // ── 실데이터(네이버/구글) 연동 — Worker 프록시 (선택) ──
 // index.html 의 window.TRIPMIND_DATE_API 에 Worker 주소를 넣으면 켜짐. 없으면 큐레이션만 동작.
 const DATE_API_URL=(typeof window!=='undefined' && window.TRIPMIND_DATE_API) || '';
-async function _loadRealSpots(area){
+// 카테고리 탭 그룹 (식당/카페 분리 + 명소)  [표시명, Worker cat]
+const REAL_GROUPS=[
+  {title:'🍽️ 맛집', cats:[['전체','맛집'],['한식','한식'],['중식','중식'],['일식','일식'],['양식','양식'],['술집','술집']]},
+  {title:'☕ 카페·디저트', cats:[['카페','카페'],['디저트','디저트'],['브런치','브런치']]},
+  {title:'📸 데이트 명소', cats:[['명소','데이트명소']]},
+];
+const _realCache={};
+function _realDong(area){ return (area||'').split('·')[0].split(/\s+/)[0]; }
+function _selectedWeekday(){
+  const v=document.getElementById('date-when')?.value;
+  const d=v?new Date(v):new Date();
+  const n=d.getDay();
+  return isNaN(n)?new Date().getDay():n;
+}
+function _loadRealSpots(area){
   const host=document.getElementById('date-real-data');
   if(!host) return;
   if(!DATE_API_URL){ host.innerHTML=''; return; }
-  host.innerHTML='<div class="date-real-loading">⏳ 이 동네 실제 인기 가게 불러오는 중…</div>';
+  const dong=_realDong(area);
+  host.innerHTML=`<div class="date-real-head">📍 <b>${esc(dong)}</b> 실제 인기 가게 <span class="date-real-src">네이버·구글 실데이터</span></div>`+
+    REAL_GROUPS.map((g,gi)=>{
+      const chips=g.cats.map((c,ci)=>`<span class="date-cat-chip${ci===0?' on':''}" onclick="_dateCat('${esc(dong)}','${esc(c[1])}','rl-${gi}',this)">${esc(c[0])}</span>`).join('');
+      return `<div class="date-real-card">
+        <div class="date-real-title">${g.title}</div>
+        ${g.cats.length>1?`<div class="date-cat-chips">${chips}</div>`:''}
+        <div id="rl-${gi}" class="date-real-list"><div class="date-real-loading">⏳ 불러오는 중…</div></div>
+      </div>`;
+    }).join('');
+  REAL_GROUPS.forEach((g,gi)=>_dateCat(dong, g.cats[0][1], 'rl-'+gi, null));
+}
+async function _dateCat(dong,cat,listId,chipEl){
+  if(chipEl){ const row=chipEl.parentElement; if(row) row.querySelectorAll('.date-cat-chip').forEach(c=>c.classList.remove('on')); chipEl.classList.add('on'); }
+  const el=document.getElementById(listId); if(!el) return;
+  if(!DATE_API_URL){ el.innerHTML=''; return; }
+  const day=_selectedWeekday();
+  const ck=dong+'|'+cat+'|'+day;
+  if(_realCache[ck]){ el.innerHTML=_realRows(_realCache[ck]); return; }
+  el.innerHTML='<div class="date-real-loading">⏳ 불러오는 중…</div>';
   try{
     const base=DATE_API_URL.replace(/\/+$/,'');
-    const a=encodeURIComponent((area||'').split('·')[0]);
-    const [cafe,food]=await Promise.all([
-      fetch(`${base}/spots?area=${a}&cat=카페&n=5`).then(r=>r.ok?r.json():null).catch(()=>null),
-      fetch(`${base}/spots?area=${a}&cat=맛집&n=5`).then(r=>r.ok?r.json():null).catch(()=>null),
-    ]);
-    const html=_realBlock('☕ 실제 인기 카페 TOP',cafe)+_realBlock('🍽️ 실제 인기 맛집 TOP',food);
-    host.innerHTML=html;
-  }catch(_){ host.innerHTML=''; }
+    const u=`${base}/spots?area=${encodeURIComponent(dong)}&cat=${encodeURIComponent(cat)}&n=10&hours=1&day=${day}`;
+    const d=await fetch(u).then(r=>r.ok?r.json():null).catch(()=>null);
+    const items=(d&&Array.isArray(d.items))?d.items:[];
+    _realCache[ck]=items;
+    el.innerHTML=items.length?_realRows(items):'<div class="date-real-loading">검색 결과가 없어요</div>';
+  }catch(_){ el.innerHTML='<div class="date-real-loading">불러오기 실패 — 잠시 후 다시</div>'; }
 }
-function _realBlock(title,data){
-  if(!data||!Array.isArray(data.items)||!data.items.length) return '';
-  const rows=data.items.map((it,i)=>{
-    const star=(it.googleRating!=null)?`⭐ ${it.googleRating} (${Number(it.googleReviews||0).toLocaleString()})`:'';
-    const blog=(it.blogTotal!=null&&it.blogTotal>0)?`📝 블로그 ${Number(it.blogTotal).toLocaleString()}`:'';
-    const meta=[star,blog,esc(it.category||'')].filter(Boolean).join(' · ');
-    const q=encodeURIComponent(it.name+' '+(data.area||''));
+function _realRows(items){
+  return items.map((it,i)=>{
+    const star=(it.googleRating!=null)?`⭐ ${it.googleRating}${it.googleReviews?` (${Number(it.googleReviews).toLocaleString()})`:''}`:'';
+    const blog=(it.blogTotal!=null&&it.blogTotal>0)?`📝 ${Number(it.blogTotal).toLocaleString()}`:'';
+    const catTail=esc((it.category||'').split('>').pop()||'');
+    const meta=[star,blog,catTail].filter(Boolean).join(' · ');
+    let openBadge='';
+    if(it.openNow===true) openBadge=' <span class="date-open">🟢 영업중</span>';
+    else if(it.openNow===false) openBadge=' <span class="date-closed">🔴 영업종료</span>';
+    const hours=it.todayHours?`<div class="date-hours">⏰ ${esc(it.todayHours)}</div>`:'';
+    const q=encodeURIComponent(it.name);
     return `<div class="date-real-row">
       <span class="date-real-rank">${i+1}</span>
       <div class="date-real-info">
-        <div class="date-real-name">${esc(it.name)}</div>
+        <div class="date-real-name">${esc(it.name)}${openBadge}</div>
         ${meta?`<div class="date-real-meta">${meta}</div>`:''}
+        ${hours}
       </div>
       <a href="https://map.naver.com/v5/search/${q}" target="_blank" rel="noopener" class="date-ext date-ext-map">지도</a>
     </div>`;
   }).join('');
-  return `<div class="date-real-card"><div class="date-real-title">${esc(title)} <span class="date-real-src">네이버·구글 실데이터</span></div>${rows}</div>`;
 }
 
 function generateDateCourse(){
@@ -938,6 +973,7 @@ else setTimeout(_initDateRegion,100);
 
 Object.assign(window,{
   filterDepLoc,selectDepLoc,showDateRegion,selectDateArea,clearDateArea,
-  updateDateDayLabel,togDateMood,togDateBudget,togDateWeather,generateDateCourse,shareDateCourse
+  updateDateDayLabel,togDateMood,togDateBudget,togDateWeather,generateDateCourse,shareDateCourse,
+  _dateCat
 });
 })();

@@ -1,40 +1,26 @@
 /**
  * ─────────────────────────────────────────────────────────────
- * TripMind — 데이트 추천 실데이터 프록시 (Cloudflare Worker)
+ * TripMind — 데이트 추천 실데이터 프록시 (Cloudflare Worker)  v2
  * ─────────────────────────────────────────────────────────────
- * GitHub Pages(정적 프론트)에서 직접 못 부르는 네이버/구글 API를
- * 서버에서 대신 호출해 주는 "프록시" Worker입니다. (CORS + 키 보호)
+ * 정적 프론트(GitHub Pages)가 직접 못 부르는 네이버/구글 API를
+ * 서버에서 대신 호출하는 프록시. (CORS + 키 보호)
  *
- * ■ 배포 방법 (GitHub Actions·토큰 불필요)
- *   1) https://dash.cloudflare.com → Workers & Pages → Create → Worker
- *   2) 이 파일 내용을 통째로 붙여넣고 Deploy
- *   3) Settings → Variables and Secrets 에 아래 값을 "Secret"으로 추가
- *        NAVER_ID       = 네이버 개발자센터 Client ID
- *        NAVER_SECRET   = 네이버 개발자센터 Client Secret
- *        GOOGLE_KEY     = (선택) 구글 Places API 키 — ⭐별점 원할 때만
- *        ALLOW_ORIGIN   = (선택) https://hydrogen-king.github.io  (기본 *)
- *   4) 배포된 주소(예: https://tripmind-date.<계정>.workers.dev)를
- *      index.html 의  const DATE_API_URL = ''  에 넣으면 끝.
- *
- * ■ 키 발급
- *   · 네이버: https://developers.naver.com/apps  → 애플리케이션 등록
- *            → "검색" API 사용 추가 → Client ID/Secret 발급 (무료, 25,000회/일)
- *   · 구글(별점, 선택): Google Cloud Console → Places API 활성화 + 결제(빌링)
- *            ※ 구글 Places는 호출당 과금됩니다. 캐시(6h)로 비용 최소화함.
- *
- * ■ 데이터 정직 고지
- *   · 네이버/카카오 공개 API에는 "별점"이 없습니다.
- *     → 별점·리뷰수는 구글 Places(GOOGLE_KEY 설정 시)에서만 옵니다.
- *   · 네이버는 실제 상호·주소·지도링크 + 블로그 후기 개수(인기 지표)를 제공.
+ * ■ 환경변수(Secret): NAVER_ID, NAVER_SECRET, GOOGLE_KEY(선택·별점/영업시간), ALLOW_ORIGIN(선택)
  *
  * ■ 엔드포인트
  *   GET /health
- *   GET /spots?area=홍대&cat=카페&n=5     ← 그 동네 실제 인기 가게 TOP
- *   GET /enrich?name=어니언 성수&area=성수  ← 특정 가게 블로그수/구글별점
+ *   GET /spots?area=홍대&cat=한식&n=10&hours=1&day=5
+ *        cat : 맛집 한식 중식 일식 양식 술집 카페 디저트 브런치 데이트명소 ...
+ *        n   : 1~10 (네이버 지역검색은 1쿼리 최대 5건이라 여러 키워드로 모아 dedupe)
+ *        hours=1 + day=(0=일~6=토) : 구글 영업시간(GOOGLE_KEY 필요)
+ *   GET /enrich?name=어니언 성수&area=성수
+ *
+ * ■ 정직 고지: 별점·영업시간은 구글 Places에서만 옵니다(네이버/카카오 미제공).
+ *   구글은 호출당 과금 → 결과 6시간 캐시로 비용 최소화.
  * ─────────────────────────────────────────────────────────────
  */
 
-const CACHE_TTL = 21600; // 결과 캐시 6시간 (네이버/구글 호출량·비용 절감)
+const CACHE_TTL = 21600; // 6시간
 
 export default {
   async fetch(request, env, ctx) {
@@ -47,14 +33,12 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
     if (request.method !== 'GET') return json({ error: 'GET only' }, 405, cors);
 
-    // health 는 캐시하지 않음
     if (url.pathname === '/health') {
       return json({ ok: true,
         naver: !!(env.NAVER_ID && env.NAVER_SECRET),
         google: !!env.GOOGLE_KEY, ts: Date.now() }, 200, cors);
     }
 
-    // 캐시 HIT
     const cache = caches.default;
     const hit = await cache.match(request);
     if (hit) { const r = new Response(hit.body, hit); r.headers.set('X-Cache', 'HIT'); return r; }
@@ -83,7 +67,7 @@ function json(obj, status, headers) {
 }
 function stripTags(s) { return String(s || '').replace(/<[^>]*>/g, '').trim(); }
 
-// ── 네이버 지역검색 (실제 상호·주소, 블로그 리뷰 많은 순) ──
+// ── 네이버 지역검색 (실제 상호·주소, 블로그 리뷰 많은 순) — 1쿼리 최대 5건 ──
 async function naverLocal(env, query, n) {
   if (!env.NAVER_ID || !env.NAVER_SECRET) throw new Error('네이버 키 미설정 (NAVER_ID / NAVER_SECRET)');
   const display = Math.min(Math.max(n || 5, 1), 5);
@@ -112,52 +96,99 @@ async function naverBlogTotal(env, query) {
   } catch (_) { return null; }
 }
 
-// ── 구글 Places (⭐별점·리뷰수, 선택) ──
-async function googlePlace(env, query) {
+// ── 구글 Places — ⭐별점·리뷰수 + (옵션) 영업시간 ──
+async function googlePlace(env, query, wantHours, dayIdx) {
   if (!env.GOOGLE_KEY) return null;
   try {
-    const u = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(query)}&inputtype=textquery&language=ko&fields=rating,user_ratings_total,name,place_id&key=${env.GOOGLE_KEY}`;
+    const u = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(query)}&inputtype=textquery&language=ko&fields=rating,user_ratings_total,place_id,opening_hours,name&key=${env.GOOGLE_KEY}`;
     const r = await fetch(u);
     if (!r.ok) return null;
     const d = await r.json();
     const c = (d.candidates || [])[0];
     if (!c) return null;
-    return { rating: c.rating ?? null, reviews: c.user_ratings_total ?? null, placeId: c.place_id || null };
+    const out = {
+      rating: c.rating ?? null, reviews: c.user_ratings_total ?? null, placeId: c.place_id || null,
+      openNow: (c.opening_hours && typeof c.opening_hours.open_now === 'boolean') ? c.opening_hours.open_now : null,
+      todayHours: null,
+    };
+    if (wantHours && out.placeId) {
+      const det = await googleDetails(env, out.placeId, dayIdx);
+      if (det) { if (det.openNow != null) out.openNow = det.openNow; out.todayHours = det.todayHours; }
+    }
+    return out;
   } catch (_) { return null; }
 }
 
-// 슬롯 카테고리 → 네이버 검색어 키워드
-const CAT_QUERY = {
-  '카페': '카페', '맛집': '맛집', '식사': '맛집', '점심': '맛집', '저녁': '맛집',
-  '활동': '가볼만한곳', '놀거리': '가볼만한곳', '야경': '야경 명소',
+// 구글 Place Details — 요일별 영업시간(weekday_text)에서 해당 요일만 추출
+async function googleDetails(env, placeId, dayIdx) {
+  try {
+    const u = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&language=ko&fields=opening_hours&key=${env.GOOGLE_KEY}`;
+    const r = await fetch(u);
+    if (!r.ok) return null;
+    const d = await r.json();
+    const oh = d.result && d.result.opening_hours;
+    if (!oh) return null;
+    let today = null;
+    if (Array.isArray(oh.weekday_text) && dayIdx != null && dayIdx >= 0 && dayIdx <= 6) {
+      const ko = ['일', '월', '화', '수', '목', '금', '토'][dayIdx];
+      today = oh.weekday_text.find(s => s.indexOf(ko + '요일') === 0) || null;
+    }
+    return { openNow: (typeof oh.open_now === 'boolean') ? oh.open_now : null, todayHours: today };
+  } catch (_) { return null; }
+}
+
+// 카테고리 → 네이버 검색 키워드(여러 개로 모아 TOP10까지 확보)
+const CAT_KW = {
+  '맛집': ['맛집', '맛집 추천'], '한식': ['한식', '한식 맛집'], '중식': ['중식', '중국집'],
+  '일식': ['일식', '이자카야'], '양식': ['양식', '파스타'], '술집': ['술집', '포차'],
+  '카페': ['카페', '감성 카페'], '디저트': ['디저트 카페', '베이커리'], '브런치': ['브런치', '브런치 카페'],
+  '데이트명소': ['가볼만한곳', '데이트'], '데이트 명소': ['가볼만한곳', '데이트'],
+  '식사': ['맛집'], '점심': ['맛집'], '저녁': ['맛집'], '활동': ['가볼만한곳'], '놀거리': ['가볼만한곳'], '야경': ['야경 명소'],
 };
 
-// ── /spots — 그 동네 실제 인기 가게 TOP ──
+// ── /spots — 그 동네 실제 인기 가게 TOP(최대 10, 카테고리·영업시간) ──
 async function handleSpots(url, env) {
   const area = (url.searchParams.get('area') || '').trim();
   const cat = (url.searchParams.get('cat') || '카페').trim();
-  const n = parseInt(url.searchParams.get('n') || '5', 10);
+  const want = Math.min(Math.max(parseInt(url.searchParams.get('n') || '10', 10) || 10, 1), 10);
+  const wantHours = url.searchParams.get('hours') === '1';
+  const dayRaw = url.searchParams.get('day');
+  const dayIdx = (dayRaw != null && dayRaw !== '') ? parseInt(dayRaw, 10) : null;
   if (!area) throw new Error('area 파라미터 필요');
-  const kw = CAT_QUERY[cat] || cat;
-  const query = `${area} ${kw}`;
-  const items = await naverLocal(env, query, n);
-  // 가게별 블로그수 + 구글별점 병렬 보강
-  await Promise.all(items.map(async it => {
+
+  const kws = CAT_KW[cat] || [cat];
+  // 여러 키워드 결과를 합쳐 상호 기준 dedupe → TOP10 확보
+  const items = []; const seen = new Set();
+  for (const kw of kws) {
+    if (items.length >= want) break;
+    let part = [];
+    try { part = await naverLocal(env, `${area} ${kw}`, 5); }
+    catch (e) { if (!items.length && kw === kws[0]) throw e; }
+    for (const it of part) { if (it.name && !seen.has(it.name)) { seen.add(it.name); items.push(it); } }
+  }
+  const top = items.slice(0, want);
+  // 블로그수 + 구글(별점·영업시간) 병렬 보강
+  await Promise.all(top.map(async it => {
     const gq = `${it.name} ${area}`;
-    const [blog, g] = await Promise.all([naverBlogTotal(env, it.name), googlePlace(env, gq)]);
+    const [blog, g] = await Promise.all([naverBlogTotal(env, it.name), googlePlace(env, gq, wantHours, dayIdx)]);
     it.blogTotal = blog;
-    if (g) { it.googleRating = g.rating; it.googleReviews = g.reviews; it.placeId = g.placeId; }
+    if (g) { it.googleRating = g.rating; it.googleReviews = g.reviews; it.openNow = g.openNow; it.todayHours = g.todayHours; }
   }));
-  items.sort((a, b) => (b.blogTotal || 0) - (a.blogTotal || 0)); // 블로그 후기 많은 순
-  return { area, cat, query, count: items.length, items };
+  top.sort((a, b) => (b.blogTotal || 0) - (a.blogTotal || 0)); // 블로그 후기 많은 순
+  return { area, cat, count: top.length, items: top };
 }
 
-// ── /enrich — 특정 큐레이션 스팟에 실데이터 덧붙이기 ──
+// ── /enrich — 특정 가게에 실데이터 덧붙이기 ──
 async function handleEnrich(url, env) {
   const name = (url.searchParams.get('name') || '').trim();
   const area = (url.searchParams.get('area') || '').trim();
+  const wantHours = url.searchParams.get('hours') === '1';
+  const dayRaw = url.searchParams.get('day');
+  const dayIdx = (dayRaw != null && dayRaw !== '') ? parseInt(dayRaw, 10) : null;
   if (!name) throw new Error('name 파라미터 필요');
   const gq = `${name} ${area}`.trim();
-  const [blog, g] = await Promise.all([naverBlogTotal(env, name), googlePlace(env, gq)]);
-  return { name, area, blogTotal: blog, googleRating: g ? g.rating : null, googleReviews: g ? g.reviews : null, placeId: g ? g.placeId : null };
+  const [blog, g] = await Promise.all([naverBlogTotal(env, name), googlePlace(env, gq, wantHours, dayIdx)]);
+  return { name, area, blogTotal: blog,
+    googleRating: g ? g.rating : null, googleReviews: g ? g.reviews : null,
+    openNow: g ? g.openNow : null, todayHours: g ? g.todayHours : null };
 }
