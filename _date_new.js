@@ -884,6 +884,7 @@ function generateDateCourse(){
   ${routeHtml}
   <div class="date-flow-wrap"><div class="date-flow-label">🧭 오늘의 동선</div><div class="date-flow-chips">${flowChips}</div></div>
   <div id="date-map" class="date-map"></div>
+  <div id="date-map-cap" class="date-map-cap" style="display:none;">🔢 번호 = 코스 순서 · 📍 위치는 네이버 검색 기반 대략값</div>
   <div class="date-timeline">`;
 
   let prevBand='';
@@ -932,15 +933,16 @@ function generateDateCourse(){
   const body=document.getElementById('date-result-body');
   if(body) body.innerHTML=html;
   _loadRealSpots(DST.area);
-  _renderDateMap(areaCoord, dep1, c1, dep2, c2, DST.area, firstSpot);
+  _renderDateMap(areaCoord, dep1, c1, dep2, c2, DST.area, firstSpot, timeSlots.map(s=>({name:s.spot.name,label:s.label,time:s.time})));
 }
 
 // ── 동선 지도 (Leaflet + OSM, API 키 불필요) ──
 let _dateMapObj=null;
-function _renderDateMap(areaCoord, dep1, c1, dep2, c2, areaName, firstSpot){
+function _renderDateMap(areaCoord, dep1, c1, dep2, c2, areaName, firstSpot, spots){
   const host=document.getElementById('date-map');
+  const cap=document.getElementById('date-map-cap');
   if(!host) return;
-  if(typeof L==='undefined' || !areaCoord){ host.style.display='none'; return; }
+  if(typeof L==='undefined' || !areaCoord){ host.style.display='none'; if(cap) cap.style.display='none'; return; }
   try{
     if(_dateMapObj){ try{_dateMapObj.remove();}catch(_){ } _dateMapObj=null; }
     host.style.display='';
@@ -956,8 +958,35 @@ function _renderDateMap(areaCoord, dep1, c1, dep2, c2, areaName, firstSpot){
       L.polyline([c2,areaCoord],{color:'#a855f7',weight:3,opacity:.75,dashArray:'7,7'}).addTo(map); pts.push(c2); }
     if(pts.length>1) map.fitBounds(L.latLngBounds(pts).pad(0.3));
     else map.setView(areaCoord,14);
+    _addCourseMarkers(map, areaCoord, areaName, spots);
     setTimeout(()=>{ try{map.invalidateSize();}catch(_){ } },150);
-  }catch(e){ host.style.display='none'; }
+  }catch(e){ host.style.display='none'; if(cap) cap.style.display='none'; }
+}
+// 코스 스팟을 네이버 좌표로 찍어 번호 핀 + 순서 선 그리기 (Worker /geocode)
+async function _addCourseMarkers(map, areaCoord, areaName, spots){
+  const cap=document.getElementById('date-map-cap');
+  if(!DATE_API_URL || !spots || !spots.length || typeof L==='undefined'){ if(cap) cap.style.display='none'; return; }
+  try{
+    const base=DATE_API_URL.replace(/\/+$/,'');
+    const dong=(areaName||'').split('·')[0];
+    const names=spots.map(s=>s.name).join('|');
+    const d=await fetch(`${base}/geocode?area=${encodeURIComponent(dong)}&names=${encodeURIComponent(names)}`).then(r=>r.ok?r.json():null).catch(()=>null);
+    const pts=(d&&Array.isArray(d.points))?d.points:[];
+    if(!pts.length){ if(cap) cap.style.display='none'; return; }
+    const line=[];
+    spots.forEach((s,i)=>{
+      const p=pts[i];
+      const lat=(p&&p.lat!=null)?p.lat:areaCoord[0]+Math.cos(i*1.3)*0.0016;
+      const lng=(p&&p.lng!=null)?p.lng:areaCoord[1]+Math.sin(i*1.3)*0.0016;
+      const numIcon=L.divIcon({className:'date-map-num',html:`<div class="dmn">${i+1}</div>`,iconSize:[24,24],iconAnchor:[12,12],popupAnchor:[0,-12]});
+      L.marker([lat,lng],{icon:numIcon}).addTo(map).bindPopup(`<b>${i+1}. ${esc(s.name)}</b><br>${esc(s.time||'')} ${esc(s.label||'')}`);
+      line.push([lat,lng]);
+    });
+    if(line.length>1) L.polyline(line,{color:'#E8580A',weight:3.5,opacity:.85}).addTo(map);
+    try{ map.fitBounds(L.latLngBounds(line.concat([areaCoord])).pad(0.25)); }catch(_){ }
+    if(cap) cap.style.display='';
+    setTimeout(()=>{ try{map.invalidateSize();}catch(_){ } },80);
+  }catch(_){ if(cap) cap.style.display='none'; }
 }
 
 function _getDateTip(area,mood,startH,rain){

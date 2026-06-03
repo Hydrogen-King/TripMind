@@ -45,9 +45,10 @@ export default {
 
     try {
       let body;
-      if (url.pathname === '/spots')       body = await handleSpots(url, env);
-      else if (url.pathname === '/enrich') body = await handleEnrich(url, env);
-      else return json({ error: 'not found', endpoints: ['/health', '/spots', '/enrich'] }, 404, cors);
+      if (url.pathname === '/spots')         body = await handleSpots(url, env);
+      else if (url.pathname === '/enrich')   body = await handleEnrich(url, env);
+      else if (url.pathname === '/geocode')  body = await handleGeocode(url, env);
+      else return json({ error: 'not found', endpoints: ['/health', '/spots', '/enrich', '/geocode'] }, 404, cors);
 
       const res = json(body, 200, { ...cors, 'Cache-Control': `public, max-age=${CACHE_TTL}`, 'X-Cache': 'MISS' });
       ctx.waitUntil(cache.put(request, res.clone()));
@@ -176,6 +177,26 @@ async function handleSpots(url, env) {
   }));
   top.sort((a, b) => (b.blogTotal || 0) - (a.blogTotal || 0)); // 블로그 후기 많은 순
   return { area, cat, count: top.length, items: top };
+}
+
+// ── /geocode — 코스 스팟 이름들을 좌표로 (지도 핀용) ──
+// names=이름1|이름2|...  (네이버 mapx/mapy ÷ 1e7 = 경도/위도)
+async function handleGeocode(url, env) {
+  const area = (url.searchParams.get('area') || '').trim();
+  const names = (url.searchParams.get('names') || '').split('|').map(s => s.trim()).filter(Boolean).slice(0, 10);
+  if (!names.length) throw new Error('names 파라미터 필요');
+  const points = await Promise.all(names.map(async nm => {
+    try {
+      const q = (area && !nm.includes(area)) ? `${area} ${nm}` : nm;
+      const items = await naverLocal(env, q, 1);
+      const it = items[0];
+      if (it && it.mapx && it.mapy) {
+        return { name: nm, realName: it.name, lat: Number(it.mapy) / 1e7, lng: Number(it.mapx) / 1e7 };
+      }
+    } catch (_) { }
+    return { name: nm, lat: null, lng: null };
+  }));
+  return { area, points };
 }
 
 // ── /enrich — 특정 가게에 실데이터 덧붙이기 ──
