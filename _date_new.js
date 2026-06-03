@@ -730,7 +730,8 @@ function _loadRealSpots(area){
   if(!host) return;
   if(!DATE_API_URL){ host.innerHTML=''; return; }
   const dong=_realDong(area);
-  host.innerHTML=`<div class="date-real-head">📍 <b>${esc(dong)}</b> 실제 인기 가게 <span class="date-real-src">네이버·구글 실데이터</span></div>`+
+  host.innerHTML=`<div class="date-real-head">📍 <b>${esc(dong)}</b> 실제 인기 가게 <span class="date-real-src">네이버·구글 실데이터</span></div>
+  <div class="date-real-hint">⏰ <b>영업시간·평점·방문자리뷰</b>는 각 가게 <span class="date-naver-tag">🗺️ 영업·리뷰</span> 버튼 → 네이버지도에서 바로 확인!</div>`+
     REAL_GROUPS.map((g,gi)=>{
       const chips=g.cats.map((c,ci)=>`<span class="date-cat-chip${ci===0?' on':''}" onclick="_dateCat('${esc(dong)}','${esc(c[1])}','rl-${gi}',this)">${esc(c[0])}</span>`).join('');
       return `<div class="date-real-card">
@@ -747,7 +748,7 @@ async function _dateCat(dong,cat,listId,chipEl){
   if(!DATE_API_URL){ el.innerHTML=''; return; }
   const day=_selectedWeekday();
   const ck=dong+'|'+cat+'|'+day;
-  if(_realCache[ck]){ el.innerHTML=_realRows(_realCache[ck]); return; }
+  if(_realCache[ck]){ el.innerHTML=_realRows(_realCache[ck],dong); return; }
   el.innerHTML='<div class="date-real-loading">⏳ 불러오는 중…</div>';
   try{
     const base=DATE_API_URL.replace(/\/+$/,'');
@@ -755,10 +756,10 @@ async function _dateCat(dong,cat,listId,chipEl){
     const d=await fetch(u).then(r=>r.ok?r.json():null).catch(()=>null);
     const items=(d&&Array.isArray(d.items))?d.items:[];
     _realCache[ck]=items;
-    el.innerHTML=items.length?_realRows(items):'<div class="date-real-loading">검색 결과가 없어요</div>';
+    el.innerHTML=items.length?_realRows(items,dong):'<div class="date-real-loading">검색 결과가 없어요</div>';
   }catch(_){ el.innerHTML='<div class="date-real-loading">불러오기 실패 — 잠시 후 다시</div>'; }
 }
-function _realRows(items){
+function _realRows(items,dong){
   return items.map((it,i)=>{
     const star=(it.googleRating!=null)?`⭐ ${it.googleRating}${it.googleReviews?` (${Number(it.googleReviews).toLocaleString()})`:''}`:'';
     const blog=(it.blogTotal!=null&&it.blogTotal>0)?`📝 ${Number(it.blogTotal).toLocaleString()}`:'';
@@ -768,7 +769,7 @@ function _realRows(items){
     if(it.openNow===true) openBadge=' <span class="date-open">🟢 영업중</span>';
     else if(it.openNow===false) openBadge=' <span class="date-closed">🔴 영업종료</span>';
     const hours=it.todayHours?`<div class="date-hours">⏰ ${esc(it.todayHours)}</div>`:'';
-    const q=encodeURIComponent(it.name);
+    const q=encodeURIComponent(it.name+(dong?(' '+dong):''));
     return `<div class="date-real-row">
       <span class="date-real-rank">${i+1}</span>
       <div class="date-real-info">
@@ -776,7 +777,7 @@ function _realRows(items){
         ${meta?`<div class="date-real-meta">${meta}</div>`:''}
         ${hours}
       </div>
-      <a href="https://map.naver.com/v5/search/${q}" target="_blank" rel="noopener" class="date-ext date-ext-map">지도</a>
+      <a href="https://map.naver.com/v5/search/${q}" target="_blank" rel="noopener" class="date-ext date-ext-map date-naver-btn">🗺️ 영업·리뷰</a>
     </div>`;
   }).join('');
 }
@@ -911,7 +912,7 @@ function generateDateCourse(){
           <div class="date-slot-meta">
             <span class="date-slot-badge">⏱ ${_durLabel(s.spot.dur||60)}</span>
             <span class="date-slot-badge ${cost===0?'green':''}">${costStr}</span>
-            <a href="https://map.naver.com/v5/search/${mapQ}" target="_blank" rel="noopener" class="date-ext date-ext-map">🗺️ 지도</a>
+            <a href="https://map.naver.com/v5/search/${mapQ}" target="_blank" rel="noopener" class="date-ext date-ext-map">🗺️ 지도·리뷰</a>
             <a href="https://www.youtube.com/results?search_query=${mapQ}" target="_blank" rel="noopener" class="date-ext date-ext-yt">▶ 유튜브</a>
             <a href="https://search.naver.com/search.naver?where=blog&query=${mapQ}" target="_blank" rel="noopener" class="date-ext date-ext-blog">📝 블로그</a>
           </div>
