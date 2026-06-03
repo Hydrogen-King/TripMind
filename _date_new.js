@@ -765,6 +765,22 @@ function _loadRealSpots(area){
     }).join('');
   REAL_GROUPS.forEach((g,gi)=>_dateCat(dong, g.cats[0][1], 'rl-'+gi, null));
 }
+// 그 지역 현재 전시·특별전 (네이버 실시간) — Worker /exhibitions
+async function _loadExhibitions(area){
+  const host=document.getElementById('date-exhibit'); if(!host) return;
+  if(!DATE_API_URL){ host.innerHTML=''; return; }
+  try{
+    const base=DATE_API_URL.replace(/\/+$/,''); const dong=(area||'').split('·')[0];
+    const d=await fetch(`${base}/exhibitions?area=${encodeURIComponent(dong)}&n=5`).then(r=>r.ok?r.json():null).catch(()=>null);
+    const items=(d&&Array.isArray(d.items))?d.items:[];
+    if(!items.length){ host.innerHTML=''; return; }
+    host.innerHTML=`<div class="date-real-card"><div class="date-real-title">🎨 지금 ${esc(dong)} 전시·특별전 <span class="date-real-src">네이버 실시간</span></div>`+
+      items.map(it=>{
+        const link=it.link||('https://search.naver.com/search.naver?query='+encodeURIComponent(dong+' 전시회'));
+        return `<div class="date-real-row"><div class="date-real-info"><div class="date-real-name" style="white-space:normal;">${esc(it.title)}</div>${it.desc?`<div class="date-real-meta" style="white-space:normal;">${esc(it.desc)}</div>`:''}</div><a href="${esc(link)}" target="_blank" rel="noopener" class="date-ext date-ext-blog">보기</a></div>`;
+      }).join('')+`</div>`;
+  }catch(_){ host.innerHTML=''; }
+}
 async function _dateCat(dong,cat,listId,chipEl){
   if(chipEl){ const row=chipEl.parentElement; if(row) row.querySelectorAll('.date-cat-chip').forEach(c=>c.classList.remove('on')); chipEl.classList.add('on'); }
   const el=document.getElementById(listId); if(!el) return;
@@ -949,6 +965,7 @@ function generateDateCourse(){
   });
   html+=`</div>
   <div id="date-real-data"></div>
+  <div id="date-exhibit"></div>
   <div class="date-tip-card">
     <div class="date-tip-title">💡 데이트 TIP</div>
     ${_getDateTip(DST.area,DST.mood,startH,rain)}
@@ -956,6 +973,7 @@ function generateDateCourse(){
   const body=document.getElementById('date-result-body');
   if(body) body.innerHTML=html;
   _loadRealSpots(DST.area);
+  _loadExhibitions(DST.area);
   _renderDateMap(areaCoord, dep1, c1, dep2, c2, DST.area, firstSpot, timeSlots.map(s=>({name:s.spot.name,label:s.label,time:s.time})));
   _enhanceCourse(DST.area, timeSlots.map((s,i)=>({idx:i,type:s.type})));
 }

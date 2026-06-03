@@ -45,10 +45,11 @@ export default {
 
     try {
       let body;
-      if (url.pathname === '/spots')         body = await handleSpots(url, env);
-      else if (url.pathname === '/enrich')   body = await handleEnrich(url, env);
-      else if (url.pathname === '/geocode')  body = await handleGeocode(url, env);
-      else return json({ error: 'not found', endpoints: ['/health', '/spots', '/enrich', '/geocode'] }, 404, cors);
+      if (url.pathname === '/spots')           body = await handleSpots(url, env);
+      else if (url.pathname === '/enrich')     body = await handleEnrich(url, env);
+      else if (url.pathname === '/geocode')    body = await handleGeocode(url, env);
+      else if (url.pathname === '/exhibitions') body = await handleExhibitions(url, env);
+      else return json({ error: 'not found', endpoints: ['/health', '/spots', '/enrich', '/geocode', '/exhibitions'] }, 404, cors);
 
       const res = json(body, 200, { ...cors, 'Cache-Control': `public, max-age=${CACHE_TTL}`, 'X-Cache': 'MISS' });
       ctx.waitUntil(cache.put(request, res.clone()));
@@ -186,17 +187,43 @@ async function handleGeocode(url, env) {
   const names = (url.searchParams.get('names') || '').split('|').map(s => s.trim()).filter(Boolean).slice(0, 10);
   if (!names.length) throw new Error('names 파라미터 필요');
   const points = await Promise.all(names.map(async nm => {
-    try {
-      const q = (area && !nm.includes(area)) ? `${area} ${nm}` : nm;
-      const items = await naverLocal(env, q, 1);
-      const it = items[0];
-      if (it && it.mapx && it.mapy) {
-        return { name: nm, realName: it.name, lat: Number(it.mapy) / 1e7, lng: Number(it.mapx) / 1e7 };
-      }
-    } catch (_) { }
+    // 2단계: ①전체 이름 → ②핵심 단어(활동/풍경 접미사 제거한 대표 명소명)
+    const tries = [(area && !nm.includes(area)) ? `${area} ${nm}` : nm];
+    const core = nm.split(/[·,]/)[0].replace(/(산책|피크닉|야경|투어|체험|관람|나들이|코스|먹거리|거리)/g, ' ').trim().split(/\s+/)[0];
+    if (core && core.length >= 2 && core !== nm) { if (area) tries.push(`${area} ${core}`); tries.push(core); }
+    for (const q of tries) {
+      try {
+        const items = await naverLocal(env, q, 1);
+        const it = items[0];
+        if (it && it.mapx && it.mapy) return { name: nm, realName: it.name, lat: Number(it.mapy) / 1e7, lng: Number(it.mapx) / 1e7 };
+      } catch (_) { }
+    }
     return { name: nm, lat: null, lng: null };
   }));
   return { area, points };
+}
+
+// ── /exhibitions — 그 지역 현재 전시·특별전 (네이버 검색 기반, 기존 키 재사용) ──
+async function handleExhibitions(url, env) {
+  const area = (url.searchParams.get('area') || '').trim();
+  const n = Math.min(Math.max(parseInt(url.searchParams.get('n') || '5', 10) || 5, 1), 8);
+  if (!area) throw new Error('area 파라미터 필요');
+  const items = await naverExhibitionSearch(env, area, n);
+  return { area, source: 'naver', count: items.length, items };
+}
+async function naverExhibitionSearch(env, area, n) {
+  if (!env.NAVER_ID || !env.NAVER_SECRET) return [];
+  // 블로그 검색: "{지역} 전시회" 최신순 → 실제 회자되는 전시·특별전
+  const u = `https://openapi.naver.com/v1/search/blog.json?query=${encodeURIComponent(area + ' 전시회')}&display=${n}&sort=sim`;
+  const r = await fetch(u, { headers: { 'X-Naver-Client-Id': env.NAVER_ID, 'X-Naver-Client-Secret': env.NAVER_SECRET } });
+  if (!r.ok) return [];
+  const d = await r.json();
+  return (d.items || []).map(it => ({
+    title: stripTags(it.title),
+    desc: stripTags(it.description || '').slice(0, 90),
+    link: it.link || '',
+    date: it.postdate || '',
+  })).filter(x => x.title);
 }
 
 // ── /enrich — 특정 가게에 실데이터 덧붙이기 ──
