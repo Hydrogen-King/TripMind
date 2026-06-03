@@ -668,6 +668,15 @@ const DST={area:'',mood:'설레는',budget:'일반',weather:'맑음'};
 function togDateMood(el,mood){document.querySelectorAll('#date-mood-chips .chip').forEach(c=>c.classList.remove('on'));if(el)el.classList.add('on');DST.mood=mood;}
 function togDateBudget(el,b){document.querySelectorAll('#date-budget-chips .chip').forEach(c=>c.classList.remove('on'));if(el)el.classList.add('on');DST.budget=b;}
 function togDateWeather(el,w){document.querySelectorAll('#date-weather-chips .chip').forEach(c=>c.classList.remove('on'));if(el)el.classList.add('on');DST.weather=w;}
+// 단계별 위저드 (①출발·날짜 ②지역 ③취향)
+function dateStep(n){
+  document.querySelectorAll('#s-date .date-step').forEach(el=>{ el.style.display=(el.getAttribute('data-step')===String(n))?'':'none'; });
+  document.querySelectorAll('#date-steps .date-step-dot').forEach(d=>{ const ds=Number(d.getAttribute('data-s')); d.classList.toggle('on',ds===n); d.classList.toggle('done',ds<n); });
+  const T={1:['오늘 어디서 만날까요?','두 분의 출발지·날짜·시간을 알려주세요 💕'],2:['어디로 갈까요?','중간 지점 추천 또는 직접 지역을 골라요 🗺️'],3:['어떤 데이트로?','분위기·예산·날씨를 고르면 완성! ✨']};
+  const tt=document.getElementById('date-step-title'), ss=document.getElementById('date-step-sub');
+  if(tt&&T[n]) tt.textContent=T[n][0]; if(ss&&T[n]) ss.textContent=T[n][1];
+  try{ window.scrollTo(0,0); }catch(_){ }
+}
 
 // ══════════════════════════════════════════════
 // 시간 계산
@@ -784,7 +793,7 @@ function _realRows(items,dong){
 
 function generateDateCourse(){
   const errEl=document.getElementById('date-input-err');
-  if(!DST.area){if(errEl){errEl.textContent='📍 데이트 지역을 선택해주세요';errEl.classList.add('on');}return;}
+  if(!DST.area){ dateStep(2); _toast('📍 데이트 지역을 먼저 선택해주세요'); if(errEl){errEl.textContent='📍 데이트 지역을 선택해주세요';errEl.classList.add('on');} return; }
   if(errEl) errEl.classList.remove('on');
   const areaData=KOREA_DATE_DB[DST.area];
   if(!areaData){if(errEl){errEl.textContent='⚠️ 해당 지역 데이터가 없어요';errEl.classList.add('on');}return;}
@@ -1096,6 +1105,6 @@ else setTimeout(_initDateRegion,100);
 Object.assign(window,{
   filterDepLoc,selectDepLoc,showDateRegion,selectDateArea,clearDateArea,
   updateDateDayLabel,togDateMood,togDateBudget,togDateWeather,generateDateCourse,shareDateCourse,
-  _dateCat
+  _dateCat,dateStep
 });
 })();

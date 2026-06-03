@@ -1061,6 +1061,13 @@ body{overscroll-behavior-y:none;}
 .home-feat{font-size:13px;}
 .home-card-cta{font-size:14px;}
 .step-lbl{font-size:14px;}
+/* 데이트 단계 위저드 */
+.date-steps{display:flex;gap:6px;margin-bottom:14px;}
+.date-step-dot{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;font-size:12px;font-weight:700;color:var(--sub);background:var(--card2);border:1px solid var(--bdr);border-radius:20px;padding:7px 6px;text-align:center;line-height:1.2;}
+.date-step-dot b{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--bdr);color:var(--sub);font-size:11px;flex-shrink:0;}
+.date-step-dot.on{color:#ec4899;border-color:#ec4899;background:rgba(236,72,153,.1);}
+.date-step-dot.on b{background:#ec4899;color:#fff;}
+.date-step-dot.done b{background:#16a34a;color:#fff;}
 </style>
 </head>
 <body>
@@ -1190,7 +1197,7 @@ body{overscroll-behavior-y:none;}
       <div class="home-card-desc">예산·인원·취향만 알려주면 — 딱 맞는 여행지 TOP 3와 상세 일정을 바로 짜드려요</div>
       <div class="home-card-cta">추천받기 →</div>
     </div>
-    <div class="home-card home-card-date" role="button" tabindex="0" onclick="go('date')" aria-label="데이트 코스 짜기" style="grid-column:1/-1;">
+    <div class="home-card home-card-date" role="button" tabindex="0" onclick="go('date');dateStep(1)" aria-label="데이트 코스 짜기" style="grid-column:1/-1;">
       <div class="home-card-icon">💑</div>
       <div class="home-card-title">데이트 코스 짜기</div>
       <div class="home-card-desc">도시 · 분위기 · 예산을 선택하면 — 오전부터 야경까지 완벽한 하루 데이트 코스를 만들어드려요</div>
@@ -1609,9 +1616,16 @@ body{overscroll-behavior-y:none;}
     <span class="step-lbl">💑 데이트 코스</span>
     <div style="width:42px"></div>
   </div>
-  <div class="pg-t">오늘 어디서 만날까요?</div>
-  <div class="pg-s">두 분의 출발지를 입력하면 딱 맞는 데이트 코스를 추천해드려요 💕</div>
+  <div class="pg-t" id="date-step-title">오늘 어디서 만날까요?</div>
+  <div class="pg-s" id="date-step-sub">두 분의 출발지·날짜·시간을 알려주세요 💕</div>
+  <div class="date-steps" id="date-steps">
+    <div class="date-step-dot on" data-s="1"><b>1</b> 출발·날짜</div>
+    <div class="date-step-dot" data-s="2"><b>2</b> 지역</div>
+    <div class="date-step-dot" data-s="3"><b>3</b> 취향</div>
+  </div>
 
+  <!-- ░░ STEP 1: 출발지·날짜 ░░ -->
+  <div class="date-step" data-step="1">
   <!-- 출발지 카드 -->
   <div class="dest-card" style="margin-bottom:10px;">
     <div class="dest-row" style="align-items:flex-start;">
@@ -1653,7 +1667,11 @@ body{overscroll-behavior-y:none;}
       </div>
     </div>
   </div>
+  <button class="btn btn-p" onclick="dateStep(2)" style="margin-top:4px;">다음 → 지역 선택</button>
+  </div><!-- /STEP 1 -->
 
+  <!-- ░░ STEP 2: 지역 ░░ -->
+  <div class="date-step" data-step="2" style="display:none;">
   <!-- 추천 지역 (출발지 입력 후 자동 표시) -->
   <div id="date-area-section" style="display:none;margin-bottom:10px;">
     <div class="sec-title" style="margin-bottom:8px;">📍 추천 데이트 지역</div>
@@ -1681,7 +1699,14 @@ body{overscroll-behavior-y:none;}
     <span style="font-size:13px;font-weight:700;color:#ec4899;">📍 선택됨: <span id="date-selected-area-label"></span></span>
     <span onclick="clearDateArea()" style="margin-left:8px;cursor:pointer;font-size:12px;color:var(--sub);">변경</span>
   </div>
+  <div style="display:flex;gap:10px;margin-top:6px;">
+    <button class="btn btn-g" onclick="dateStep(1)" style="flex:1;">← 이전</button>
+    <button class="btn btn-p" onclick="dateStep(3)" style="flex:2;">다음 → 취향 선택</button>
+  </div>
+  </div><!-- /STEP 2 -->
 
+  <!-- ░░ STEP 3: 취향(분위기·예산·날씨) ░░ -->
+  <div class="date-step" data-step="3" style="display:none;">
   <!-- 분위기 -->
   <div class="sec-title" style="margin-bottom:8px;">✨ 분위기</div>
   <div class="chips" id="date-mood-chips" style="margin-bottom:12px;">
@@ -1708,13 +1733,17 @@ body{overscroll-behavior-y:none;}
   </div>
 
   <div id="date-input-err" class="err-msg"></div>
-  <button class="btn btn-p" onclick="generateDateCourse()" style="margin-top:4px;font-size:16px;">💑 데이트 코스 만들기</button>
+  <div style="display:flex;gap:10px;margin-top:4px;">
+    <button class="btn btn-g" onclick="dateStep(2)" style="flex:1;">← 이전</button>
+    <button class="btn btn-p" onclick="generateDateCourse()" style="flex:2;font-size:16px;">💑 코스 만들기</button>
+  </div>
+  </div><!-- /STEP 3 -->
 </div>
 
 <!-- DATE RESULT -->
 <div class="screen" id="s-date-result">
   <div class="bar">
-    <button class="ico" onclick="go('date')" aria-label="다시">←</button>
+    <button class="ico" onclick="go('date');dateStep(1)" aria-label="다시">←</button>
     <span style="font-weight:700;font-size:14px;">💑 데이트 코스</span>
     <button class="ico" onclick="go('home')" aria-label="홈" style="font-size:15px;">🏠</button>
   </div>
