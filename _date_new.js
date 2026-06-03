@@ -908,7 +908,7 @@ function generateDateCourse(){
       </div>
       <div class="date-slot-content">
         <div class="date-slot-time">${s.time} · ${esc(s.label)}</div>
-        <div class="date-slot-card">
+        <div class="date-slot-card" id="dslot-${i}">
           <div class="date-slot-emoji">${s.spot.emoji}</div>
           <div class="date-slot-name">${esc(s.spot.name)}</div>
           <div class="date-slot-desc">${esc(s.spot.desc)}</div>
@@ -934,6 +934,7 @@ function generateDateCourse(){
   if(body) body.innerHTML=html;
   _loadRealSpots(DST.area);
   _renderDateMap(areaCoord, dep1, c1, dep2, c2, DST.area, firstSpot, timeSlots.map(s=>({name:s.spot.name,label:s.label,time:s.time})));
+  _enhanceCourse(DST.area, timeSlots.map((s,i)=>({idx:i,type:s.type})));
 }
 
 // ── 동선 지도 (Leaflet + OSM, API 키 불필요) ──
@@ -987,6 +988,69 @@ async function _addCourseMarkers(map, areaCoord, areaName, spots){
     if(cap) cap.style.display='';
     setTimeout(()=>{ try{map.invalidateSize();}catch(_){ } },80);
   }catch(_){ if(cap) cap.style.display='none'; }
+}
+
+// ══════════════════════════════════════════════
+// 코스의 카페/식당 슬롯을 실제 인기 가게로 교체 (동선 + 인기 근거)
+// ══════════════════════════════════════════════
+function _venueEmoji(type){ return type.startsWith('카페')?'☕':(type==='점심'?'🍜':'🍽️'); }
+function _coordVenues(res){
+  if(!res||!Array.isArray(res.items)) return [];
+  return res.items.filter(it=>it&&it.name).map(it=>{
+    const lat=it.mapy?Number(it.mapy)/1e7:null, lng=it.mapx?Number(it.mapx)/1e7:null;
+    return {...it,_c:(lat&&lng)?[lat,lng]:null};
+  });
+}
+function _pickNearPopular(pool,from,used){
+  const av=pool.filter(v=>!used.has(v));
+  if(!av.length) return null;
+  if(from){ // 인기 상위 6곳 중 동선상 가장 가까운 곳
+    const top=av.slice().sort((a,b)=>(b.blogTotal||0)-(a.blogTotal||0)).slice(0,6);
+    top.sort((a,b)=>((a._c?_dist(from,a._c):99))-((b._c?_dist(from,b._c):99)));
+    return top[0];
+  }
+  return av.slice().sort((a,b)=>(b.blogTotal||0)-(a.blogTotal||0))[0];
+}
+async function _enhanceCourse(area,slots){
+  if(!DATE_API_URL||typeof fetch==='undefined'||!Array.isArray(slots)) return;
+  const cafeSlots=slots.filter(s=>s.type==='카페'||s.type==='카페2');
+  const foodSlots=slots.filter(s=>s.type==='점심'||s.type==='저녁');
+  if(!cafeSlots.length&&!foodSlots.length) return;
+  try{
+    const base=DATE_API_URL.replace(/\/+$/,''); const dong=(area||'').split('·')[0]; const day=_selectedWeekday();
+    const [cafeR,foodR]=await Promise.all([
+      cafeSlots.length?fetch(`${base}/spots?area=${encodeURIComponent(dong)}&cat=카페&n=10&hours=1&day=${day}`).then(r=>r.ok?r.json():null).catch(()=>null):null,
+      foodSlots.length?fetch(`${base}/spots?area=${encodeURIComponent(dong)}&cat=맛집&n=10&hours=1&day=${day}`).then(r=>r.ok?r.json():null).catch(()=>null):null,
+    ]);
+    const meet=(KOREA_DATE_DB[area]&&KOREA_DATE_DB[area].coord)||null;
+    const cafePool=_coordVenues(cafeR), foodPool=_coordVenues(foodR), used=new Set();
+    let cur=meet; // 만남 지점에서 시작해 가까운 순으로 동선 구성
+    cafeSlots.forEach(s=>{ const v=_pickNearPopular(cafePool,cur,used); if(v){used.add(v); if(v._c)cur=v._c; _applyRealSlot(s.idx,s.type,v,meet,dong);} });
+    foodSlots.forEach(s=>{ const v=_pickNearPopular(foodPool,cur,used); if(v){used.add(v); if(v._c)cur=v._c; _applyRealSlot(s.idx,s.type,v,meet,dong);} });
+  }catch(_){ }
+}
+function _applyRealSlot(idx,type,v,meet,dong){
+  const card=document.getElementById('dslot-'+idx); if(!card) return;
+  const dKm=(v._c&&meet)?_dist(meet,v._c):null;
+  const reason=(dKm!=null&&dKm<2.6)?`📍 동선상 가까워요 · 만남지점서 ${dKm<1?Math.round(dKm*1000)+'m':dKm.toFixed(1)+'km'}`:'🔥 이 동네 인기 스팟';
+  const blog=v.blogTotal?`📝 ${Number(v.blogTotal).toLocaleString()}`:'';
+  const star=(v.googleRating!=null)?`⭐ ${v.googleRating}`:'';
+  let ob=''; if(v.openNow===true)ob=' <span class="date-open">🟢 영업중</span>'; else if(v.openNow===false)ob=' <span class="date-closed">🔴 영업종료</span>';
+  const hrs=v.todayHours?`<div class="date-hours">⏰ ${esc(v.todayHours)}</div>`:'';
+  const cat=esc((v.category||'').split('>').pop()||'');
+  const q=encodeURIComponent(v.name+' '+dong);
+  card.innerHTML=`
+          <div class="date-slot-emoji">${_venueEmoji(type)}</div>
+          <div class="date-slot-name">${esc(v.name)}${ob} <span class="date-real-src">실제 추천</span></div>
+          <div class="date-slot-desc">${reason}${cat?' · '+cat:''}</div>
+          ${hrs}
+          <div class="date-slot-meta">
+            ${star?`<span class="date-slot-badge">${star}</span>`:''}
+            ${blog?`<span class="date-slot-badge">${blog}</span>`:''}
+            <a href="https://map.naver.com/v5/search/${q}" target="_blank" rel="noopener" class="date-ext date-ext-map date-naver-btn">🗺️ 영업·리뷰</a>
+            <a href="https://www.youtube.com/results?search_query=${q}" target="_blank" rel="noopener" class="date-ext date-ext-yt">▶ 유튜브</a>
+            <a href="https://search.naver.com/search.naver?where=blog&query=${q}" target="_blank" rel="noopener" class="date-ext date-ext-blog">📝 블로그</a>
+          </div>`;
 }
 
 function _getDateTip(area,mood,startH,rain){
