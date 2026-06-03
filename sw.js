@@ -1,6 +1,6 @@
 // TripMind Service Worker — v2.0
 // 전략: Network First (HTML), Cache First (JS/SVG 에셋)
-const CACHE_NAME = 'tripmind-v9';
+const CACHE_NAME = 'tripmind-v10';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

@@ -883,6 +883,7 @@ function generateDateCourse(){
   </div>
   ${routeHtml}
   <div class="date-flow-wrap"><div class="date-flow-label">🧭 오늘의 동선</div><div class="date-flow-chips">${flowChips}</div></div>
+  <div id="date-map" class="date-map"></div>
   <div class="date-timeline">`;
 
   let prevBand='';
@@ -931,6 +932,32 @@ function generateDateCourse(){
   const body=document.getElementById('date-result-body');
   if(body) body.innerHTML=html;
   _loadRealSpots(DST.area);
+  _renderDateMap(areaCoord, dep1, c1, dep2, c2, DST.area, firstSpot);
+}
+
+// ── 동선 지도 (Leaflet + OSM, API 키 불필요) ──
+let _dateMapObj=null;
+function _renderDateMap(areaCoord, dep1, c1, dep2, c2, areaName, firstSpot){
+  const host=document.getElementById('date-map');
+  if(!host) return;
+  if(typeof L==='undefined' || !areaCoord){ host.style.display='none'; return; }
+  try{
+    if(_dateMapObj){ try{_dateMapObj.remove();}catch(_){ } _dateMapObj=null; }
+    host.style.display='';
+    const map=L.map(host,{zoomControl:true,scrollWheelZoom:false});
+    _dateMapObj=map;
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+    const pin=(emoji,cls)=>L.divIcon({className:'date-map-pin',html:`<div class="dmp ${cls}">${emoji}</div>`,iconSize:[28,28],iconAnchor:[14,28],popupAnchor:[0,-26]});
+    const pts=[areaCoord];
+    L.marker(areaCoord,{icon:pin('📍','dmp-meet')}).addTo(map).bindPopup(`📍 만남: ${esc(firstSpot)}<br>(${esc(areaName)})`);
+    if(c1){ L.marker(c1,{icon:pin('🧑','dmp-a')}).addTo(map).bindPopup('🧑 나 · '+esc(dep1));
+      L.polyline([c1,areaCoord],{color:'#3b82f6',weight:3,opacity:.75,dashArray:'7,7'}).addTo(map); pts.push(c1); }
+    if(c2){ L.marker(c2,{icon:pin('💑','dmp-b')}).addTo(map).bindPopup('💑 상대방 · '+esc(dep2));
+      L.polyline([c2,areaCoord],{color:'#a855f7',weight:3,opacity:.75,dashArray:'7,7'}).addTo(map); pts.push(c2); }
+    if(pts.length>1) map.fitBounds(L.latLngBounds(pts).pad(0.3));
+    else map.setView(areaCoord,14);
+    setTimeout(()=>{ try{map.invalidateSize();}catch(_){ } },150);
+  }catch(e){ host.style.display='none'; }
 }
 
 function _getDateTip(area,mood,startH,rain){

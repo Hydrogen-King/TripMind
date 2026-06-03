@@ -1006,6 +1006,15 @@ body{overscroll-behavior-y:none;}
   }
 }
 </style>
+<!-- 데이트 동선 지도 (Leaflet + OpenStreetMap, API 키 불필요) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+.date-map{height:230px;border-radius:14px;overflow:hidden;border:1px solid var(--bdr);margin-bottom:16px;}
+.date-map .leaflet-container{height:100%;width:100%;font:inherit;background:var(--card2);}
+.dmp{font-size:22px;line-height:1;text-align:center;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45));}
+.leaflet-popup-content{font-size:12px;font-weight:600;}
+</style>
 </head>
 <body>
 <!-- ── 로딩 오버레이 ── -->
