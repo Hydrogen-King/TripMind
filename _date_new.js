@@ -854,17 +854,18 @@ function generateDateCourse(){
   const c1=dep1?_findKrCoord(dep1):null, c2=dep2?_findKrCoord(dep2):null;
   const d1=c1?Math.round(_dist(c1,areaCoord)):null, d2=c2?Math.round(_dist(c2,areaCoord)):null;
   const firstSpot=timeSlots[0]?.spot?.name||DST.area;
+  const _meetTarget=firstSpot+' '+DST.area.split('·')[0];
+  const _mkDir=(dep)=>`https://map.kakao.com/?sName=${encodeURIComponent(dep)}&eName=${encodeURIComponent(_meetTarget)}`;
+  const _depRow=(icon,label,dep,dkm)=>`<div class="date-route-row">${icon} <b>${esc(label)}</b> · ${esc(dep)}${dkm!=null?` <span class="date-route-km">약 ${dkm}km</span>`:''} <a href="${_mkDir(dep)}" target="_blank" rel="noopener" class="date-route-dir">🧭 길찾기</a></div>`;
   let routeHtml='';
-  if(dep1&&dep2){
-    routeHtml=`
-    <div class="date-route-card">
-      <div class="date-route-title">🗺️ 최적 동선 — 중간 지점 만남</div>
-      <div class="date-route-row">🧑 <b>${esc(dep1)}</b><span class="date-route-arrow">→</span>📍 ${esc(DST.area)} ${d1!=null?`<span class="date-route-km">약 ${d1}km</span>`:''}</div>
-      <div class="date-route-row">💑 <b>${esc(dep2)}</b><span class="date-route-arrow">→</span>📍 ${esc(DST.area)} ${d2!=null?`<span class="date-route-km">약 ${d2}km</span>`:''}</div>
-      <div class="date-route-meet">📌 <b>${esc(firstSpot)}</b>에서 만나 아래 순서대로 이동하면 동선이 가장 효율적이에요</div>
-    </div>`;
-  } else if(dep1||dep2){
-    routeHtml=`<div class="date-route-card" style="opacity:.95;"><div class="date-route-row" style="color:var(--sub);">🗺️ 상대방 출발지도 입력하면 <b>두 분 중간 지점</b> 기준 최적 동선을 잡아드려요!</div></div>`;
+  if(dep1||dep2){
+    const rows=[];
+    if(dep1) rows.push(_depRow('🧑','나',dep1,d1));
+    if(dep2) rows.push(_depRow('💑','상대방',dep2,d2));
+    const meet=(dep1&&dep2)
+      ? `<div class="date-route-meet">📌 <b>${esc(firstSpot)}</b>에서 만나요 — 두 분 중간 지점이라 동선이 가장 효율적이에요</div>`
+      : `<div class="date-route-meet">📌 만남 지점: <b>${esc(firstSpot)}</b> · 상대방 출발지도 넣으면 <b>중간 지점</b>까지 맞춰드려요</div>`;
+    routeHtml=`<div class="date-route-card"><div class="date-route-title">🗺️ 출발지 & 동선</div>${rows.join('')}${meet}</div>`;
   }
 
   // ── 동선 한눈에 보기(순서 칩) ──
