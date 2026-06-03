@@ -1185,7 +1185,7 @@ body{overscroll-behavior-y:none;}
 
   <!-- 2열 가로 카드 -->
   <div class="home-grid">
-    <div class="home-card" role="button" tabindex="0" onclick="go('input')" aria-label="여행 계획 짜기">
+    <div class="home-card" role="button" tabindex="0" onclick="go('input');inputStep(1)" aria-label="여행 계획 짜기">
       <div class="home-card-icon">🗺️</div>
       <div class="home-card-title">여행 계획<br>짜기</div>
       <div class="home-card-desc">여행지·날짜를 이미 알고 있다면 — 일정·숙소·항공·액티비티 링크와 예상 비용까지 한번에</div>
@@ -1271,8 +1271,16 @@ body{overscroll-behavior-y:none;}
     <div class="step-dot active" title="여행 설정"></div>
     <div class="step-dot" title="결과"></div>
   </div>
-  <div class="pg-t">어디로, 언제 가나요?</div>
+  <div class="pg-t" id="input-step-title">어디로 가나요?</div>
+  <div class="pg-s" id="input-step-sub">가고 싶은 나라·도시를 골라요 🌍</div>
+  <div class="date-steps" id="input-steps">
+    <div class="date-step-dot on" data-s="1"><b>1</b> 목적지</div>
+    <div class="date-step-dot" data-s="2"><b>2</b> 날짜·인원</div>
+    <div class="date-step-dot" data-s="3"><b>3</b> 스타일</div>
+  </div>
 
+  <!-- ░░ STEP 1: 목적지 ░░ -->
+  <div class="input-step" data-step="1">
   <!-- ① 목적지 카드 -->
   <div class="dest-card">
     <div style="font-size:11px;color:var(--sub);margin-bottom:8px;line-height:1.5;">
@@ -1314,6 +1322,11 @@ body{overscroll-behavior-y:none;}
       </div>
     </div>
   </div>
+  <button class="btn btn-p" onclick="inputNext1()" style="margin-top:4px;">다음 → 날짜·인원</button>
+  </div><!-- /INPUT STEP 1 -->
+
+  <!-- ░░ STEP 2: 날짜·인원·공항 ░░ -->
+  <div class="input-step" data-step="2" style="display:none;">
 
   <!-- ② 날짜+인원 가로 카드 -->
   <div class="trip-card">
@@ -1352,6 +1365,14 @@ body{overscroll-behavior-y:none;}
       <option value="KWJ">광주공항 (KWJ)</option>
     </select>
   </div>
+  <div style="display:flex;gap:10px;margin-top:10px;">
+    <button class="btn btn-g" onclick="inputStep(1)" style="flex:1;">← 이전</button>
+    <button class="btn btn-p" onclick="inputStep(3)" style="flex:2;">다음 → 스타일</button>
+  </div>
+  </div><!-- /INPUT STEP 2 -->
+
+  <!-- ░░ STEP 3: 스타일(선택) ░░ -->
+  <div class="input-step" data-step="3" style="display:none;">
 
   <!-- ③ 여행 스타일 (접이식 토글) -->
   <div class="style-section-toggle" onclick="toggleStyleSection(this)" role="button" tabindex="0" aria-expanded="false" aria-controls="style-collapse" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--card);border:1px solid var(--bdr);border-radius:var(--r);cursor:pointer;margin-top:14px;user-select:none;">
@@ -1415,7 +1436,11 @@ body{overscroll-behavior-y:none;}
   <div id="style-err" class="err-msg" role="alert" aria-live="polite"></div>
   <div id="generate-err" class="err-msg" role="alert" aria-live="polite"></div>
   <div class="sp"></div>
-  <button id="generate-btn" class="btn btn-p" onclick="goStyle()" aria-label="여행 계획 생성">여행 계획 생성 🚀</button>
+  <div style="display:flex;gap:10px;">
+    <button class="btn btn-g" onclick="inputStep(2)" style="flex:1;">← 이전</button>
+    <button id="generate-btn" class="btn btn-p" onclick="goStyle()" style="flex:2;" aria-label="여행 계획 생성">여행 계획 생성 🚀</button>
+  </div>
+  </div><!-- /INPUT STEP 3 -->
 </div>
 
 <!-- STYLE (빈 더미 — 하위 호환용, 실제 사용 안 함) -->

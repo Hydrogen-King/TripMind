@@ -677,6 +677,20 @@ function dateStep(n){
   if(tt&&T[n]) tt.textContent=T[n][0]; if(ss&&T[n]) ss.textContent=T[n][1];
   try{ window.scrollTo(0,0); }catch(_){ }
 }
+// 여행계획 입력 위저드 (①목적지 ②날짜·인원 ③스타일) — 데이트와 동일 패턴
+function inputStep(n){
+  document.querySelectorAll('#s-input .input-step').forEach(el=>{ el.style.display=(el.getAttribute('data-step')===String(n))?'':'none'; });
+  document.querySelectorAll('#input-steps .date-step-dot').forEach(d=>{ const ds=Number(d.getAttribute('data-s')); d.classList.toggle('on',ds===n); d.classList.toggle('done',ds<n); });
+  const T={1:['어디로 가나요?','가고 싶은 나라·도시를 골라요 🌍'],2:['언제, 몇 명이?','날짜·인원·출발 공항을 정해요 ✈️'],3:['어떤 스타일로?','취향을 더하면 일정이 더 정교해져요 (선택) 🎨']};
+  const tt=document.getElementById('input-step-title'), ss=document.getElementById('input-step-sub');
+  if(tt&&T[n]) tt.textContent=T[n][0]; if(ss&&T[n]) ss.textContent=T[n][1];
+  try{ window.scrollTo(0,0); }catch(_){ }
+}
+function inputNext1(){
+  const sel=document.getElementById('selected-dests-chips');
+  if(!sel||!sel.children||sel.children.length===0){ _toast('🌍 도시를 먼저 선택해주세요'); return; }
+  inputStep(2);
+}
 
 // ══════════════════════════════════════════════
 // 시간 계산
@@ -1105,6 +1119,6 @@ else setTimeout(_initDateRegion,100);
 Object.assign(window,{
   filterDepLoc,selectDepLoc,showDateRegion,selectDateArea,clearDateArea,
   updateDateDayLabel,togDateMood,togDateBudget,togDateWeather,generateDateCourse,shareDateCourse,
-  _dateCat,dateStep
+  _dateCat,dateStep,inputStep,inputNext1
 });
 })();
