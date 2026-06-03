@@ -1,6 +1,6 @@
 // TripMind Service Worker — v2.0
 // 전략: Network First (HTML), Cache First (JS/SVG 에셋)
-const CACHE_NAME = 'tripmind-v7';
+const CACHE_NAME = 'tripmind-v8';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -52,8 +52,7 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       fetch(event.request)
         .then(res => {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
+          if (res && res.ok) { const clone = res.clone(); caches.open(CACHE_NAME).then(c => c.put(event.request, clone)); }
           return res;
         })
         .catch(() => caches.match(event.request))
@@ -64,8 +63,7 @@ self.addEventListener('fetch', event => {
       caches.match(event.request).then(cached => {
         if (cached) return cached;
         return fetch(event.request).then(res => {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
+          if (res && res.ok) { const clone = res.clone(); caches.open(CACHE_NAME).then(c => c.put(event.request, clone)); }
           return res;
         });
       })
