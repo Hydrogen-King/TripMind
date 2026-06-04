@@ -768,19 +768,33 @@ function _loadRealSpots(area){
   REAL_GROUPS.forEach((g,gi)=>_dateCat(dong, g.cats[0][1], 'rl-'+gi, null));
 }
 // 그 지역 현재 전시·특별전 (네이버 실시간) — Worker /exhibitions
+function _fmtPeriod(s,e){
+  const f=d=>{ d=String(d||''); return d.length>=8?`${+d.slice(4,6)}.${+d.slice(6,8)}`:''; };
+  const fs=f(s), fe=f(e); if(!fs&&!fe) return ''; return `${fs}~${fe}`;
+}
 async function _loadExhibitions(area){
   const host=document.getElementById('date-exhibit'); if(!host) return;
   if(!DATE_API_URL){ host.innerHTML=''; return; }
   try{
     const base=DATE_API_URL.replace(/\/+$/,''); const dong=(area||'').split('·')[0];
-    const d=await fetch(`${base}/exhibitions?area=${encodeURIComponent(dong)}&n=5`).then(r=>r.ok?r.json():null).catch(()=>null);
+    const region=(KOREA_DATE_DB[area]||{}).region||'';
+    const d=await fetch(`${base}/exhibitions?area=${encodeURIComponent(dong)}&region=${encodeURIComponent(region)}&n=6`).then(r=>r.ok?r.json():null).catch(()=>null);
     const items=(d&&Array.isArray(d.items))?d.items:[];
     if(!items.length){ host.innerHTML=''; return; }
-    host.innerHTML=`<div class="date-real-card"><div class="date-real-title">🎨 지금 ${esc(dong)} 전시·특별전 <span class="date-real-src">네이버 실시간</span></div>`+
-      items.map(it=>{
-        const link=it.link||('https://search.naver.com/search.naver?query='+encodeURIComponent(dong+' 전시회'));
-        return `<div class="date-real-row"><div class="date-real-info"><div class="date-real-name" style="white-space:normal;">${esc(_decodeEnt(it.title))}</div>${it.desc?`<div class="date-real-meta" style="white-space:normal;">${esc(_decodeEnt(it.desc))}</div>`:''}</div><a href="${esc(link)}" target="_blank" rel="noopener" class="date-ext date-ext-blog">보기</a></div>`;
-      }).join('')+`</div>`;
+    const official=d.source==='tourapi';
+    const src=official?'공식 · 진행중 우선':'네이버 실시간';
+    const rows=items.map(it=>{
+      const title=esc(_decodeEnt(it.title));
+      if(it.start||it.place){ // TourAPI: 기간·장소 검증
+        const per=_fmtPeriod(it.start,it.end);
+        const meta=[ it.ongoing?'<span class="date-open">🟢 진행중</span>':'', per?`📅 ${per}`:'', esc(it.place||'') ].filter(Boolean).join(' · ');
+        const q=encodeURIComponent(it.title);
+        return `<div class="date-real-row"><div class="date-real-info"><div class="date-real-name" style="white-space:normal;">${title}</div>${meta?`<div class="date-real-meta" style="white-space:normal;">${meta}</div>`:''}</div><a href="https://search.naver.com/search.naver?query=${q}" target="_blank" rel="noopener" class="date-ext date-ext-blog">보기</a></div>`;
+      }
+      const link=it.link||('https://search.naver.com/search.naver?query='+encodeURIComponent(dong+' 전시회'));
+      return `<div class="date-real-row"><div class="date-real-info"><div class="date-real-name" style="white-space:normal;">${title}</div>${it.desc?`<div class="date-real-meta" style="white-space:normal;">${esc(_decodeEnt(it.desc))}</div>`:''}</div><a href="${esc(link)}" target="_blank" rel="noopener" class="date-ext date-ext-blog">보기</a></div>`;
+    }).join('');
+    host.innerHTML=`<div class="date-real-card"><div class="date-real-title">🎉 지금 ${esc(dong)} 축제·전시 <span class="date-real-src">${esc(src)}</span></div>${rows}</div>`;
   }catch(_){ host.innerHTML=''; }
 }
 async function _dateCat(dong,cat,listId,chipEl){

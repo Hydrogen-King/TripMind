@@ -5,7 +5,8 @@
  * 정적 프론트(GitHub Pages)가 직접 못 부르는 네이버/구글 API를
  * 서버에서 대신 호출하는 프록시. (CORS + 키 보호)
  *
- * ■ 환경변수(Secret): NAVER_ID, NAVER_SECRET, GOOGLE_KEY(선택·별점/영업시간), ALLOW_ORIGIN(선택)
+ * ■ 환경변수(Secret): NAVER_ID, NAVER_SECRET, GOOGLE_KEY(선택·별점/영업시간),
+ *                    TOURAPI_KEY(선택·축제/전시 기간검증·한국관광공사), ALLOW_ORIGIN(선택)
  *
  * ■ 엔드포인트
  *   GET /health
@@ -20,7 +21,26 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-const CACHE_TTL = 21600; // 6시간
+const CACHE_TTL   = 21600;  // 6시간
+const RATE_LIMIT  = 30;     // IP당 일일 최대 요청 수
+const RATE_TTL    = 86400;  // 1일 (KV TTL)
+
+// ── IP별 레이트 리밋 (Cloudflare KV) ──────────────────────────
+async function checkRateLimit(request, env) {
+  if (!env.RATELIMIT_KV) return false; // KV 미설정 시 패스
+
+  const ip  = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const day = new Date().toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
+  const key = `rl:${ip}:${day}`;
+
+  const raw   = await env.RATELIMIT_KV.get(key);
+  const count = raw ? parseInt(raw, 10) : 0;
+  if (count >= RATE_LIMIT) return true; // 초과
+
+  // 카운터 증가 (하루 만료)
+  await env.RATELIMIT_KV.put(key, String(count + 1), { expirationTtl: RATE_TTL });
+  return false;
+}
 
 export default {
   async fetch(request, env, ctx) {
@@ -37,6 +57,14 @@ export default {
       return json({ ok: true,
         naver: !!(env.NAVER_ID && env.NAVER_SECRET),
         google: !!env.GOOGLE_KEY, ts: Date.now() }, 200, cors);
+    }
+
+    // 레이트 리밋 체크 (/health 제외)
+    const limited = await checkRateLimit(request, env);
+    if (limited) {
+      return json({ error: '요청이 너무 많습니다. 내일 다시 시도해주세요.' }, 429, {
+        ...cors, 'Retry-After': '86400',
+      });
     }
 
     const cache = caches.default;
@@ -203,13 +231,45 @@ async function handleGeocode(url, env) {
   return { area, points };
 }
 
-// ── /exhibitions — 그 지역 현재 전시·특별전 (네이버 검색 기반, 기존 키 재사용) ──
+// ── /exhibitions — 그 지역 현재 축제·전시 (공식 TourAPI 우선 → 네이버 폴백) ──
+// region: 서울 / 경기·인천 / 강원 / 충청 / 전라 / 경상 / 제주  (TOURAPI_KEY 필요)
+const AREA_CODE = { '서울': 1, '경기·인천': 31, '강원': 32, '충청': 34, '전라': 38, '경상': 36, '제주': 39 };
 async function handleExhibitions(url, env) {
   const area = (url.searchParams.get('area') || '').trim();
-  const n = Math.min(Math.max(parseInt(url.searchParams.get('n') || '5', 10) || 5, 1), 8);
-  if (!area) throw new Error('area 파라미터 필요');
-  const items = await naverExhibitionSearch(env, area, n);
-  return { area, source: 'naver', count: items.length, items };
+  const region = (url.searchParams.get('region') || '').trim();
+  const n = Math.min(Math.max(parseInt(url.searchParams.get('n') || '6', 10) || 6, 1), 10);
+  if (!area && !region) throw new Error('area 파라미터 필요');
+  // ① 공식 TourAPI — 기간 검증된 축제·전시(행사)
+  if (env.TOURAPI_KEY && region && AREA_CODE[region]) {
+    try { const ev = await tourapiEvents(env, region, n); if (ev.length) return { area, region, source: 'tourapi', count: ev.length, items: ev }; } catch (_) { }
+  }
+  // ② 폴백 — 네이버 검색
+  const items = await naverExhibitionSearch(env, area || region, n);
+  return { area, region, source: 'naver', count: items.length, items };
+}
+// 한국관광공사 TourAPI — 기간 검증된 축제/공연/전시(행사) by 지역·오늘
+async function tourapiEvents(env, region, n) {
+  const areaCode = AREA_CODE[region] || 1;
+  const t = new Date();
+  const ymd = `${t.getFullYear()}${String(t.getMonth() + 1).padStart(2, '0')}${String(t.getDate()).padStart(2, '0')}`;
+  const u = `https://apis.data.go.kr/B551011/KorService1/searchFestival1?serviceKey=${env.TOURAPI_KEY}&MobileOS=ETC&MobileApp=TripMind&_type=json&listYN=Y&arrange=A&eventStartDate=${ymd}&areaCode=${areaCode}&numOfRows=40&pageNo=1`;
+  const r = await fetch(u);
+  if (!r.ok) return [];
+  let d; try { d = await r.json(); } catch (_) { return []; }
+  let items = d && d.response && d.response.body && d.response.body.items && d.response.body.items.item;
+  if (!items) return [];
+  if (!Array.isArray(items)) items = [items];
+  const todayNum = Number(ymd);
+  const mapped = items.map(it => ({
+    title: stripTags(it.title || ''),
+    place: stripTags(it.addr1 || ''),
+    start: String(it.eventstartdate || ''), end: String(it.eventenddate || ''),
+    image: it.firstimage || '',
+    ongoing: (Number(it.eventstartdate) <= todayNum && Number(it.eventenddate) >= todayNum),
+  })).filter(x => x.title);
+  // 진행중 먼저, 그다음 시작일 빠른 순
+  mapped.sort((a, b) => (Number(b.ongoing) - Number(a.ongoing)) || (Number(a.start) - Number(b.start)));
+  return mapped.slice(0, n);
 }
 async function naverExhibitionSearch(env, area, n) {
   if (!env.NAVER_ID || !env.NAVER_SECRET) return [];
