@@ -7,6 +7,8 @@
 
 // 내부 escape (index.html escHtml 의존 제거)
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+// 네이버가 돌려주는 HTML 엔티티(&amp; 등) 디코드 → esc 이중이스케이프 방지
+function _decodeEnt(s){return String(s||'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&nbsp;/g,' ');}
 function _go(id){ if(typeof go==='function') go(id); else { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on')); const t=document.getElementById('s-'+id); if(t) t.classList.add('on'); } }
 function _toast(msg,ms){ if(typeof showToast==='function') showToast(msg,ms); else alert(msg); }
 
@@ -777,7 +779,7 @@ async function _loadExhibitions(area){
     host.innerHTML=`<div class="date-real-card"><div class="date-real-title">🎨 지금 ${esc(dong)} 전시·특별전 <span class="date-real-src">네이버 실시간</span></div>`+
       items.map(it=>{
         const link=it.link||('https://search.naver.com/search.naver?query='+encodeURIComponent(dong+' 전시회'));
-        return `<div class="date-real-row"><div class="date-real-info"><div class="date-real-name" style="white-space:normal;">${esc(it.title)}</div>${it.desc?`<div class="date-real-meta" style="white-space:normal;">${esc(it.desc)}</div>`:''}</div><a href="${esc(link)}" target="_blank" rel="noopener" class="date-ext date-ext-blog">보기</a></div>`;
+        return `<div class="date-real-row"><div class="date-real-info"><div class="date-real-name" style="white-space:normal;">${esc(_decodeEnt(it.title))}</div>${it.desc?`<div class="date-real-meta" style="white-space:normal;">${esc(_decodeEnt(it.desc))}</div>`:''}</div><a href="${esc(link)}" target="_blank" rel="noopener" class="date-ext date-ext-blog">보기</a></div>`;
       }).join('')+`</div>`;
   }catch(_){ host.innerHTML=''; }
 }
@@ -812,7 +814,7 @@ function _realRows(items,dong){
     return `<div class="date-real-row">
       <span class="date-real-rank">${i+1}</span>
       <div class="date-real-info">
-        <div class="date-real-name">${esc(it.name)}${openBadge}</div>
+        <div class="date-real-name">${esc(_decodeEnt(it.name))}${openBadge}</div>
         ${meta?`<div class="date-real-meta">${meta}</div>`:''}
         ${hours}
       </div>
@@ -1082,7 +1084,7 @@ function _applyRealSlot(idx,type,v,meet,dong){
   const q=encodeURIComponent(v.name+' '+dong);
   card.innerHTML=`
           <div class="date-slot-emoji">${_venueEmoji(type)}</div>
-          <div class="date-slot-name">${esc(v.name)}${ob} <span class="date-real-src">실제 추천</span></div>
+          <div class="date-slot-name">${esc(_decodeEnt(v.name))}${ob} <span class="date-real-src">실제 추천</span></div>
           <div class="date-slot-desc">${reason}${cat?' · '+cat:''}</div>
           ${hrs}
           <div class="date-slot-meta">
