@@ -239,6 +239,7 @@ async function handleExhibitions(url, env) {
   const region = (url.searchParams.get('region') || '').trim();
   const n = Math.min(Math.max(parseInt(url.searchParams.get('n') || '6', 10) || 6, 1), 10);
   if (!area && !region) throw new Error('area 파라미터 필요');
+  if (url.searchParams.get('debug') === '1') return await tourapiDebug(env, region || '서울');
   // ① 공식 TourAPI — 기간 검증된 축제·전시(행사)
   if (env.TOURAPI_KEY && region && AREA_CODE[region]) {
     try { const ev = await tourapiEvents(env, region, n); if (ev.length) return { area, region, source: 'tourapi', count: ev.length, items: ev }; } catch (_) { }
@@ -281,6 +282,30 @@ async function tourapiEvents(env, region, n) {
     } catch (_) { }
   }
   return [];
+}
+// 진단용: data.go.kr 응답을 그대로 보여줌(키 값은 노출 안 함, 길이/형식만)
+async function tourapiDebug(env, region) {
+  const out = {
+    debug: true, region, areaCode: AREA_CODE[region] || null,
+    hasKey: !!env.TOURAPI_KEY,
+    keyLen: env.TOURAPI_KEY ? env.TOURAPI_KEY.length : 0,
+    looksDecoding: env.TOURAPI_KEY ? /[+/=]/.test(env.TOURAPI_KEY) : null, // true면 Decoding 키(문제)
+    tries: [],
+  };
+  if (!env.TOURAPI_KEY) return out;
+  const areaCode = AREA_CODE[region] || 1;
+  const t = new Date();
+  const ymd = `${t.getFullYear()}${String(t.getMonth() + 1).padStart(2, '0')}${String(t.getDate()).padStart(2, '0')}`;
+  const qs = `serviceKey=${env.TOURAPI_KEY}&MobileOS=ETC&MobileApp=TripMind&_type=json&eventStartDate=${ymd}&areaCode=${areaCode}&numOfRows=2&pageNo=1`;
+  const eps = [
+    ['KorService1', `https://apis.data.go.kr/B551011/KorService1/searchFestival1?${qs}`],
+    ['KorService2', `https://apis.data.go.kr/B551011/KorService2/searchFestival2?${qs}`],
+  ];
+  for (const [name, u] of eps) {
+    try { const r = await fetch(u); const txt = await r.text(); out.tries.push({ ep: name, status: r.status, snippet: txt.slice(0, 350) }); }
+    catch (e) { out.tries.push({ ep: name, fetchError: String((e && e.message) || e) }); }
+  }
+  return out;
 }
 async function naverExhibitionSearch(env, area, n) {
   if (!env.NAVER_ID || !env.NAVER_SECRET) return [];
