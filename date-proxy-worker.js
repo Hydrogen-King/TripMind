@@ -248,28 +248,39 @@ async function handleExhibitions(url, env) {
   return { area, region, source: 'naver', count: items.length, items };
 }
 // 한국관광공사 TourAPI — 기간 검증된 축제/공연/전시(행사) by 지역·오늘
+// KorService1/2 어느 버전 키든 작동하도록 두 엔드포인트 순차 시도
 async function tourapiEvents(env, region, n) {
   const areaCode = AREA_CODE[region] || 1;
   const t = new Date();
   const ymd = `${t.getFullYear()}${String(t.getMonth() + 1).padStart(2, '0')}${String(t.getDate()).padStart(2, '0')}`;
-  const u = `https://apis.data.go.kr/B551011/KorService1/searchFestival1?serviceKey=${env.TOURAPI_KEY}&MobileOS=ETC&MobileApp=TripMind&_type=json&listYN=Y&arrange=A&eventStartDate=${ymd}&areaCode=${areaCode}&numOfRows=40&pageNo=1`;
-  const r = await fetch(u);
-  if (!r.ok) return [];
-  let d; try { d = await r.json(); } catch (_) { return []; }
-  let items = d && d.response && d.response.body && d.response.body.items && d.response.body.items.item;
-  if (!items) return [];
-  if (!Array.isArray(items)) items = [items];
   const todayNum = Number(ymd);
-  const mapped = items.map(it => ({
-    title: stripTags(it.title || ''),
-    place: stripTags(it.addr1 || ''),
-    start: String(it.eventstartdate || ''), end: String(it.eventenddate || ''),
-    image: it.firstimage || '',
-    ongoing: (Number(it.eventstartdate) <= todayNum && Number(it.eventenddate) >= todayNum),
-  })).filter(x => x.title);
-  // 진행중 먼저, 그다음 시작일 빠른 순
-  mapped.sort((a, b) => (Number(b.ongoing) - Number(a.ongoing)) || (Number(a.start) - Number(b.start)));
-  return mapped.slice(0, n);
+  const qs = `serviceKey=${env.TOURAPI_KEY}&MobileOS=ETC&MobileApp=TripMind&_type=json&listYN=Y&arrange=A&eventStartDate=${ymd}&areaCode=${areaCode}&numOfRows=40&pageNo=1`;
+  const endpoints = [
+    `https://apis.data.go.kr/B551011/KorService1/searchFestival1?${qs}`,
+    `https://apis.data.go.kr/B551011/KorService2/searchFestival2?${qs}`,
+  ];
+  for (const u of endpoints) {
+    try {
+      const r = await fetch(u);
+      if (!r.ok) continue;
+      let d; try { d = await r.json(); } catch (_) { continue; }
+      let items = d && d.response && d.response.body && d.response.body.items && d.response.body.items.item;
+      if (!items) continue;
+      if (!Array.isArray(items)) items = [items];
+      const mapped = items.map(it => ({
+        title: stripTags(it.title || ''),
+        place: stripTags(it.addr1 || ''),
+        start: String(it.eventstartdate || ''), end: String(it.eventenddate || ''),
+        image: it.firstimage || '',
+        ongoing: (Number(it.eventstartdate) <= todayNum && Number(it.eventenddate) >= todayNum),
+      })).filter(x => x.title);
+      if (!mapped.length) continue;
+      // 진행중 먼저, 그다음 시작일 빠른 순
+      mapped.sort((a, b) => (Number(b.ongoing) - Number(a.ongoing)) || (Number(a.start) - Number(b.start)));
+      return mapped.slice(0, n);
+    } catch (_) { }
+  }
+  return [];
 }
 async function naverExhibitionSearch(env, area, n) {
   if (!env.NAVER_ID || !env.NAVER_SECRET) return [];
