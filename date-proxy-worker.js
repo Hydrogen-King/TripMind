@@ -255,31 +255,34 @@ async function tourapiEvents(env, region, n) {
   const t = new Date();
   const ymd = `${t.getFullYear()}${String(t.getMonth() + 1).padStart(2, '0')}${String(t.getDate()).padStart(2, '0')}`;
   const todayNum = Number(ymd);
-  const qs = `serviceKey=${env.TOURAPI_KEY}&MobileOS=ETC&MobileApp=TripMind&_type=json&listYN=Y&arrange=A&eventStartDate=${ymd}&areaCode=${areaCode}&numOfRows=40&pageNo=1`;
-  const endpoints = [
-    `https://apis.data.go.kr/B551011/KorService1/searchFestival1?${qs}`,
-    `https://apis.data.go.kr/B551011/KorService2/searchFestival2?${qs}`,
+  const k = env.TOURAPI_KEY || '';
+  const keyVariants = k.includes('%') ? [k] : [k, encodeURIComponent(k)]; // 원본/인코딩 둘 다 시도
+  const bases = [
+    'https://apis.data.go.kr/B551011/KorService1/searchFestival1',
+    'https://apis.data.go.kr/B551011/KorService2/searchFestival2',
   ];
-  for (const u of endpoints) {
-    try {
-      const r = await fetch(u);
-      if (!r.ok) continue;
-      let d; try { d = await r.json(); } catch (_) { continue; }
-      let items = d && d.response && d.response.body && d.response.body.items && d.response.body.items.item;
-      if (!items) continue;
-      if (!Array.isArray(items)) items = [items];
-      const mapped = items.map(it => ({
-        title: stripTags(it.title || ''),
-        place: stripTags(it.addr1 || ''),
-        start: String(it.eventstartdate || ''), end: String(it.eventenddate || ''),
-        image: it.firstimage || '',
-        ongoing: (Number(it.eventstartdate) <= todayNum && Number(it.eventenddate) >= todayNum),
-      })).filter(x => x.title);
-      if (!mapped.length) continue;
-      // 진행중 먼저, 그다음 시작일 빠른 순
-      mapped.sort((a, b) => (Number(b.ongoing) - Number(a.ongoing)) || (Number(a.start) - Number(b.start)));
-      return mapped.slice(0, n);
-    } catch (_) { }
+  for (const base of bases) {
+    for (const key of keyVariants) {
+      try {
+        const u = `${base}?serviceKey=${key}&MobileOS=ETC&MobileApp=TripMind&_type=json&listYN=Y&arrange=A&eventStartDate=${ymd}&areaCode=${areaCode}&numOfRows=40&pageNo=1`;
+        const r = await fetch(u);
+        if (!r.ok) continue;
+        let d; try { d = await r.json(); } catch (_) { continue; }
+        let items = d && d.response && d.response.body && d.response.body.items && d.response.body.items.item;
+        if (!items) continue;
+        if (!Array.isArray(items)) items = [items];
+        const mapped = items.map(it => ({
+          title: stripTags(it.title || ''),
+          place: stripTags(it.addr1 || ''),
+          start: String(it.eventstartdate || ''), end: String(it.eventenddate || ''),
+          image: it.firstimage || '',
+          ongoing: (Number(it.eventstartdate) <= todayNum && Number(it.eventenddate) >= todayNum),
+        })).filter(x => x.title);
+        if (!mapped.length) continue;
+        mapped.sort((a, b) => (Number(b.ongoing) - Number(a.ongoing)) || (Number(a.start) - Number(b.start)));
+        return mapped.slice(0, n);
+      } catch (_) { }
+    }
   }
   return [];
 }
@@ -289,21 +292,28 @@ async function tourapiDebug(env, region) {
     debug: true, region, areaCode: AREA_CODE[region] || null,
     hasKey: !!env.TOURAPI_KEY,
     keyLen: env.TOURAPI_KEY ? env.TOURAPI_KEY.length : 0,
-    looksDecoding: env.TOURAPI_KEY ? /[+/=]/.test(env.TOURAPI_KEY) : null, // true면 Decoding 키(문제)
+    keyHasPercent: env.TOURAPI_KEY ? env.TOURAPI_KEY.includes('%') : null,
+    keyHasPlusEq: env.TOURAPI_KEY ? /[+/=]/.test(env.TOURAPI_KEY) : null,
     tries: [],
   };
   if (!env.TOURAPI_KEY) return out;
   const areaCode = AREA_CODE[region] || 1;
   const t = new Date();
   const ymd = `${t.getFullYear()}${String(t.getMonth() + 1).padStart(2, '0')}${String(t.getDate()).padStart(2, '0')}`;
-  const qs = `serviceKey=${env.TOURAPI_KEY}&MobileOS=ETC&MobileApp=TripMind&_type=json&eventStartDate=${ymd}&areaCode=${areaCode}&numOfRows=2&pageNo=1`;
-  const eps = [
-    ['KorService1', `https://apis.data.go.kr/B551011/KorService1/searchFestival1?${qs}`],
-    ['KorService2', `https://apis.data.go.kr/B551011/KorService2/searchFestival2?${qs}`],
+  const k = env.TOURAPI_KEY;
+  const keyVariants = k.includes('%') ? [['asis', k]] : [['asis', k], ['encoded', encodeURIComponent(k)]];
+  const bases = [
+    ['KorService1', 'https://apis.data.go.kr/B551011/KorService1/searchFestival1'],
+    ['KorService2', 'https://apis.data.go.kr/B551011/KorService2/searchFestival2'],
   ];
-  for (const [name, u] of eps) {
-    try { const r = await fetch(u); const txt = await r.text(); out.tries.push({ ep: name, status: r.status, snippet: txt.slice(0, 350) }); }
-    catch (e) { out.tries.push({ ep: name, fetchError: String((e && e.message) || e) }); }
+  for (const [bn, base] of bases) {
+    for (const [kn, key] of keyVariants) {
+      try {
+        const u = `${base}?serviceKey=${key}&MobileOS=ETC&MobileApp=TripMind&_type=json&eventStartDate=${ymd}&areaCode=${areaCode}&numOfRows=2&pageNo=1`;
+        const r = await fetch(u); const txt = await r.text();
+        out.tries.push({ ep: bn, key: kn, status: r.status, snippet: txt.slice(0, 220) });
+      } catch (e) { out.tries.push({ ep: bn, key: kn, fetchError: String((e && e.message) || e) }); }
+    }
   }
   return out;
 }
