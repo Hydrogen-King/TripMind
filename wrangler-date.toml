@@ -1,0 +1,12 @@
+name = "tripmind-date"
+compatibility_date = "2025-01-01"
+main = "date-proxy-worker.js"
+
+# ── KV: IP별 레이트 리밋 카운터 ──────────────────────────────
+# npx wrangler kv namespace create RATELIMIT_KV --config wrangler-date.toml
+[[kv_namespaces]]
+binding = "RATELIMIT_KV"
+id      = "9c18ba1308eb47a18b2e61c039c624fc"
+
+# ── Secrets (wrangler secret put --config wrangler-date.toml) ──
+# NAVER_ID, NAVER_SECRET, GOOGLE_KEY, ALLOW_ORIGIN
