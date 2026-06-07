@@ -1742,6 +1742,17 @@ body{overscroll-behavior-y:none;}
     <div class="chip" onclick="togDateMood(this,'미식')">🍷 미식투어</div>
   </div>
 
+  <!-- 음식 종류 (복수 선택) -->
+  <div class="sec-title" style="margin-bottom:8px;">🍽️ 먹고 싶은 음식 <span style="font-size:11px;font-weight:400;color:var(--sub);">(복수 선택 · 식사 추천에 반영)</span></div>
+  <div class="chips" id="date-cuisine-chips" style="margin-bottom:12px;">
+    <div class="chip" onclick="togDateCuisine(this,'한식')">🍚 한식</div>
+    <div class="chip" onclick="togDateCuisine(this,'중식')">🥢 중식</div>
+    <div class="chip" onclick="togDateCuisine(this,'일식')">🍣 일식</div>
+    <div class="chip" onclick="togDateCuisine(this,'양식')">🍝 양식</div>
+    <div class="chip" onclick="togDateCuisine(this,'분식')">🍢 분식</div>
+    <div class="chip" onclick="togDateCuisine(this,'고기')">🥩 고기·구이</div>
+  </div>
+
   <!-- 예산 -->
   <div class="sec-title" style="margin-bottom:8px;">💸 예산 (1인)</div>
   <div class="chips" id="date-budget-chips" style="margin-bottom:16px;">
@@ -2536,7 +2547,10 @@ function go(id){
   target.classList.add('on');
   // 결과화면일 때 앱 컨테이너 확장
   document.getElementById('app').classList.toggle('wide', id==='result');
+  // 모드 진입 시 항상 최상단으로 포커스 (스크롤 컨테이너 차이·타이밍 대비)
   window.scrollTo(0,0);
+  try{ document.documentElement.scrollTop=0; document.body.scrollTop=0; }catch(_){}
+  requestAnimationFrame(()=>{ try{ window.scrollTo(0,0); }catch(_){} });
   // 홈화면으로 돌아올 때 저장 목록 갱신
   if(id==='home'){updateSavedBadge();renderSavedList();}
   // 결과화면 진입 시 s-input 진행 도트 완료 표시
@@ -9349,13 +9363,71 @@ function rerollSpot(btn){
 
 // ══════════════════════════════════════════════
 // ⑥ 결과 저장 & 불러오기
+//    저장: localStorage(즉시) + KV API(백그라운드 동기화)
+//    불러오기: localStorage 우선, 없으면 KV
 // ══════════════════════════════════════════════
-const _SAVE_KEY='tm_saved_results_v1';
-const _MAX_SAVES=5;
+const _SAVE_KEY  = 'tm_saved_results_v1';
+const _MAX_SAVES = 20;   // KV 기반으로 확장 (기존 5 → 20)
+
+// ── 익명 사용자 ID (디바이스 고유, localStorage에 영구 저장) ───
+function _getUid(){
+  let uid=localStorage.getItem('tm_uid');
+  if(!uid){
+    uid=(typeof crypto!=='undefined'&&crypto.randomUUID)
+      ?crypto.randomUUID()
+      :'uid-'+Date.now()+'-'+Math.random().toString(36).slice(2);
+    localStorage.setItem('tm_uid',uid);
+  }
+  return uid;
+}
+
+// ── KV API 래퍼 ────────────────────────────────────────────────
+const _KV_BASE='/api/saves';
+
+async function _kvList(){
+  try{
+    const r=await fetch(`${_KV_BASE}?uid=${encodeURIComponent(_getUid())}`,{cache:'no-store'});
+    if(!r.ok) return null;
+    const d=await r.json();
+    return Array.isArray(d.saves)?d.saves:null;
+  }catch(_){return null;}
+}
+async function _kvSave(item){
+  try{
+    await fetch(_KV_BASE,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({uid:_getUid(),item}),
+    });
+  }catch(_){}
+}
+async function _kvDelete(id){
+  try{
+    await fetch(`${_KV_BASE}/${id}?uid=${encodeURIComponent(_getUid())}`,{method:'DELETE'});
+  }catch(_){}
+}
+
+// ── localStorage 읽기/쓰기 헬퍼 ───────────────────────────────
+function _lsGet(){  try{return JSON.parse(localStorage.getItem(_SAVE_KEY)||'[]');}catch(_){return[];}}
+function _lsSet(v){ try{localStorage.setItem(_SAVE_KEY,JSON.stringify(v));}catch(_){}}
+
+// ── KV → localStorage 동기화 (앱 초기 로드 시 1회 실행) ───────
+async function _syncFromKv(){
+  const remote=await _kvList();
+  if(!remote||!remote.length) return;
+  const local=_lsGet();
+  // 리모트 항목 중 로컬에 없는 것만 병합 (중복 방지)
+  const localIds=new Set(local.map(x=>String(x.id)));
+  const merged=[...local,...remote.filter(x=>!localIds.has(String(x.id)))];
+  merged.sort((a,b)=>b.id-a.id);
+  _lsSet(merged.slice(0,_MAX_SAVES));
+  updateSavedBadge();
+  renderSavedList();
+}
 
 function saveResult(){
   try{
-    const existing=JSON.parse(localStorage.getItem(_SAVE_KEY)||'[]');
+    const existing=_lsGet();
     if(existing.length>=_MAX_SAVES){
       showToast(`💾 최대 ${_MAX_SAVES}개까지 저장돼요. 오래된 항목을 삭제 후 다시 시도해주세요.`);
       return;
@@ -9369,7 +9441,8 @@ function saveResult(){
       savedAt:new Date().toLocaleDateString('ko-KR',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})
     };
     existing.unshift(item);
-    localStorage.setItem(_SAVE_KEY,JSON.stringify(existing));
+    _lsSet(existing);
+    _kvSave(item);   // 백그라운드 KV 동기화 (fire & forget)
     updateSavedBadge();
     showToast('💾 이 일정이 저장되었어요!',3000);
     if(window.gtag) gtag('event','save_result',{destination:destLabel});
@@ -9377,9 +9450,10 @@ function saveResult(){
 }
 function deleteSaved(id){
   try{
-    const existing=JSON.parse(localStorage.getItem(_SAVE_KEY)||'[]');
+    const existing=_lsGet();
     const updated=existing.filter(x=>x.id!==id);
-    localStorage.setItem(_SAVE_KEY,JSON.stringify(updated));
+    _lsSet(updated);
+    _kvDelete(id);   // 백그라운드 KV 삭제 (fire & forget)
     updateSavedBadge();
     renderSavedList();
     showToast('🗑️ 삭제되었어요',1500);
@@ -9387,7 +9461,7 @@ function deleteSaved(id){
 }
 function loadSaved(id){
   try{
-    const existing=JSON.parse(localStorage.getItem(_SAVE_KEY)||'[]');
+    const existing=_lsGet();
     const item=existing.find(x=>x.id===id);
     if(!item){showToast('저장된 일정을 찾을 수 없어요');return;}
     ST.from=item.from; ST.to=item.to; ST.ppl=item.ppl;
@@ -9398,7 +9472,7 @@ function loadSaved(id){
 }
 function updateSavedBadge(){
   try{
-    const saves=JSON.parse(localStorage.getItem(_SAVE_KEY)||'[]');
+    const saves=_lsGet();
     document.querySelectorAll('.saved-count-chip').forEach(el=>el.textContent=saves.length?`(${saves.length})`:'');
     const sec=document.getElementById('saved-section');
     if(sec) sec.style.display=saves.length>0?'block':'none';
@@ -9408,7 +9482,7 @@ function renderSavedList(){
   const el=document.getElementById('saved-list');
   if(!el) return;
   try{
-    const saves=JSON.parse(localStorage.getItem(_SAVE_KEY)||'[]');
+    const saves=_lsGet();
     if(!saves.length){el.innerHTML='<p style="padding:14px 16px;font-size:13px;color:var(--sub);">저장된 일정이 없어요</p>';return;}
     el.innerHTML=saves.map(item=>`
       <div class="saved-item" >
@@ -10458,9 +10532,11 @@ document.addEventListener('DOMContentLoaded',function(){
 // INIT — 페이지 로드 시 실행 (db_extra*.js 로드 후)
 // ══════════════════════════════════════════════
 (function init(){
-  // 저장 배지 & 목록 초기화
+  // 저장 배지 & 목록 초기화 (localStorage 즉시 표시)
   updateSavedBadge();
   renderSavedList();
+  // KV → localStorage 백그라운드 동기화 (다기기 저장 복원)
+  _syncFromKv();
   // 복원 배너
   initRestoreBanner();
   // 기본 날짜 세팅 (오늘 + 1개월)

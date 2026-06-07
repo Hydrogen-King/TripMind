@@ -666,9 +666,11 @@ function updateDateDayLabel(){
 // ══════════════════════════════════════════════
 // 입력 상태
 // ══════════════════════════════════════════════
-const DST={area:'',mood:'설레는',budget:'일반',weather:'맑음'};
+const DST={area:'',mood:'설레는',budget:'일반',weather:'맑음',cuisines:[]};
 function togDateMood(el,mood){document.querySelectorAll('#date-mood-chips .chip').forEach(c=>c.classList.remove('on'));if(el)el.classList.add('on');DST.mood=mood;}
 function togDateBudget(el,b){document.querySelectorAll('#date-budget-chips .chip').forEach(c=>c.classList.remove('on'));if(el)el.classList.add('on');DST.budget=b;}
+// 음식 종류 — 복수 선택 토글
+function togDateCuisine(el,c){ const i=DST.cuisines.indexOf(c); if(i>=0){DST.cuisines.splice(i,1); if(el)el.classList.remove('on');} else {DST.cuisines.push(c); if(el)el.classList.add('on');} }
 function togDateWeather(el,w){document.querySelectorAll('#date-weather-chips .chip').forEach(c=>c.classList.remove('on'));if(el)el.classList.add('on');DST.weather=w;}
 // 단계별 위저드 (①출발·날짜 ②지역 ③취향)
 function dateStep(n){
@@ -1075,15 +1077,26 @@ async function _enhanceCourse(area,slots){
   if(!cafeSlots.length&&!foodSlots.length) return;
   try{
     const base=DATE_API_URL.replace(/\/+$/,''); const dong=(area||'').split('·')[0]; const day=_selectedWeekday();
-    const [cafeR,foodR]=await Promise.all([
-      cafeSlots.length?fetch(`${base}/spots?area=${encodeURIComponent(dong)}&cat=카페&n=10&hours=1&day=${day}`).then(r=>r.ok?r.json():null).catch(()=>null):null,
-      foodSlots.length?fetch(`${base}/spots?area=${encodeURIComponent(dong)}&cat=맛집&n=10&hours=1&day=${day}`).then(r=>r.ok?r.json():null).catch(()=>null):null,
-    ]);
     const meet=(KOREA_DATE_DB[area]&&KOREA_DATE_DB[area].coord)||null;
-    const cafePool=_coordVenues(cafeR), foodPool=_coordVenues(foodR), used=new Set();
-    let cur=meet; // 만남 지점에서 시작해 가까운 순으로 동선 구성
-    cafeSlots.forEach(s=>{ const v=_pickNearPopular(cafePool,cur,used); if(v){used.add(v); if(v._c)cur=v._c; _applyRealSlot(s.idx,s.type,v,meet,dong);} });
-    foodSlots.forEach(s=>{ const v=_pickNearPopular(foodPool,cur,used); if(v){used.add(v); if(v._c)cur=v._c; _applyRealSlot(s.idx,s.type,v,meet,dong);} });
+    const used=new Set(); let cur=meet; // 만남 지점에서 시작해 가까운 순으로 동선
+    const fetchSpots=(cat)=>fetch(`${base}/spots?area=${encodeURIComponent(dong)}&cat=${encodeURIComponent(cat)}&n=10&hours=1&day=${day}`).then(r=>r.ok?r.json():null).catch(()=>null);
+    // 카페
+    if(cafeSlots.length){
+      const cafePool=_coordVenues(await fetchSpots('카페'));
+      cafeSlots.forEach(s=>{ const v=_pickNearPopular(cafePool,cur,used); if(v){used.add(v); if(v._c)cur=v._c; _applyRealSlot(s.idx,s.type,v,meet,dong);} });
+    }
+    // 식사 — 선택한 음식 종류 반영 (없으면 맛집 전체)
+    if(foodSlots.length){
+      const cuisines=(Array.isArray(DST.cuisines)&&DST.cuisines.length)?DST.cuisines:['맛집'];
+      const cats=[...new Set(cuisines)];
+      const results=await Promise.all(cats.map(fetchSpots));
+      const poolByCat={}; cats.forEach((c,i)=>poolByCat[c]=_coordVenues(results[i]));
+      foodSlots.forEach((s,i)=>{
+        const cat=cuisines[i%cuisines.length];
+        const pool=(poolByCat[cat]&&poolByCat[cat].length)?poolByCat[cat]:(poolByCat[cats[0]]||[]);
+        const v=_pickNearPopular(pool,cur,used); if(v){used.add(v); if(v._c)cur=v._c; _applyRealSlot(s.idx,s.type,v,meet,dong);}
+      });
+    }
   }catch(_){ }
 }
 function _applyRealSlot(idx,type,v,meet,dong){
@@ -1152,7 +1165,7 @@ else setTimeout(_initDateRegion,100);
 
 Object.assign(window,{
   filterDepLoc,selectDepLoc,showDateRegion,selectDateArea,clearDateArea,
-  updateDateDayLabel,togDateMood,togDateBudget,togDateWeather,generateDateCourse,shareDateCourse,
+  updateDateDayLabel,togDateMood,togDateBudget,togDateWeather,togDateCuisine,generateDateCourse,shareDateCourse,
   _dateCat,dateStep,inputStep,inputNext1
 });
 })();
