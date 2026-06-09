@@ -146,44 +146,50 @@ async function naverBlogTotal(env, query) {
   } catch (_) { return null; }
 }
 
-// ── 구글 Places — ⭐별점·리뷰수 + (옵션) 영업시간 ──
+// ── 구글 Places API (New) — ⭐별점·리뷰수·영업중·오늘 영업시간 (1회 호출) ──
+//   클라이언트(index.html)와 동일한 places.googleapis.com/v1 사용 →
+//   이미 켜둔 'Places API (New)' 그대로 활용. 구버전 대비 호출 1번으로 끝.
+//   서버용 키(GOOGLE_KEY): 같은 프로젝트에서 'API 제한 → Places API (New)'로
+//   잠근 키 권장(리퍼러 제한 X — 서버 호출은 리퍼러가 없음).
 async function googlePlace(env, query, wantHours, dayIdx) {
   if (!env.GOOGLE_KEY) return null;
   try {
-    const u = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(query)}&inputtype=textquery&language=ko&fields=rating,user_ratings_total,place_id,opening_hours,name&key=${env.GOOGLE_KEY}`;
-    const r = await fetch(u);
+    const fields = [
+      'places.rating', 'places.userRatingCount', 'places.id', 'places.displayName',
+      'places.currentOpeningHours.openNow',
+      'places.currentOpeningHours.weekdayDescriptions',
+      'places.regularOpeningHours.weekdayDescriptions',
+    ].join(',');
+    const r = await fetch('https://places.googleapis.com/v1/places:searchText', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': env.GOOGLE_KEY,
+        'X-Goog-FieldMask': fields,
+      },
+      body: JSON.stringify({ textQuery: query, languageCode: 'ko', regionCode: 'KR', maxResultCount: 1 }),
+    });
     if (!r.ok) return null;
     const d = await r.json();
-    const c = (d.candidates || [])[0];
-    if (!c) return null;
+    const p = (d.places || [])[0];
+    if (!p) return null;
     const out = {
-      rating: c.rating ?? null, reviews: c.user_ratings_total ?? null, placeId: c.place_id || null,
-      openNow: (c.opening_hours && typeof c.opening_hours.open_now === 'boolean') ? c.opening_hours.open_now : null,
+      rating: (typeof p.rating === 'number') ? p.rating : null,
+      reviews: (typeof p.userRatingCount === 'number') ? p.userRatingCount : null,
+      placeId: p.id || null,
+      openNow: null,
       todayHours: null,
     };
-    if (wantHours && out.placeId) {
-      const det = await googleDetails(env, out.placeId, dayIdx);
-      if (det) { if (det.openNow != null) out.openNow = det.openNow; out.todayHours = det.todayHours; }
+    const coh = p.currentOpeningHours || {};
+    if (typeof coh.openNow === 'boolean') out.openNow = coh.openNow;
+    if (wantHours && dayIdx != null && dayIdx >= 0 && dayIdx <= 6) {
+      const ko = ['일', '월', '화', '수', '목', '금', '토'][dayIdx];
+      const list = (coh.weekdayDescriptions && coh.weekdayDescriptions.length)
+        ? coh.weekdayDescriptions
+        : ((p.regularOpeningHours && p.regularOpeningHours.weekdayDescriptions) || []);
+      out.todayHours = list.find(s => String(s).indexOf(ko + '요일') === 0) || null;
     }
     return out;
-  } catch (_) { return null; }
-}
-
-// 구글 Place Details — 요일별 영업시간(weekday_text)에서 해당 요일만 추출
-async function googleDetails(env, placeId, dayIdx) {
-  try {
-    const u = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&language=ko&fields=opening_hours&key=${env.GOOGLE_KEY}`;
-    const r = await fetch(u);
-    if (!r.ok) return null;
-    const d = await r.json();
-    const oh = d.result && d.result.opening_hours;
-    if (!oh) return null;
-    let today = null;
-    if (Array.isArray(oh.weekday_text) && dayIdx != null && dayIdx >= 0 && dayIdx <= 6) {
-      const ko = ['일', '월', '화', '수', '목', '금', '토'][dayIdx];
-      today = oh.weekday_text.find(s => s.indexOf(ko + '요일') === 0) || null;
-    }
-    return { openNow: (typeof oh.open_now === 'boolean') ? oh.open_now : null, todayHours: today };
   } catch (_) { return null; }
 }
 
