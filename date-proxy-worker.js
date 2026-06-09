@@ -22,12 +22,30 @@
  */
 
 const CACHE_TTL   = 21600;  // 6시간
-const RATE_LIMIT  = 30;     // IP당 일일 최대 요청 수
+const DEFAULT_RATE_LIMIT = 200;  // IP당 일일 최대 요청 수 (env.RATE_LIMIT 로 조정)
 const RATE_TTL    = 86400;  // 1일 (KV TTL)
+
+// ── CORS: ALLOW_ORIGIN(콤마구분 화이트리스트) 검증 후 출처 반향 ──
+//   미설정 → '*'(개방, 하위호환).  설정 → 허용목록에 있는 출처만 그대로
+//   돌려주고, 그 외 출처에는 목록 첫 값을 줘서 브라우저가 차단하게 함.
+//   ※ CORS 는 '브라우저 교차출처' 차단용. 서버/curl 우회는 레이트리밋이 방어.
+function corsHeaders(env, reqOrigin) {
+  const allow = String(env.ALLOW_ORIGIN || '').split(',').map(s => s.trim()).filter(Boolean);
+  let origin = '*';
+  if (allow.length) origin = allow.includes(reqOrigin) ? reqOrigin : allow[0];
+  const h = {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+  if (allow.length) h['Vary'] = 'Origin';
+  return h;
+}
 
 // ── IP별 레이트 리밋 (Cloudflare KV) ──────────────────────────
 async function checkRateLimit(request, env) {
   if (!env.RATELIMIT_KV) return false; // KV 미설정 시 패스
+  const limit = Number(env.RATE_LIMIT) || DEFAULT_RATE_LIMIT;
 
   const ip  = request.headers.get('CF-Connecting-IP') || 'unknown';
   const day = new Date().toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
@@ -35,7 +53,7 @@ async function checkRateLimit(request, env) {
 
   const raw   = await env.RATELIMIT_KV.get(key);
   const count = raw ? parseInt(raw, 10) : 0;
-  if (count >= RATE_LIMIT) return true; // 초과
+  if (count >= limit) return true; // 초과
 
   // 카운터 증가 (하루 만료)
   await env.RATELIMIT_KV.put(key, String(count + 1), { expirationTtl: RATE_TTL });
@@ -45,11 +63,7 @@ async function checkRateLimit(request, env) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    const cors = {
-      'Access-Control-Allow-Origin': env.ALLOW_ORIGIN || '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    };
+    const cors = corsHeaders(env, request.headers.get('Origin') || '');
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
     if (request.method !== 'GET') return json({ error: 'GET only' }, 405, cors);
 
@@ -69,7 +83,13 @@ export default {
 
     const cache = caches.default;
     const hit = await cache.match(request);
-    if (hit) { const r = new Response(hit.body, hit); r.headers.set('X-Cache', 'HIT'); return r; }
+    if (hit) {
+      const r = new Response(hit.body, hit);
+      r.headers.set('X-Cache', 'HIT');
+      // 캐시는 출처별로 나뉘지 않으므로, 현재 요청 출처에 맞게 CORS 교정
+      r.headers.set('Access-Control-Allow-Origin', cors['Access-Control-Allow-Origin']);
+      return r;
+    }
 
     try {
       let body;

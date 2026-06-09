@@ -2,6 +2,13 @@ name = "tripmind-date"
 compatibility_date = "2025-01-01"
 main = "date-proxy-worker.js"
 
+# ── 공개 설정값(비밀 아님) ────────────────────────────────────
+# ALLOW_ORIGIN: 이 출처들만 브라우저에서 프록시 호출 허용(콤마 구분).
+#   미설정이면 '*'(개방). 새 배포 도메인이 생기면 여기에 추가하세요.
+# RATE_LIMIT: IP당 일일 최대 요청 수(미설정 시 코드 기본 200).
+[vars]
+ALLOW_ORIGIN = "https://hydrogen-king.github.io,https://tripmind.kangjuno980126.workers.dev,http://localhost:3000"
+
 # ── KV: IP별 레이트 리밋 카운터 ──────────────────────────────
 # npx wrangler kv namespace create RATELIMIT_KV --config wrangler-date.toml
 [[kv_namespaces]]
@@ -9,4 +16,4 @@ binding = "RATELIMIT_KV"
 id      = "9c18ba1308eb47a18b2e61c039c624fc"
 
 # ── Secrets (wrangler secret put --config wrangler-date.toml) ──
-# NAVER_ID, NAVER_SECRET, GOOGLE_KEY, ALLOW_ORIGIN
+# NAVER_ID, NAVER_SECRET, GOOGLE_KEY (영업시간·별점 활성화 시)
