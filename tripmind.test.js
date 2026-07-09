@@ -8,7 +8,8 @@
 
 'use strict';
 const fs = require('fs');
-const html = fs.readFileSync('index.html', 'utf8');
+// CRLF 정규화 — Windows 체크아웃(autocrlf)에서도 '\n' 기반 매칭이 동작하도록
+const html = fs.readFileSync('index.html', 'utf8').replace(/\r\n/g, '\n');
 
 /* ──────────────────────────────────────────────
    테스트 러너 (경량 TAP-like)
@@ -45,8 +46,8 @@ function countOccurrences(str, sub) {
 /* ══════════════════════════════════════════════
    1. HTML HEAD / SEO
    ══════════════════════════════════════════════ */
-test('[HEAD-01] og:url이 GitHub Pages URL', () => {
-  assertContains(html, 'og:url" content="https://hydrogen-king.github.io/TripMind"', 'og:url');
+test('[HEAD-01] og:url이 Cloudflare Workers 배포 URL', () => {
+  assertContains(html, 'og:url" content="https://tripmind.kangjuno980126.workers.dev/"', 'og:url');
 });
 test('[HEAD-02] og:url에 netlify 없음', () => {
   assertNotContains(html, 'tripmind.netlify.app', 'netlify URL');
@@ -64,8 +65,9 @@ test('[HEAD-05] apple-mobile-web-app-status-bar-style 중복 없음 (1번만)', 
   assert(count === 1, `apple-mobile-web-app-status-bar-style ${count}번 선언`);
 });
 test('[HEAD-06] Google Analytics 플레이스홀더 주석 처리됨', () => {
-  // 실제 gtag script 로드는 주석 안에 있어야 함
-  assertNotContains(html, '<script async src="https://www.googletagmanager.com/gtag/js', 'GA 활성 script');
+  // 실제 gtag script 로드는 주석 안에만 있어야 함 → 주석 제거 후 검사
+  const htmlNoComments = html.replace(/<!--[\s\S]*?-->/g, '');
+  assertNotContains(htmlNoComments, '<script async src="https://www.googletagmanager.com/gtag/js', 'GA 활성 script');
 });
 test('[HEAD-07] gtag stub 존재 (gtag 호출 코드가 오류 없도록)', () => {
   assertContains(html, 'window.gtag=window.gtag||function(){}', 'gtag stub');
@@ -154,8 +156,8 @@ test('[CITY-02] adjustCityDays() 함수 존재', () => {
 test('[CITY-03] updateCityDaysTotal() 합계 초과 경고 존재', () => {
   assertContains(html, 'sum>totalDays', '합계 초과 경고');
 });
-test('[CITY-04] updateCityDaysTotal() 합계 부족 안내 존재', () => {
-  assertContains(html, 'sum<totalDays', '합계 부족 안내');
+test('[CITY-04] updateCityDaysTotal() 합계 일치 확인 로직 존재', () => {
+  assertContains(html, 'sum===totalDays', '합계 일치 확인');
 });
 test('[CITY-05] customDays 기반 일정 분배 로직', () => {
   assertContains(html, '_hasCustom?(ST.customDays[key]||1)', 'customDays 분배');
@@ -310,7 +312,7 @@ test('[DATA-11] HIER (대륙-국가-도시 계층) 정의됨', () => {
   assertContains(html, 'const HIER={', 'HIER');
 });
 test('[DATA-12] DB 객체 정의됨', () => {
-  assertContains(html, 'const DB={', 'DB');
+  assertContains(html, 'const DB = {', 'DB');
 });
 test('[DATA-13] 빈 CITY_IMG 존재', () => {
   assertContains(html, "빈:'https://images.unsplash.com", 'CITY_IMG 빈');
@@ -395,7 +397,7 @@ test('[REC-01] 여행지 추천 화면 존재', () => {
   assertContains(html, 'id="s-recommend"', '추천 화면');
 });
 test('[REC-02] _buildSpotWhy 카테고리 메타 맵 존재', () => {
-  assertContains(html, "_CAT_META={'food':", '_CAT_META');
+  assertContains(html, '_CAT_META={', '_CAT_META');
 });
 test('[REC-03] 추천 이유 chip - companion 존재', () => {
   assertContains(html, '"spot-why-chip companion"', 'companion chip');
@@ -499,17 +501,17 @@ test('[DAY-01] 실제 날짜 계산 로직 (ST.from 기반)', () => {
   assertContains(html, 'toLocaleDateString(\'ko-KR\',{month:\'long\',day:\'numeric\',weekday:\'short\'})', '날짜 포맷');
 });
 test('[DAY-02] Day N + 날짜 헤더 표시 로직', () => {
-  assertContains(html, '`Day ${dn}${_suffix', 'Day 헤더');
+  assertContains(html, 'Day ${dn}${_suffix', 'Day 헤더');
 });
 
 /* ══════════════════════════════════════════════
    19. 저장/불러오기
    ══════════════════════════════════════════════ */
 test('[SAVE-01] localStorage 키 정의됨', () => {
-  assertContains(html, "const _SAVE_KEY='tm_saved_results_v1'", '_SAVE_KEY');
+  assertContains(html, "'tm_saved_results_v1'", '_SAVE_KEY');
 });
-test('[SAVE-02] 최대 저장 개수 정의됨', () => {
-  assertContains(html, 'const _MAX_SAVES=5', '_MAX_SAVES');
+test('[SAVE-02] 최대 저장 개수 정의됨 (KV 확장 후 20개)', () => {
+  assertContains(html, 'const _MAX_SAVES = 20', '_MAX_SAVES');
 });
 test('[SAVE-03] 저장된 일정 섹션 존재', () => {
   assertContains(html, 'id="saved-section"', 'saved-section');

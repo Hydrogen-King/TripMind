@@ -12,7 +12,7 @@
 //   둘을 합쳐, 같은 캐시 세대에서 HTML+JS가 항상 한 쌍으로 일관되게 갱신됨.
 // ────────────────────────────────────────────────────────────
 
-const SW_VERSION   = 'v17-2026-06-08';     // ← 의미 있는 배포마다 올리면 즉시 갱신
+const SW_VERSION   = 'v-202607090744';     // ← 의미 있는 배포마다 올리면 즉시 갱신
 const CACHE_PREFIX = 'tripmind-';
 const CACHE_NAME   = CACHE_PREFIX + SW_VERSION;
 const STATIC_ASSETS = [
@@ -30,6 +30,7 @@ const STATIC_ASSETS = [
   '/hotel_data.js',
   '/_date_new.js',
   '/favicon.svg',
+  '/apple-touch-icon.png',
 ];
 
 // ── 설치: 새 버전 캐시에 에셋 사전 캐시 → 즉시 활성화 대기 ─────

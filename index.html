@@ -16,7 +16,7 @@
 <meta property="og:image" content="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=1200&h=630&fit=crop&auto=format">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:url" content="https://hydrogen-king.github.io/TripMind">
+<meta property="og:url" content="https://tripmind.kangjuno980126.workers.dev/">
 <meta property="og:site_name" content="TripMind">
 <meta property="og:locale" content="ko_KR">
 <!-- Twitter Card -->
@@ -44,7 +44,7 @@
 <meta name="theme-color" content="#E8580A">
 <meta name="mobile-web-app-capable" content="yes">
 <!-- ↑ apple-mobile-web-app-* 는 위(line 33~35)에서 이미 선언됨 — 중복 제거 -->
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23E8580A'/%3E%3Ctext y='.9em' font-size='80' x='10'%3E✈️%3C/text%3E%3C/svg%3E">
+<!-- apple-touch-icon.png(180×180)은 위 line 32에서 선언 — 실제 파일 저장소에 포함 -->
 <!-- Google Analytics 4 — G-XXXXXXXXXX 를 실제 측정 ID로 교체 후 아래 주석 해제하세요 -->
 <!--
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
@@ -124,7 +124,16 @@ textarea.fi2{resize:vertical;min-height:90px;}
 .tip{background:rgba(0,78,137,.07);border:1px solid rgba(0,78,137,.2);border-radius:12px;
   padding:12px 14px;font-size:14px;color:rgba(28,30,46,.7);margin-bottom:12px;line-height:1.55;}
 /* result */
-.sec-title{font-size:18px;font-weight:800;margin:16px 0 10px;display:flex;align-items:center;gap:8px;}
+.sec-title{font-size:18px;font-weight:800;margin:16px 0 10px;display:flex;align-items:center;gap:8px;scroll-margin-top:52px;}
+/* 결과 화면 섹션 바로가기 (sticky) */
+.result-nav{position:sticky;top:0;z-index:60;display:flex;gap:6px;overflow-x:auto;
+  padding:8px 2px;margin:0 0 6px;background:var(--bg);
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);scrollbar-width:none;}
+.result-nav::-webkit-scrollbar{display:none;}
+.result-nav-chip{flex-shrink:0;font-size:12.5px;font-weight:700;color:var(--txt);
+  background:var(--card);border:1px solid var(--bdr);border-radius:20px;padding:7px 13px;
+  cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;}
+.result-nav-chip:hover{background:var(--pri);color:#fff;border-color:var(--pri);}
 .day-card{background:var(--card);border:1px solid var(--bdr);border-radius:var(--r);margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow);}
 .day-head{padding:14px 18px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-weight:700;font-size:15px;}
 .day-head:hover{background:var(--card2);}
@@ -704,6 +713,30 @@ textarea.fi2{resize:vertical;min-height:90px;}
 .price-cta-btn-icon{font-size:20px;}
 .price-cta-btn-label{font-size:11px;font-weight:700;color:var(--txt);}
 .price-cta-btn-sub{font-size:10px;color:var(--sub);}
+/* 항공권 카드 */
+.flight-card{background:var(--card);border:1px solid var(--bdr);border-radius:var(--r);padding:16px 16px 14px;margin-bottom:14px;box-shadow:var(--shadow);}
+.fc-route{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px;}
+.fc-ap{text-align:center;min-width:60px;}
+.fc-ap-code{font-size:23px;font-weight:800;color:var(--txt);letter-spacing:1px;}
+.fc-ap-name{font-size:12px;color:var(--sub);margin-top:2px;}
+.fc-mid{flex:1;display:flex;flex-direction:column;align-items:center;gap:12px;}
+.fc-line{position:relative;width:100%;height:2px;background:linear-gradient(90deg,var(--pri),var(--acc));border-radius:2px;}
+.fc-plane{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--card);padding:0 6px;font-size:14px;line-height:1;}
+.fc-time{font-size:11px;color:var(--sub);font-weight:600;margin-top:2px;}
+.fc-meta{display:flex;justify-content:space-around;gap:6px;background:var(--card2);border-radius:10px;padding:10px 8px;margin-bottom:12px;}
+.fc-meta-item{display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;}
+.fc-meta-lbl{font-size:10px;color:var(--sub);}
+.fc-meta-val{font-size:12px;font-weight:700;color:var(--txt);}
+.fc-price{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;margin-bottom:12px;border-radius:10px;background:linear-gradient(135deg,rgba(232,88,10,.08),rgba(255,140,66,.05));border:1px dashed rgba(232,88,10,.25);}
+.fc-price-lbl{font-size:12px;color:var(--sub);font-weight:600;}
+.fc-price-val{font-size:16px;font-weight:800;color:var(--pri);}
+.fc-book{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.fc-book-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:12px 6px;border-radius:12px;text-decoration:none;color:#fff;text-align:center;transition:opacity .2s;}
+.fc-book-btn:hover{opacity:.85;}
+.fc-book-name{font-size:13px;font-weight:700;}
+.fc-book-tag{font-size:10px;opacity:.9;font-weight:400;}
+.fc-hint{font-size:11px;color:var(--sub);margin-top:10px;text-align:center;line-height:1.5;}
+@media(max-width:600px){.fc-book{grid-template-columns:1fr;}.fc-book-btn{flex-direction:row;justify-content:center;gap:8px;padding:13px;}}
 
 /* ══ 모바일 반응형 ══ */
 @media(max-width:640px){
@@ -873,6 +906,11 @@ textarea.fi2{resize:vertical;min-height:90px;}
   transition:opacity .25s,transform .25s;opacity:.85;
 }
 #dark-toggle:hover{opacity:1;transform:scale(1.08);}
+/* 모바일: 콘텐츠(가격·버튼 등)를 가리지 않도록 축소 + 반투명 */
+@media(max-width:640px){
+  #dark-toggle{width:36px;height:36px;font-size:15px;bottom:112px;right:10px;opacity:.55;}
+  #back-to-top{width:38px;height:38px;font-size:16px;bottom:64px;right:10px;}
+}
 
 /* html.dark 클래스 — 수동 토글 (시스템 설정과 독립) */
 html.dark{
@@ -1006,9 +1044,7 @@ body{overscroll-behavior-y:none;}
   }
 }
 </style>
-<!-- 데이트 동선 지도 (Leaflet + OpenStreetMap, API 키 불필요) -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- 데이트 동선 지도 스타일 (Leaflet 본체는 head 상단에서 1회만 로드) -->
 <style>
 .date-map{height:230px;border-radius:14px;overflow:hidden;border:1px solid var(--bdr);margin-bottom:16px;}
 .date-map .leaflet-container{height:100%;width:100%;font:inherit;background:var(--card2);}
@@ -4036,7 +4072,7 @@ function _runGenerate(){
         globalDay+=cityDays;
       }
     });
-    if(firstLinks) html+=renderLinks(firstLinks);
+    if(firstLinks) html+=renderLinks(firstLinks,findDest(destKeys[0]),totalCost.flight);
     html+=`<div class="sec-title">💰 예상 여행 비용</div>
     <div class="cost-card" role="region" aria-label="비용 예상">
       <div class="cost-row"><span class="label">✈️ 항공권 (왕복, ${ST.ppl}인)</span><span>${ko(totalCost.flight)}원</span></div>
@@ -4117,7 +4153,7 @@ function _runGenerate(){
           spots:spotPairs.map(p=>p.coord),spotNames:spotPairs.map(p=>p.name)});
       }
       html+=renderDayColumns(itin,destObj,1,dailyCosts);
-      html+=renderLinks(links);
+      html+=renderLinks(links,destObj,cost.flight);
       html+=`<div class="sec-title">💰 예상 여행 비용</div>
       <div class="cost-card" role="region" aria-label="비용 예상">
         <div class="cost-row"><span class="label">✈️ 항공권 (왕복, ${ST.ppl}인)</span><span>${ko(cost.flight)}원</span></div>
@@ -4158,6 +4194,7 @@ function _runGenerate(){
 
   document.getElementById('result-body').innerHTML=html;
   go('result');
+  buildResultNav(); // 섹션 바로가기 칩 (일정·항공·숙소·비용…)
 
   // ── 실시간 이동시간 (Google Maps Routes API) ──
   _fetchRealTransitTimes();
@@ -4177,12 +4214,55 @@ function _runGenerate(){
   }
 
   // ── 지도 초기화 (DOM 반영 후) ──
-  if(pendingMaps.length>0){
+  window._lastMapSpecs=pendingMaps; // 저장/복원 시 지도 재생성용
+  _initResultMaps(pendingMaps);
+
+  // ── localStorage 저장 ──
+  saveToStorage();
+}
+
+// ── 결과 화면 섹션 바로가기 내비게이션 (sticky 앵커 칩) ──
+function buildResultNav(){
+  try{
+    const rb=document.getElementById('result-body');
+    if(!rb) return;
+    rb.querySelectorAll('.result-nav').forEach(n=>n.remove()); // 재생성/복원 대비 idempotent
+    const titles=[...rb.querySelectorAll('.sec-title')];
+    if(titles.length<3) return; // 섹션이 적으면 내비 불필요
+    const seen=new Set(); const chips=[];
+    titles.forEach((t,i)=>{
+      const label=t.textContent.trim().replace(/\s+/g,' ');
+      if(!label||seen.has(label)) return;   // 다도시 반복 섹션은 첫 등장만
+      seen.add(label);
+      if(chips.length>=10) return;
+      if(!t.id) t.id='sec-anchor-'+i;
+      chips.push({id:t.id,label:label.length>14?label.slice(0,13)+'…':label});
+    });
+    if(chips.length<3) return;
+    const nav=document.createElement('nav');
+    nav.className='result-nav';
+    nav.setAttribute('aria-label','일정 섹션 바로가기');
+    nav.innerHTML=chips.map(c=>
+      `<button type="button" class="result-nav-chip" onclick="document.getElementById('${c.id}')?.scrollIntoView({behavior:'smooth',block:'start'})">${escHtml(c.label)}</button>`
+    ).join('');
+    rb.prepend(nav);
+  }catch(e){console.warn('[TripMind] 섹션 내비 생성 실패:',e);}
+}
+
+// ── 결과 화면 지도 초기화 (생성 직후 + 저장 일정 복원 시 공용) ──
+function _initResultMaps(pendingMaps){
+  if(pendingMaps&&pendingMaps.length>0){
     setTimeout(()=>{
       pendingMaps.forEach(({mapId,keys,type,spots,spotNames})=>{
         try {
           const el=document.getElementById(mapId);
           if(!el||typeof L==='undefined') return;
+          // 저장 스냅샷 복원 시 이전 렌더 잔재 제거 (지도 이중 초기화 방지)
+          if(el.classList.contains('leaflet-container')){
+            el.innerHTML='';
+            el.className=el.className.split(' ').filter(c=>c.indexOf('leaflet')!==0).join(' ');
+            try{delete el._leaflet_id;}catch(_){}
+          }
 
           if(type==='city'){
             // ── 도시 내 이동경로 미니맵 ──
@@ -4236,18 +4316,59 @@ function _runGenerate(){
       });
     },250);
   }
-
-  // ── localStorage 저장 ──
-  saveToStorage();
 }
 
-function renderLinks(links){
+// ── 항공권 정보 카드 (노선·비행시간·예상가·원탭 예약) ──
+function renderFlightCard(destObj,links,flightCost){
+  if(!destObj) return '';
+  const dep=ST.depAirport||'ICN';
+  const depMap={ICN:['ICN','인천'],GMP:['GMP','김포'],PUS:['PUS','부산'],CJU:['CJU','제주'],TAE:['TAE','대구'],CJJ:['CJJ','청주'],KWJ:['KWJ','광주']};
+  const [depCode,depName]=depMap[dep]||['ICN','인천'];
+  const arrCode=destObj.airport||destObj.iata||'—';
+  const fTime=destObj.flight||'';
+  const ko=n=>(n||0).toLocaleString('ko-KR');
+  const fmt=d=>new Date(d).toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
+  const days=Math.round((new Date(ST.to)-new Date(ST.from))/86400000)+1;
+  const nights=days-1;
+  const adults=ST.ppl||2;
+  const flBtns=links.flights.map(l=>`<a href="${l.url}" target="_blank" rel="noopener noreferrer"
+      class="fc-book-btn" style="background:${l.color};" aria-label="${l.name} - ${l.tag}">
+      <span class="fc-book-name">${l.name}</span><span class="fc-book-tag">${l.tag}</span></a>`).join('');
+  return `<div class="sec-title">✈️ 항공권 예약</div>
+  <div class="flight-card">
+    <div class="fc-route">
+      <div class="fc-ap"><div class="fc-ap-code">${depCode}</div><div class="fc-ap-name">${depName}</div></div>
+      <div class="fc-mid">
+        <div class="fc-line"><span class="fc-plane">✈️</span></div>
+        <div class="fc-time">${fTime?fTime+' (편도)':'노선 검색'}</div>
+      </div>
+      <div class="fc-ap"><div class="fc-ap-code">${arrCode}</div><div class="fc-ap-name">${destObj.kr}</div></div>
+    </div>
+    <div class="fc-meta">
+      <div class="fc-meta-item"><span class="fc-meta-lbl">출발</span><span class="fc-meta-val">${fmt(ST.from)}</span></div>
+      <div class="fc-meta-item"><span class="fc-meta-lbl">귀국</span><span class="fc-meta-val">${fmt(ST.to)}</span></div>
+      <div class="fc-meta-item"><span class="fc-meta-lbl">인원·기간</span><span class="fc-meta-val">${adults}명 · ${nights}박${days}일</span></div>
+    </div>
+    ${flightCost?`<div class="fc-price">
+      <span class="fc-price-lbl">예상 왕복 항공료 (${adults}인)</span>
+      <span class="fc-price-val">약 ${ko(flightCost)}원</span>
+    </div>`:''}
+    <div class="fc-book" role="list">${flBtns}</div>
+    <div class="fc-hint">💡 버튼을 누르면 위 날짜·인원·노선이 자동 입력된 검색 결과로 바로 이동해요</div>
+  </div>`;
+}
+
+function renderLinks(links,destObj,flightCost){
   const mkBtn=l=>`<a href="${l.url}" target="_blank" rel="noopener noreferrer"
     class="link-btn" style="background:${l.color};" aria-label="${l.name} - ${l.tag}">${l.name}<span class="tag">${l.tag}</span></a>`;
   let h='';
-  h+=`<div class="sec-title">✈️ 항공권 예약</div><div class="link-grid" role="list">`;
-  links.flights.forEach(l=>{h+=mkBtn(l);});
-  h+=`</div>`;
+  if(destObj){
+    h+=renderFlightCard(destObj,links,flightCost);
+  } else {
+    h+=`<div class="sec-title">✈️ 항공권 예약</div><div class="link-grid" role="list">`;
+    links.flights.forEach(l=>{h+=mkBtn(l);});
+    h+=`</div>`;
+  }
   h+=`<div class="sec-title">🏨 숙소 예약</div><div class="link-grid" role="list">`;
   links.hotels.forEach(l=>{h+=mkBtn(l);});
   h+=`</div>`;
@@ -4494,21 +4615,28 @@ async function _gmapsDuration(origin, destination, mode){
     });
     return res.json();
   };
+  // 세션 캐시: 동일 (출발,도착,모드) 재호출 방지 — 유료 API 비용·대기시간 절감
+  const _ck=`tm_rt:${mode}:${origin}→${destination}`;
+  try{
+    const hit=sessionStorage.getItem(_ck);
+    if(hit!==null) return hit==='∅'?null:hit;
+  }catch(_){}
+  let _out=null;
   try{
     const travelMode=mode==='walking'?'WALK':mode==='transit'?'TRANSIT':'DRIVE';
     const data=await _call(travelMode);
     if(data.routes&&data.routes[0]&&data.routes[0].duration){
-      return _fmtSecs(parseInt(data.routes[0].duration));
-    }
-    // TRANSIT 실패 → DRIVE 재시도
-    if(travelMode==='TRANSIT'){
+      _out=_fmtSecs(parseInt(data.routes[0].duration));
+    } else if(travelMode==='TRANSIT'){
+      // TRANSIT 실패 → DRIVE 재시도
       const data2=await _call('DRIVE');
       if(data2.routes&&data2.routes[0]&&data2.routes[0].duration){
-        return _fmtSecs(parseInt(data2.routes[0].duration))+' (차량)';
+        _out=_fmtSecs(parseInt(data2.routes[0].duration))+' (차량)';
       }
     }
   }catch(e){}
-  return null;
+  try{sessionStorage.setItem(_ck,_out===null?'∅':_out);}catch(_){}
+  return _out;
 }
 
 async function _fetchRealTransitTimes(){
@@ -9409,7 +9537,8 @@ async function _kvDelete(id){
 
 // ── localStorage 읽기/쓰기 헬퍼 ───────────────────────────────
 function _lsGet(){  try{return JSON.parse(localStorage.getItem(_SAVE_KEY)||'[]');}catch(_){return[];}}
-function _lsSet(v){ try{localStorage.setItem(_SAVE_KEY,JSON.stringify(v));}catch(_){}}
+// 성공 여부 반환 — 쿼터 초과 등 실패를 조용히 삼키지 않고 호출부가 알 수 있게
+function _lsSet(v){ try{localStorage.setItem(_SAVE_KEY,JSON.stringify(v));return true;}catch(_){return false;}}
 
 // ── KV → localStorage 동기화 (앱 초기 로드 시 1회 실행) ───────
 async function _syncFromKv(){
@@ -9437,11 +9566,25 @@ function saveResult(){
       id:Date.now(),
       title:destLabel,
       from:ST.from, to:ST.to, ppl:ST.ppl,
-      html:document.getElementById('result-body').innerHTML,
+      html:(()=>{ // 스냅샷에서 지도 렌더 잔재·내비 제거 → 용량 절감 + 복원 시 재생성
+        const c=document.getElementById('result-body').cloneNode(true);
+        c.querySelectorAll('.result-nav').forEach(n=>n.remove());
+        c.querySelectorAll('.leaflet-container').forEach(el=>{
+          el.innerHTML='';
+          el.className=el.className.split(' ').filter(x=>x.indexOf('leaflet')!==0).join(' ');
+        });
+        return c.innerHTML;
+      })(),
+      maps:window._lastMapSpecs||[],   // 복원 시 지도 재생성용 스펙
       savedAt:new Date().toLocaleDateString('ko-KR',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})
     };
     existing.unshift(item);
-    _lsSet(existing);
+    if(!_lsSet(existing)){
+      // 쿼터 초과 → 성공으로 속이지 않고 알림 (KV 동기화는 계속 시도)
+      _kvSave(item);
+      showToast('⚠️ 기기 저장 공간이 부족해요. 오래된 저장 일정을 삭제해주세요.',4000);
+      return;
+    }
     _kvSave(item);   // 백그라운드 KV 동기화 (fire & forget)
     updateSavedBadge();
     showToast('💾 이 일정이 저장되었어요!',3000);
@@ -9465,8 +9608,12 @@ function loadSaved(id){
     const item=existing.find(x=>x.id===id);
     if(!item){showToast('저장된 일정을 찾을 수 없어요');return;}
     ST.from=item.from; ST.to=item.to; ST.ppl=item.ppl;
+    destroyAllMaps(); // 이전 화면의 지도 인스턴스 정리
     document.getElementById('result-body').innerHTML=item.html;
     go('result');
+    // 스냅샷 HTML의 지도 div는 빈 껍데기 → 저장된 스펙으로 Leaflet 재생성
+    if(item.maps&&item.maps.length) _initResultMaps(item.maps);
+    if(typeof buildResultNav==='function') buildResultNav();
     showToast('📂 저장된 일정을 불러왔어요',2500);
   }catch(e){showToast('불러오기 실패');}
 }
@@ -10173,13 +10320,22 @@ async function loadWeatherWidget(destObj, fromDate){
     const travelDate=new Date(fromDate); travelDate.setHours(0,0,0,0);
     const daysUntil=Math.round((travelDate-today)/86400000);
 
-    // 종료일: 여행 시작+2일 (3일치 표시)
-    const endDate=new Date(travelDate); endDate.setDate(endDate.getDate()+2);
+    // 종료일: 여행 전체 기간 표시 (UI 가독성 위해 최대 7일치)
+    let tripDaysFull=3;
+    try{
+      const toD=new Date(ST.to); toD.setHours(0,0,0,0);
+      const d=Math.round((toD-travelDate)/86400000)+1;
+      if(!isNaN(d)&&d>=1) tripDaysFull=d;
+    }catch(_){}
+    const tripDays=Math.min(tripDaysFull,7);
+    const endDate=new Date(travelDate); endDate.setDate(endDate.getDate()+tripDays-1);
 
-    let daily, isHistorical=false;
+    let daily, isHistorical=false, clipped=false;
 
     if(daysUntil<=15){
-      // ① 실제 예보 — Open-Meteo forecast (최대 16일 선행)
+      // ① 실제 예보 — Open-Meteo forecast (최대 16일 선행) → 범위 밖이면 잘라냄
+      const maxFc=new Date(today); maxFc.setDate(maxFc.getDate()+15);
+      if(endDate>maxFc){endDate.setTime(maxFc.getTime());clipped=true;}
       const startStr=travelDate.toISOString().slice(0,10);
       const endStr=endDate.toISOString().slice(0,10);
       const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto&start_date=${startStr}&end_date=${endStr}&forecast_days=16`;
@@ -10190,7 +10346,7 @@ async function loadWeatherWidget(destObj, fromDate){
       // ② 기후 참고 — 작년 동기 기록 (Open-Meteo archive)
       isHistorical=true;
       const refStart=new Date(travelDate); refStart.setFullYear(refStart.getFullYear()-1);
-      const refEnd=new Date(refStart); refEnd.setDate(refEnd.getDate()+2);
+      const refEnd=new Date(refStart); refEnd.setDate(refEnd.getDate()+tripDays-1);
       const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${refStart.toISOString().slice(0,10)}&end_date=${refEnd.toISOString().slice(0,10)}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`;
       const res=await fetch(url,{signal:AbortSignal.timeout(6000)});
       if(!res.ok) throw new Error('archive fail');
@@ -10218,9 +10374,11 @@ async function loadWeatherWidget(destObj, fromDate){
       </div>`;
     }).join('');
 
-    const subtitle=isHistorical
+    const shownN=daily.time.length;
+    const rangeLbl=(tripDaysFull>shownN)?` · 첫 ${shownN}일치`:(clipped?` · 예보 범위 내 ${shownN}일치`:'');
+    const subtitle=(isHistorical
       ? `작년 동기 기후 참고 · 출발 15일 전부터 실제 예보로 전환`
-      : daysUntil===0?`오늘 날씨`:`출발일 기준 예보 (D-${daysUntil})`;
+      : daysUntil===0?`오늘 날씨`:`출발일 기준 예보 (D-${daysUntil})`)+rangeLbl;
 
     el.innerHTML=`<div class="weather-card">
       <div class="weather-title">🌤 ${cityKr} 날씨 <span style="font-weight:400;color:var(--sub);font-size:10px;">${subtitle}</span></div>
@@ -10599,6 +10757,16 @@ if('serviceWorker' in navigator){
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('/sw.js').then(function(reg){
       console.log('[TripMind] SW 등록 완료', reg.scope);
+      // 새 버전 감지 → 사용자에게 새로고침 안내 (SWR 특성상 첫 방문은 구버전이 보임)
+      reg.addEventListener('updatefound',function(){
+        var nw=reg.installing;
+        if(!nw) return;
+        nw.addEventListener('statechange',function(){
+          if(nw.state==='installed'&&navigator.serviceWorker.controller&&typeof showToast==='function'){
+            showToast('🔄 새 버전이 준비됐어요 — 새로고침하면 적용됩니다',6000);
+          }
+        });
+      });
     }).catch(function(err){
       console.warn('[TripMind] SW 등록 실패', err);
     });

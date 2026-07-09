@@ -1,6 +1,19 @@
 name = "tripmind"
 compatibility_date = "2025-01-01"
+main = "worker.js"                 # API 라우터 (KV 저장·버전 반환)
 
 [assets]
 directory = "."
+binding = "ASSETS"                 # worker.js 에서 env.ASSETS.fetch 로 정적 파일 위임
 not_found_handling = "single-page-application"
+
+# ── KV 네임스페이스 ──────────────────────────────────────────────
+# 처음 배포 전: npx wrangler kv namespace create TRIPMIND_KV 로 생성 후 id 교체
+[[kv_namespaces]]
+binding = "TRIPMIND_KV"
+id      = "84aa1e07ebf246728e2dcd3005d57181"     # 2026-07-09 생성
+
+# ── 환경변수 (배포 시 wrangler secret put 으로 등록) ──────────────
+# BUILD_VERSION 은 배포 스크립트(deploy.sh)가 주입. 없으면 타임스탬프 사용.
+# [vars]
+# BUILD_VERSION = "manual"
