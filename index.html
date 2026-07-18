@@ -3483,6 +3483,24 @@ function buildItinerary(dest,days,style){
     const label=isFirst?`Day ${d} — 도착 & 첫 탐험`:isLast?`Day ${d} — 마지막 날 & 귀국`:`Day ${d}`;
     itin.push({label,spots:daySpots});
   }
+
+  // ── [교훈] 마지막 날은 귀가일 — 야경·일몰 스팟이 배정되면 앞쪽 날과 교체 ──
+  // (귀가일에 야경을 보면 밤 늦게 출발하게 됨. 경주·강릉 실전 계획에서 배운 규칙)
+  if(days>=2){
+    const last=itin[itin.length-1];
+    last.spots.forEach((s,si)=>{
+      if(s.p!=='야경'&&s.p!=='일몰') return;
+      for(let d=itin.length-2;d>=0;d--){
+        const cand=itin[d].spots.findIndex(x=>x.p!=='야경'&&x.p!=='일몰');
+        if(cand>=0){
+          const tmp=itin[d].spots[cand];
+          itin[d].spots[cand]=s;
+          last.spots[si]=tmp;
+          return;
+        }
+      }
+    });
+  }
   return {itin,suggestedDays};
 }
 
@@ -3836,6 +3854,23 @@ function _runGenerate(){
     }
   })();
 
+  // ── [교훈] 플래너 체크리스트 — 실제 가족여행(경주·강릉) 계획에서 증류한 실전 규칙 ──
+  (function(){
+    const _CHECKS=[
+      ['📞','<b>식당 휴무일·브레이크타임 확인</b> — 월요일 휴무가 특히 잦고, 브레이크타임(보통 15~17시) 직후 첫 타임이 대기 없이 가장 좋아요'],
+      ['📱','<b>인기 식당은 사전 예약</b> — 100% 예약제인 곳도 많아요 (캐치테이블·전화). 라스트오더 시간도 함께 확인'],
+      ['🏨','<b>체크인(보통 15시) 기준으로 하루를 반 나누기</b> — 체크인 전엔 숙소 가는 길목의 스팟, 체크인·수영장 후엔 숙소 반경에서 저녁까지'],
+      ['🗺️','<b>숙소가 시내가 아닐 수 있어요</b> — 숙소 위치 기준으로 가까운 권역부터 확인 (의외로 옆 도시가 더 가까울 때도)'],
+      ['🍽️','<b>밥시간 간격 3~4시간 유지</b> — 이른 저녁(17시대)이면 오후 카페·간식은 가볍게 테이크아웃 정도로'],
+      ['🚗','<b>마지막 날은 귀가 방향으로</b> — 체크아웃 후 스팟은 집 가는 경로상에 배치해 되돌아가지 않기'],
+      ['💰','<b>성수기 부대시설 요금 확인</b> — 수영장 등은 시즌별 요금 차이가 크고, 조식+수영장 패키지가 따로 결제보다 유리할 수 있어요'],
+    ];
+    html+=`<div style="background:var(--card);border:1.5px solid var(--bdr);border-radius:14px;padding:14px 16px;margin-top:12px;" role="note" aria-label="플래너 체크리스트">
+      <div style="font-size:13px;font-weight:700;color:var(--pri);margin-bottom:8px;">🧭 플래너 체크리스트 <span style="font-weight:400;color:var(--sub);font-size:11px;">— 실전 여행에서 배운 것들</span></div>
+      ${_CHECKS.map(([ic,t])=>`<div style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--sub);line-height:1.6;margin-bottom:5px;"><span style="flex-shrink:0;">${ic}</span><span>${t}</span></div>`).join('')}
+    </div>`;
+  })();
+
   // ── 가로 컬럼 일정 렌더링 헬퍼 ──
   function renderDayColumns(itin, destObj, startDayNum, dailyCosts){
     const cityName=destObj?destObj.kr:'';
@@ -3859,6 +3894,20 @@ function _runGenerate(){
       return sorted;
     }
 
+    // ── [교훈] 날짜별 실전 팁 — 실제 가족여행(경주·강릉) 계획에서 증류한 규칙 ──
+    function _dayLessonTips(dObj,isTripFirst,isTripLast,spots){
+      const tips=[];
+      const wd=dObj?dObj.getDay():null;
+      const mo=dObj?dObj.getMonth()+1:null;
+      const txt=spots.map(s=>(s.n||'')+(s.d||'')).join('');
+      if(wd===1) tips.push('📅 월요일 — 박물관·미술관·유명 맛집 휴무가 잦아요. 가려던 곳 영업 여부부터 확인');
+      if(isTripFirst) tips.push('🏨 체크인은 보통 15시 — 그 전 스팟은 숙소 가는 길목에, 체크인·수영장 후 저녁은 숙소 반경에서');
+      if(isTripLast) tips.push('🧳 귀가일 — 체크아웃 후엔 집 방향 동선의 스팟만 들러 되돌아가지 않는 경로로');
+      if(!isTripLast&&/야경|나이트|야시장|루프탑|일몰/.test(txt)) tips.push('🌙 야경 스팟은 해 진 뒤가 하이라이트 — 저녁 식사 후 마지막 순서로, 입장 마감 확인');
+      if(mo>=6&&mo<=8&&/해변|비치|트레킹|산책|공원|둘레길|절벽|해안/.test(txt)) tips.push('☀️ 한여름 그늘 없는 야외 스팟은 오전에 — 한낮엔 실내·카페로 더위 피하기');
+      return tips.slice(0,2);
+    }
+
     // ── 이동 수단 판별 헬퍼 (renderDayColumns 공통) ──
     const _transitCities=['도쿄','오사카','싱가포르','홍콩','파리','런던','베를린','뉴욕','상하이','타이베이','베이징','서울',
     '암스테르담','빈','프라하','부다페스트','바르셀로나','마드리드','로마','밀라노','뮌헨','취리히',
@@ -3876,12 +3925,12 @@ function _runGenerate(){
     let h=`<div class="itinerary-scroll" role="region" aria-label="일정 컬럼"><div class="days-row">`;
     itin.forEach((day,i)=>{
       const dn=startDayNum+i;
-      // 실제 날짜 계산
-      let _dateStr='';
+      // 실제 날짜 계산 (_dObj는 날짜별 실전 팁에서도 사용)
+      let _dateStr='',_dObj=null;
       if(ST.from){
-        const _d=new Date(ST.from);
-        _d.setDate(_d.getDate()+dn-1);
-        _dateStr=_d.toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
+        _dObj=new Date(ST.from);
+        _dObj.setDate(_dObj.getDate()+dn-1);
+        _dateStr=_dObj.toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
       }
       // 라벨: "Day 1 — 도착 & 첫 탐험" → Day번호 교체 + 날짜 추가
       const lbl=day.label.replace(/Day \d+/,`Day ${dn}`);
@@ -3995,6 +4044,14 @@ function _runGenerate(){
           </div>`;
         }
       });
+      // ── [교훈] 날짜별 실전 팁 렌더링 ──
+      const _isTripLast=(typeof days==='number')&&dn===days;
+      const _tips=_dayLessonTips(_dObj,dn===1,_isTripLast,_bspots);
+      if(_tips.length){
+        h+=`<div role="note" aria-label="실전 팁" style="margin-top:8px;padding:8px 10px;background:var(--card);border:1px dashed var(--bdr);border-radius:10px;">
+          ${_tips.map(t=>`<div style="font-size:11px;color:var(--sub);line-height:1.55;">${t}</div>`).join('')}
+        </div>`;
+      }
       h+=`</div></div>`;
     });
     h+=`</div></div>`;
