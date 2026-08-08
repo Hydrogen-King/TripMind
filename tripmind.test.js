@@ -524,6 +524,118 @@ test('[SAVE-05] 7일 초과 세션 무효화', () => {
 });
 
 /* ══════════════════════════════════════════════
+   20. 숙소 결정 도우미 (실측 비교·체크인 충돌·평점·티켓 시간)
+   ══════════════════════════════════════════════ */
+test('[ACMP-01] _renderAccomCompareCard() 함수 존재', () => {
+  assertContains(html, 'function _renderAccomCompareCard(', '_renderAccomCompareCard()');
+});
+test('[ACMP-02] 초 단위 실측 함수 _gmapsRouteSecs() 존재', () => {
+  assertContains(html, 'async function _gmapsRouteSecs(', '_gmapsRouteSecs()');
+});
+test('[ACMP-03] _gmapsDuration()은 _gmapsRouteSecs 래퍼로 유지 (기존 호출부 호환)', () => {
+  assertContains(html, 'const r=await _gmapsRouteSecs(origin,destination,mode);', '_gmapsDuration 래퍼');
+});
+test('[ACMP-04] Routes 경유지가 placeId를 지원 (이름 지오코딩 오인식 방지)', () => {
+  assertContains(html, "return s.startsWith('place:')?{placeId:s.slice(6)}:{address:s};", '_routeWaypoint placeId');
+});
+test('[ACMP-05] Places 검색에 도시 locationBias 적용', () => {
+  assertContains(html, 'body.locationBias={circle:{center:{latitude:center[0],longitude:center[1]},radius:30000}}', 'locationBias');
+});
+test('[ACMP-06] 도시에서 60km 넘는 결과는 무효화 (동명 브랜드 타국 지점)', () => {
+  assertContains(html, '_haversineKm(center,[lat,lng])>60', '60km 가드');
+});
+test('[ACMP-07] 실측 비교 실행 함수 존재', () => {
+  assertContains(html, 'async function runAcCompare(', 'runAcCompare()');
+});
+test('[ACMP-08] 비교표 호출 간 throttle 존재 (180ms)', () => {
+  assertContains(html, 'const _routeDelay=()=>new Promise(r=>setTimeout(r,180)); // API quota 보호용 딜레이',
+    '비교표 throttle');
+});
+test('[ACMP-09] 도보 3시간 초과는 도보권 밖으로 표기', () => {
+  assertContains(html, "const far=(mode==='walking'&&r.secs>3*3600);", '도보권 밖 판정');
+});
+test('[ACMP-10] 교통 허브 DB(CITY_HUBS) 정의됨', () => {
+  assertContains(html, 'const CITY_HUBS={', 'CITY_HUBS');
+  assertContains(html, "'로마':'Roma Termini Station'", '로마 허브');
+});
+test('[CHAIN-01] 브랜드 혼동 감지 함수 존재', () => {
+  assertContains(html, 'function _chainConfusion(names)', '_chainConfusion()');
+});
+test('[CHAIN-02] 같은 브랜드 2곳 이상일 때만 경고', () => {
+  assertContains(html, 'new Set(v).size>=2', '브랜드 중복 조건');
+});
+test('[CHAIN-03] 호텔 예시 목록에 경고 연결됨', () => {
+  assertContains(html, '_chainWarnHtml(hotels.map(ht=>ht.name))', '호텔 블록 경고');
+});
+test('[CIN-01] 체크인 충돌 카드 렌더 함수 존재', () => {
+  assertContains(html, 'function _renderCheckinCard()', '_renderCheckinCard()');
+});
+test('[CIN-02] 충돌 평가 함수 존재', () => {
+  assertContains(html, 'function evalCheckinConflicts(el)', 'evalCheckinConflicts()');
+});
+test('[CIN-03] 일정 렌더 중 날짜별 시간대 수집', () => {
+  assertContains(html, '_TRIP_DAYS.push({d:dn,date:_dateStr,city:cityName,', '_TRIP_DAYS 수집');
+});
+test('[CIN-04] 생성 시마다 수집 버퍼 초기화', () => {
+  assertContains(html, '_TRIP_DAYS.length=0;', '_TRIP_DAYS 초기화');
+});
+test('[CIN-05] 결과 렌더 후 체크인 카드 채움', () => {
+  assertContains(html, '_renderCheckinCard();', '_renderCheckinCard 호출');
+});
+test('[CIN-06] 시간대별 시작·종료 기준 테이블 존재', () => {
+  assertContains(html, 'const _CI_PERIOD_START=', '_CI_PERIOD_START');
+  assertContains(html, 'const _CI_PERIOD_END', '_CI_PERIOD_END');
+});
+test('[TZ-01] 목적지 시간대 판별 함수 존재', () => {
+  assertContains(html, 'function _destTz(dObj)', '_destTz()');
+});
+test('[TZ-02] 국가→시간대 매핑 정의됨', () => {
+  assertContains(html, 'const COUNTRY_TZ={', 'COUNTRY_TZ');
+  assertContains(html, "'이탈리아':'Europe/Rome'", '이탈리아 시간대');
+});
+test('[TZ-03] 다중 시간대 국가 목록 존재', () => {
+  assertContains(html, "const TZ_MULTI=new Set(['미국','캐나다','러시아','브라질','호주'", 'TZ_MULTI');
+});
+test('[TZ-04] 현지 시각 → 절대 시각 변환 함수 존재', () => {
+  assertContains(html, 'function _localInstant(dateStr,minutes,tz)', '_localInstant()');
+});
+test('[NIGHT-01] 심야 도착 판단 함수 존재', () => {
+  assertContains(html, 'async function runNightArrival(', 'runNightArrival()');
+});
+test('[NIGHT-02] 심야 여부를 먼저 가르고 분리 판단 (낮 도착 오판 방지)', () => {
+  assertContains(html, 'const lateNight=depOfDay>=22*60||depOfDay<5*60;', '심야 게이트');
+  assertContains(html, 'const split=lateNight&&(veryLate||!transitTxt||refSecs>=40*60);', '분리 판단');
+});
+test('[NIGHT-03] 자정 넘김 처리 (분 단위 모듈러)', () => {
+  assertContains(html, 'const depOfDay=depMin%1440;', '자정 넘김');
+});
+test('[TICKET-01] 예약 시간 충돌 검사 함수 존재', () => {
+  assertContains(html, 'function evalTicketSlots(el)', 'evalTicketSlots()');
+});
+test('[TICKET-02] 겹침 판정 로직 존재', () => {
+  assertContains(html, 'if(c.s<p.e){', '겹침 판정');
+});
+test('[TICKET-03] 30분 미만 간격 경고', () => {
+  assertContains(html, 'else if(c.s-p.e<30){', '간격 부족 경고');
+});
+test('[RATE-01] 평점 리터러시 카드 존재', () => {
+  assertContains(html, '⭐ 숙소 평점 읽는 법', '평점 카드');
+});
+test('[RATE-02] 플랫폼별 기준선 문구 존재', () => {
+  assertContains(html, '에어비앤비 4.5는 사실 낮은 편', '에어비앤비 기준');
+  assertContains(html, '부킹닷컴 9점대는 확실히 우수', '부킹닷컴 기준');
+});
+test('[RATE-03] 리뷰 개수·최신성 안내 존재', () => {
+  assertContains(html, '점수보다 리뷰 개수·최신성', '리뷰 리터러시');
+});
+test('[CHK-01] 심야 이동 체크리스트 항목 추가됨', () => {
+  assertContains(html, '자정 이후 이동은 택시승강장이 최종 안전판', '심야 이동 체크리스트');
+});
+test('[JOSA-01] 한글 조사 자동 선택 함수 존재', () => {
+  assertContains(html, "function _josa(word,pair)", '_josa()');
+});
+
+/* ══════════════════════════════════════════════
    결과 출력
    ══════════════════════════════════════════════ */
 console.log('\n====================================');

@@ -638,6 +638,44 @@ textarea.fi2{resize:vertical;min-height:90px;}
 .hotel-to-first{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--sub);background:rgba(232,88,10,.05);border:1px dashed rgba(232,88,10,.25);border-radius:8px;padding:6px 10px;margin-bottom:8px;flex-wrap:wrap;}
 .hotel-to-first .htf-badge{background:rgba(232,88,10,.1);color:var(--pri);font-weight:700;border-radius:5px;padding:2px 6px;font-size:10px;flex-shrink:0;}
 
+/* ══ 숙소 후보 실측 비교표 (Routes API) ══ */
+.ac-cmp{margin-top:10px;}
+.ac-cmp-modes{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+.ac-cmp-mode{font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;border:1px solid var(--bdr);
+  background:var(--card);color:var(--sub);cursor:pointer;font-family:inherit;transition:all .18s;}
+.ac-cmp-mode.on{border-color:var(--pri);color:var(--pri);background:rgba(232,88,10,.08);}
+.ac-cmp-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--bdr);border-radius:10px;}
+table.ac-cmp-tbl{border-collapse:collapse;width:100%;min-width:420px;font-size:11px;}
+table.ac-cmp-tbl th,table.ac-cmp-tbl td{padding:7px 9px;text-align:center;border-bottom:1px solid var(--bdr);white-space:nowrap;}
+table.ac-cmp-tbl th{background:var(--card2);color:var(--sub);font-weight:700;font-size:10px;}
+table.ac-cmp-tbl td.ac-cmp-name{text-align:left;font-weight:700;color:var(--txt);white-space:normal;min-width:110px;}
+table.ac-cmp-tbl td.ac-cmp-total{font-weight:800;color:var(--pri);}
+table.ac-cmp-tbl tr.ac-cmp-best td{background:rgba(34,153,84,.09);}
+table.ac-cmp-tbl tr:last-child td{border-bottom:none;}
+.ac-cmp-area{display:inline-block;font-size:10px;font-weight:400;color:var(--sub);}
+.ac-cmp-add{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.ac-cmp-add input{flex:1;min-width:150px;font-size:12px;padding:7px 10px;border:1px solid var(--bdr);
+  border-radius:8px;background:var(--card);color:var(--txt);font-family:inherit;}
+.ac-btn{font-size:12px;font-weight:700;padding:7px 12px;border-radius:8px;border:1px solid var(--pri);
+  background:var(--pri);color:#fff;cursor:pointer;font-family:inherit;}
+.ac-btn:disabled{opacity:.55;cursor:default;}
+.ac-btn.ghost{background:var(--card);color:var(--pri);}
+.ac-warn{display:flex;gap:7px;align-items:flex-start;font-size:11.5px;line-height:1.55;
+  background:rgba(232,88,10,.07);border:1px solid rgba(232,88,10,.22);border-radius:9px;
+  padding:8px 10px;margin-top:7px;color:var(--sub);}
+.ac-warn.ok{background:rgba(34,153,84,.08);border-color:rgba(34,153,84,.22);}
+.ac-warn b{color:var(--txt);}
+.ac-timerow{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:4px;}
+.ac-timefield{display:flex;flex-direction:column;gap:3px;}
+.ac-timefield label{font-size:10px;font-weight:700;color:var(--sub);}
+.ac-timefield input{font-size:12px;padding:6px 8px;border:1px solid var(--bdr);border-radius:8px;
+  background:var(--card);color:var(--txt);font-family:inherit;}
+.ac-slot-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px;}
+.ac-slot-row input{font-size:12px;padding:6px 8px;border:1px solid var(--bdr);border-radius:8px;
+  background:var(--card);color:var(--txt);font-family:inherit;}
+.ac-slot-row input.ac-slot-name{flex:1;min-width:120px;}
+.ac-slot-del{background:none;border:none;color:var(--sub);cursor:pointer;font-size:14px;padding:2px 4px;}
+
 /* ══ 출처 링크 ══ */
 .spot-src-links{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap;}
 .spot-src-btn{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:3px 7px;border-radius:6px;border:1px solid var(--bdr);background:var(--card);color:var(--sub);text-decoration:none;transition:all .18s;}
@@ -3304,6 +3342,142 @@ function _getHotelExamples(cityKr, budget){
   return HOTEL_EXAMPLES[cityKr]?HOTEL_EXAMPLES[cityKr][key]||null:null;
 }
 
+// ── 도시별 교통 허브(중앙역/터미널) — 숙소 실측 비교의 고정 앵커 ──
+// [교훈] 짐 들고 움직이는 날의 기준점은 명소가 아니라 역이다 (도시이동일 오전이동 원칙)
+const CITY_HUBS={
+  '로마':'Roma Termini Station','피렌체':'Firenze Santa Maria Novella Station','베네치아':'Venezia Santa Lucia Station',
+  '밀라노':'Milano Centrale Station','나폴리':'Napoli Centrale Station','볼자노':'Bolzano Station',
+  '이스탄불':'Sirkeci Station, Istanbul','파리':'Gare du Nord, Paris','런던':'London Kings Cross Station',
+  '바르셀로나':'Barcelona Sants Station','마드리드':'Madrid Atocha Station','베를린':'Berlin Hauptbahnhof',
+  '뮌헨':'München Hauptbahnhof','빈':'Wien Hauptbahnhof','프라하':'Praha hlavní nádraží',
+  '부다페스트':'Budapest Keleti Station','암스테르담':'Amsterdam Centraal','브뤼셀':'Bruxelles-Midi Station',
+  '취리히':'Zürich Hauptbahnhof','리스본':'Lisboa Oriente Station','포르투':'Porto Campanhã Station',
+  '도쿄':'Tokyo Station','오사카':'Osaka Station','교토':'Kyoto Station','후쿠오카':'Hakata Station',
+  '삿포로':'Sapporo Station','나고야':'Nagoya Station','히로시마':'Hiroshima Station',
+  '서울':'서울역','부산':'부산역','대구':'동대구역','광주':'광주송정역','강릉':'강릉역','경주':'경주역','전주':'전주역',
+  '타이베이':'Taipei Main Station','홍콩':'Hong Kong Station','싱가포르':'Singapore City Hall MRT',
+  '방콕':'Bangkok Krung Thep Aphiwat Station','상하이':'Shanghai Hongqiao Railway Station','베이징':'Beijing South Railway Station',
+  '뉴욕':'Grand Central Terminal, New York','시카고':'Chicago Union Station','로스앤젤레스':'Los Angeles Union Station',
+  '샌프란시스코':'San Francisco Salesforce Transit Center','시드니':'Sydney Central Station','멜버른':'Southern Cross Station, Melbourne',
+};
+function _cityHub(dObj){
+  if(!dObj) return null;
+  if(CITY_HUBS[dObj.kr]) return {label:'교통 허브',q:CITY_HUBS[dObj.kr]};
+  if(dObj.en) return {label:'중앙역',q:`${dObj.en} central station`};
+  return null;
+}
+
+// ── [교훈] 같은 브랜드·다른 지점 혼동 경고 ──
+// "Ramada ○○" 같은 접두어만 같고 지점이 다른 후보가 섞이면 엉뚱한 지점을 예약하기 쉽다.
+// 이름 목록에서 첫 토큰(브랜드)이 겹치는 그룹을 찾아 반환.
+function _chainConfusion(names){
+  const groups={};
+  (names||[]).forEach(n=>{
+    const t=String(n||'').trim().replace(/[()[\]]/g,' ').split(/\s+/).filter(Boolean);
+    if(!t.length) return;
+    const brand=t[0];
+    if(brand.length<2) return;
+    (groups[brand]=groups[brand]||[]).push(String(n).trim());
+  });
+  return Object.entries(groups)
+    .filter(([,v])=>new Set(v).size>=2)
+    .map(([brand,v])=>({brand,names:[...new Set(v)]}));
+}
+function _chainWarnHtml(names){
+  const dup=_chainConfusion(names);
+  if(!dup.length) return '';
+  return dup.map(d=>`<div class="ac-warn">⚠️<div><b>"${escHtml(d.brand)}"</b> 브랜드 후보가 ${d.names.length}곳이에요 — <b>서로 다른 지점</b>입니다.
+    (${d.names.map(n=>escHtml(n)).join(' / ')}) 예약 전에 지점명·주소를 끝까지 확인하세요.</div></div>`).join('');
+}
+
+// ══════════════════════════════════════════════
+// [교훈] 숙소 후보 실측 이동시간 비교 (Routes API 재사용)
+// 숙소 후보 × 핵심 앵커(첫 일정지·교통허브·대표명소)를 실제 API로 재서 표로 비교한다.
+// 손으로 지역별 이동시간을 재던 작업의 자동화 — 새 API 계약 없이 기존 Routes API만 사용.
+// ══════════════════════════════════════════════
+let _acCmpIdx=0;
+function _primarySpots(dObj){
+  if(!dObj||!dObj.spots) return [];
+  if(Array.isArray(dObj.spots.default)) return dObj.spots.default;
+  const first=Object.values(dObj.spots).find(v=>Array.isArray(v)&&v.length);
+  return first||[];
+}
+// 선택 예산 등급 우선 + 부족분은 다른 등급에서 채워 최대 max개 후보 확보
+function _accomCandidates(dObj,budget,max){
+  if(!dObj||!dObj.kr) return [];
+  const out=[],seen=new Set();
+  const push=arr=>{(arr||[]).forEach(h=>{
+    if(h&&h.name&&!seen.has(h.name)&&out.length<max){seen.add(h.name);out.push(h);}
+  });};
+  push(_getHotelExamples(dObj.kr,budget));
+  ['중간','저예산','럭셔리'].forEach(k=>{if(out.length<max) push(_getHotelExamples(dObj.kr,k));});
+  return out;
+}
+function _renderAccomCompareCard(dObj,style){
+  if(!dObj||!dObj.kr) return '';
+  const spots=_primarySpots(dObj);
+  const hub=_cityHub(dObj);
+  const anchors=[];
+  if(spots[0]) anchors.push({icon:'🎯',short:spots[0].n,q:`${spots[0].n} ${dObj.kr}`,note:'첫 일정지'});
+  if(hub)      anchors.push({icon:'🚉',short:hub.label,q:hub.q,note:'짐 들고 움직이는 날 기준점'});
+  if(spots[1]) anchors.push({icon:'🏛️',short:spots[1].n,q:`${spots[1].n} ${dObj.kr}`,note:'대표 명소'});
+  if(!anchors.length) return '';
+
+  const cands=_accomCandidates(dObj,style&&style.budget,4);
+  const id='ac-cmp-'+(_acCmpIdx++);
+  // 도시 좌표 — Places 검색을 이 도시 주변으로 편향시켜 동명 브랜드 오인식을 막는다
+  const _geo=(typeof GEO!=='undefined')?(GEO[dObj.kr]||null):null;
+  const thHtml=anchors.map(a=>
+    `<th data-q="${escHtml(a.q)}" title="${escHtml(a.note)}">${a.icon} ${escHtml(a.short.length>10?a.short.slice(0,9)+'…':a.short)}</th>`).join('');
+  const emptyCells=anchors.map(()=>'<td data-col>–</td>').join('');
+  const rowsHtml=cands.map(h=>
+    `<tr data-q="${escHtml(h.name+' '+dObj.kr)}">
+      <td class="ac-cmp-name">${escHtml(h.name)}${h.area?`<br><span class="ac-cmp-area">${escHtml(h.area)}</span>`:''}</td>
+      ${emptyCells}<td class="ac-cmp-total" data-total>–</td>
+    </tr>`).join('');
+
+  // ⑥ 심야 도착 대응 — 공항→시내 야간 실측으로 "공항 1박 분리 vs 시내 통합" 판단
+  const _apt=(dObj.airport||dObj.iata||'').split('/')[0].trim();
+  const _nightTarget=hub?hub.q:`${dObj.en||dObj.kr} city center`;
+  const _tz=_destTz(dObj);
+  const nightHtml=_apt?`
+    <div class="ac-night" data-airport="${escHtml(_apt)}" data-target="${escHtml(_nightTarget)}" data-date="${escHtml(ST.from||'')}"${_tz?` data-tz="${escHtml(_tz.tz)}" data-tz-exact="${_tz.exact?'1':'0'}"`:''}>
+      <div style="font-size:12px;font-weight:700;color:var(--txt);margin:12px 0 5px;padding-top:10px;border-top:1px solid var(--bdr);">🌙 심야 도착 대응 — 공항 1박 분리 vs 시내 직행</div>
+      <div style="font-size:11px;color:var(--sub);line-height:1.55;margin-bottom:7px;">도착 시각을 넣으면 <b>입국·수하물 60분</b>을 더한 실제 출발시각 기준으로 ${escHtml(_apt)} 공항 → 시내 이동을 실측해요. 시각은 모두 <b>${escHtml(dObj.kr)} 현지 시각</b>이에요.</div>
+      <div class="ac-timerow">
+        <div class="ac-timefield"><label>항공 도착 시각</label><input type="time" class="ac-night-time" value="23:30"></div>
+        <button class="ac-btn ghost" onclick="runNightArrival(this)">🌙 심야 이동 실측</button>
+      </div>
+      <div class="ac-night-out"></div>
+    </div>`:'';
+
+  return `<div style="background:var(--card);border:1.5px solid var(--bdr);border-radius:14px;padding:14px 16px;margin-top:12px;" role="region" aria-label="숙소 후보 실측 이동시간 비교">
+    <div style="font-size:13px;font-weight:700;color:var(--pri);margin-bottom:4px;">📏 숙소 후보 실측 이동시간 비교 <span style="font-weight:400;color:var(--sub);font-size:11px;">— Google 실측(추정치 아님)</span></div>
+    <div style="font-size:11.5px;color:var(--sub);line-height:1.55;margin-bottom:8px;">후보 숙소에서 <b>그날 첫 일정지·교통 허브·대표 명소</b>까지 실제로 몇 분인지 재서 비교해요. 예약 사이트에서 봐도 알 수 없는 게 이것 하나예요.</div>
+    <div class="ac-cmp" id="${id}" data-mode="walking" data-city="${escHtml(dObj.kr)}"${_geo?` data-lat="${_geo[0]}" data-lng="${_geo[1]}"`:''}>
+      <div class="ac-cmp-modes">
+        <button type="button" class="ac-cmp-mode on" onclick="setAcCmpMode(this,'walking')">🚶 도보</button>
+        <button type="button" class="ac-cmp-mode" onclick="setAcCmpMode(this,'transit')">🚇 대중교통</button>
+        <button type="button" class="ac-cmp-mode" onclick="setAcCmpMode(this,'driving')">🚗 차량</button>
+      </div>
+      <div class="ac-cmp-scroll">
+        <table class="ac-cmp-tbl">
+          <thead><tr><th style="text-align:left;">숙소 후보</th>${thHtml}<th>합계</th></tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+      <div class="ac-cmp-add">
+        <input type="text" class="ac-cmp-input" placeholder="예약 검토 중인 숙소 이름·주소 추가" onkeydown="if(event.key==='Enter'){event.preventDefault();addAcCandidate(this);}">
+        <button type="button" class="ac-btn ghost" onclick="addAcCandidate(this)">+ 후보 추가</button>
+      </div>
+      <div class="ac-cmp-chainwarn">${_chainWarnHtml(cands.map(h=>h.name))}</div>
+      <div style="margin-top:9px;"><button type="button" class="ac-btn" onclick="runAcCompare(this)">📏 실측 비교 실행</button></div>
+      <div style="font-size:10.5px;color:var(--sub);margin-top:6px;line-height:1.5;">API 호출이 발생하므로 버튼을 눌렀을 때만 실측해요. <b>*</b> 표시는 대중교통 경로가 없어 차량으로 대체된 값이에요.</div>
+      ${nightHtml}
+    </div>
+  </div>`;
+}
+
 // ── 동행자별 스팟 추천 이유 ──
 const _COMPANION_REASON={
   '부모님':{
@@ -3683,6 +3857,7 @@ let _lastStyle=null; // rerollSpot에서 추천 이유 표시용 캐시
 
 function _runGenerate(){
   destroyAllMaps(); // ③ 이전 지도 인스턴스 제거 (메모리 누수 방지)
+  _TRIP_DAYS.length=0; // ① 체크인 충돌 감지용 수집 버퍼 초기화
   const style=parseStyle(ST.styleText);
   _lastStyle=style; // 전역 캐시
   const days=Math.round((new Date(ST.to)-new Date(ST.from))/86400000)+1;
@@ -3776,6 +3951,8 @@ function _runGenerate(){
             <span style="font-size:11px;background:rgba(232,88,10,.1);color:var(--pri);border-radius:20px;padding:1px 8px;">${ht.area}</span>
           </div>`;
         });
+        // [교훈] 같은 브랜드·다른 지점 혼동 경고
+        h+=_chainWarnHtml(hotels.map(ht=>ht.name));
       }
       // 예약 바로가기 버튼
       h+=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
@@ -3852,6 +4029,35 @@ function _runGenerate(){
         ${_lines.join('')}
       </div>`;
     }
+
+    // ── [교훈] 숙소 후보 실측 이동시간 비교 (Routes API) + 심야 도착 판단 ──
+    if(_firstDest) html+=_renderAccomCompareCard(_firstDest,style);
+
+    // ── [교훈] 체크인·체크아웃 충돌 점검 — 일정 렌더 후 _renderCheckinCard()가 채운다 ──
+    html+='<div id="ci-conflict-card"></div>';
+
+    // ── [교훈] 숙소 평점 리터러시 — 플랫폼마다 "좋은 점수"의 기준선이 다르다 ──
+    html+=`<div style="background:var(--card);border:1.5px solid var(--bdr);border-radius:14px;padding:14px 16px;margin-top:12px;" role="note" aria-label="숙소 평점 읽는 법">
+      <div style="font-size:13px;font-weight:700;color:var(--pri);margin-bottom:4px;">⭐ 숙소 평점 읽는 법 <span style="font-weight:400;color:var(--sub);font-size:11px;">— 같은 "4.5"가 플랫폼마다 다른 뜻</span></div>
+      <div style="font-size:11.5px;color:var(--sub);line-height:1.55;margin-bottom:9px;">숙소 평점은 절대점수가 아니라 <b>플랫폼별 기준선</b>으로 읽어야 해요. 기준선을 모르면 멀쩡한 곳을 거르거나, 평범한 곳을 특별하다고 착각합니다.</div>
+      <div class="ac-cmp-scroll">
+        <table class="ac-cmp-tbl">
+          <thead><tr><th style="text-align:left;">플랫폼</th><th>척도</th><th>평범</th><th>좋음</th><th>최상급</th></tr></thead>
+          <tbody>
+            <tr><td class="ac-cmp-name">에어비앤비</td><td>5점</td><td>4.5~4.7</td><td>4.8</td><td>4.9+</td></tr>
+            <tr><td class="ac-cmp-name">부킹닷컴</td><td>10점</td><td>7점대</td><td>8.5+</td><td>9.0+</td></tr>
+            <tr><td class="ac-cmp-name">아고다</td><td>10점</td><td>7점대</td><td>8.5+</td><td>9.0+</td></tr>
+            <tr><td class="ac-cmp-name">구글·트립어드바이저</td><td>5점</td><td>4.0~4.2</td><td>4.3+</td><td>4.6+</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="font-size:11.5px;color:var(--sub);line-height:1.6;margin-top:9px;">
+        · <b>에어비앤비 4.5는 사실 낮은 편</b>이에요. 호스트가 낮은 평점을 관리하는 구조라 평균이 4.7~4.8에 몰려 있어요.<br>
+        · <b>부킹닷컴 9점대는 확실히 우수</b>합니다. 10점 척도는 점수가 넓게 퍼져 8.0만 돼도 무난한 편.<br>
+        · <b>점수보다 리뷰 개수·최신성</b> — 리뷰 20개 미만의 4.9는 표본이 부족해요. <b>최근 3개월 리뷰</b>부터 읽으세요(주인·리모델링이 바뀌면 과거 점수는 무의미).<br>
+        · <b>낮은 점수의 이유</b>를 확인 — "위치"가 원인이면 동선으로 해결되지만, "청결·소음"이 원인이면 바뀌지 않아요.
+      </div>
+    </div>`;
   })();
 
   // ── [교훈] 플래너 체크리스트 — 실제 가족여행(경주·강릉) 계획에서 증류한 실전 규칙 ──
@@ -3871,12 +4077,68 @@ function _runGenerate(){
     </div>`;
   })();
 
+  // ── [교훈] 해외 여행 체크리스트 — 2026-09 이탈리아·이스탄불 국제 가족여행 실전 계획에서 증류 ──
+  (function(){
+    const _isIntl=destKeys.map(k=>findDest(k)).some(d=>d&&d.country&&!/🇰🇷|한국|대한민국/.test(d.country));
+    if(!_isIntl) return;
+    const _INTL=[
+      ['🎫','<b>인기 명소는 "예약 오픈일"부터 챙기기</b> — 방문 며칠 전에야 예약이 열리고 금방 매진돼요 (바티칸 ~60일·콜로세움 ~30일 전). 날짜가 확정되면 각 명소 오픈일에 알람'],
+      ['🏛️','<b>입장권은 공식 사이트에서</b> — 검색 상단은 2~3배 비싼 리셀러가 많아요. 공식 도메인에서 직접 예매'],
+      ['🎟️','<b>통합권은 "다 갈 때만" 이득</b> — 어차피 다 도는 곳이면 통합·업그레이드권이 유리하지만(예: 두오모 패스), 안 갈 곳 끼운 패스는 오히려 낭비'],
+      ['🖼️','<b>대형 미술관·박물관은 하루 2곳까지</b> — 3연타는 금방 지쳐요. 중간에 동네 산책·카페로 리듬 조절 (특히 부모님 동반)'],
+      ['📆','<b>요일 휴관에 순서를 맞추기</b> — 화요일 휴관(톱카프 등)·월요일 휴관이 흔해요. 방문 요일과 대조해 일정 배치'],
+      ['🚄','<b>도시 이동일은 오전이동·오후관광</b> — 이른 점심으로 기차/비행 시간을 맞추고, 역·공항 근처 숙소가 짐 이동에 편해요'],
+      ['🛬','<b>심야 도착이면 첫 밤은 공항 인근</b> — 무료 셔틀 호텔로 자정 체크인, 다음날부터 시내 숙소로 옮기면 심야 이동이 사라져요'],
+      ['🌙','<b>자정 이후 이동은 택시승강장이 최종 안전판</b> — 지하철·기차는 끊기고 앱택시도 심야엔 매칭이 느려요. 공항·역의 <u>공식 택시 승강장</u>을 미리 확인하고, 현금·현지 결제수단을 조금 남겨두세요'],
+      ['🍽️','<b>장기 여행엔 아시안 한 끼씩</b> — 현지식이 물릴 때 라멘·한식으로 리듬 전환. 식단 제약(햄·돼지)이 있으면 무슬림권(터키 등)은 자연히 안전, 이탈리아는 prosciutto·guanciale 든 메뉴만 피하면 OK'],
+      ['🧳','<b>숙소는 동선·조식·환불가능·가족룸·심야체크인</b>을 함께 확인 — 도시세(1인 1박)는 현장 현금인 곳이 많아요'],
+    ];
+    html+=`<div style="background:var(--card);border:1.5px solid var(--bdr);border-radius:14px;padding:14px 16px;margin-top:12px;" role="note" aria-label="해외 여행 체크리스트">
+      <div style="font-size:13px;font-weight:700;color:var(--pri);margin-bottom:8px;">🌍 해외 여행 체크리스트 <span style="font-weight:400;color:var(--sub);font-size:11px;">— 국제여행 실전에서 배운 것들</span></div>
+      ${_INTL.map(([ic,t])=>`<div style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--sub);line-height:1.6;margin-bottom:5px;"><span style="flex-shrink:0;">${ic}</span><span>${t}</span></div>`).join('')}
+    </div>`;
+  })();
+
   // ── 가로 컬럼 일정 렌더링 헬퍼 ──
+  // ── [교훈] 통합권·패키지 가성비 가이드 — 2026-09 이탈리아 여행(콤보 티켓 다수)에서 증류 ──
+  (function(){
+    const _isIntl=destKeys.map(k=>findDest(k)).some(d=>d&&d.country&&!/🇰🇷|한국|대한민국/.test(d.country));
+    if(!_isIntl) return;
+    html+=`<div style="background:var(--card);border:1.5px solid var(--bdr);border-radius:14px;padding:14px 16px;margin-top:12px;" role="note" aria-label="통합권 패키지 가성비 가이드">
+      <div style="font-size:13px;font-weight:700;color:var(--pri);margin-bottom:6px;">💳 통합권·패키지 가성비 가이드 <span style="font-weight:400;color:var(--sub);font-size:11px;">— 내용이 겹치는 콤보, 이렇게 판단</span></div>
+      <div style="font-size:12px;color:var(--sub);line-height:1.6;margin-bottom:9px;">관광지 많은 도시엔 통합권·투어 패키지가 흔한데, 포함 내용이 겹쳐서 사는 순간 손해인 것도 많아요. 아래 3가지로 판단하세요.</div>
+      <div style="display:flex;gap:8px;">
+        <div style="flex:1;background:rgba(34,153,84,.08);border-radius:10px;padding:9px 11px;">
+          <div style="font-size:12px;font-weight:700;color:#1e874b;margin-bottom:4px;">✅ 살 만함</div>
+          <div style="font-size:11px;color:var(--sub);line-height:1.55;">· 포함된 곳을 <b>3곳+ 실제로 다</b> 감<br>· 개별 합보다 <b>총액이 확실히 쌈</b><br>· 유효기간·체력 안에 다 소화</div>
+        </div>
+        <div style="flex:1;background:rgba(232,88,10,.07);border-radius:10px;padding:9px 11px;">
+          <div style="font-size:12px;font-weight:700;color:var(--pri);margin-bottom:4px;">❌ 낭비</div>
+          <div style="font-size:11px;color:var(--sub);line-height:1.55;">· "혹시 몰라서" 넣은 곳이 <b>절반+</b><br>· 개별 합과 <b>비슷한데 동선만 강제</b><br>· 하루에 다 돌아야 해 무리</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--sub);line-height:1.6;margin-top:9px;padding-top:8px;border-top:1px solid var(--bdr);">
+        🧮 <b>계산법</b>: <u>실제 갈 곳만</u>의 개별 입장료 합 vs 패키지가 — 안 갈 곳은 빼고 비교하세요. 예) 명소 다 도는 통합패스 = 이득 / 안 갈 미술관·정원 끼운 다일권 = 낭비. 가이드투어·특별통로 같은 상위 업그레이드권은 "그 콘텐츠가 이번 여행 기조와 맞을 때만".
+      </div>
+      <div class="ts-box" style="margin-top:11px;padding-top:9px;border-top:1px solid var(--bdr);">
+        <div style="font-size:12px;font-weight:700;color:var(--txt);margin-bottom:4px;">🕐 예약 시간대 충돌 검사</div>
+        <div style="font-size:11px;color:var(--sub);line-height:1.55;margin-bottom:7px;">
+          통합권의 진짜 함정은 가격이 아니라 <b>시간</b>이에요. 시간지정 입장권·가이드투어는 시각이 고정이라, 같은 날 두 개를 끊으면 겹쳐서 하나를 버리게 됩니다.
+          <b>결제 전에</b> 예약 후보 시각을 여기 넣어 겹치는지부터 확인하세요.
+        </div>
+        <div class="ts-list"></div>
+        <button type="button" class="ac-btn ghost" onclick="addTicketSlot(this)">+ 예약 후보 추가</button>
+        <div class="ts-result"></div>
+      </div>
+    </div>`;
+  })();
+
   function renderDayColumns(itin, destObj, startDayNum, dailyCosts){
     const cityName=destObj?destObj.kr:'';
     const nearbyList=CITY_NEARBY[cityName]||[];
     const hasFoodData=!!CITY_FOOD_RECS[cityName];
     const hasNearbyData=nearbyList.length>0;
+    const _isOverseas=!!(destObj&&destObj.country&&!/🇰🇷|한국|대한민국/.test(destObj.country));
     const foodState={};  // 식당 중복 방지: 전체 일정 공유 인덱스
 
     // 하루 스팟의 시간대 분배 보정 (오전만/오후만 몰리는 버그 수정)
@@ -3901,11 +4163,13 @@ function _runGenerate(){
       const mo=dObj?dObj.getMonth()+1:null;
       const txt=spots.map(s=>(s.n||'')+(s.d||'')).join('');
       if(wd===1) tips.push('📅 월요일 — 박물관·미술관·유명 맛집 휴무가 잦아요. 가려던 곳 영업 여부부터 확인');
+      if(_isOverseas&&/박물관|미술관|궁전|성당|대성당|갤러리|museum|palace|gallery/i.test(txt)) tips.push('🎫 예약제·시간지정이 많아요 — 공식 사이트에서 미리 예약(검색 상단 리셀러는 2~3배). 요일 휴관도 함께 확인');
+      if(isTripFirst&&_isOverseas) tips.push('🛬 심야 도착이면 첫 밤은 공항 인근(무료 셔틀) 호텔 → 다음날 시내 숙소로 옮기면 자정 이동이 사라져요');
       if(isTripFirst) tips.push('🏨 체크인은 보통 15시 — 그 전 스팟은 숙소 가는 길목에, 체크인·수영장 후 저녁은 숙소 반경에서');
       if(isTripLast) tips.push('🧳 귀가일 — 체크아웃 후엔 집 방향 동선의 스팟만 들러 되돌아가지 않는 경로로');
       if(!isTripLast&&/야경|나이트|야시장|루프탑|일몰/.test(txt)) tips.push('🌙 야경 스팟은 해 진 뒤가 하이라이트 — 저녁 식사 후 마지막 순서로, 입장 마감 확인');
       if(mo>=6&&mo<=8&&/해변|비치|트레킹|산책|공원|둘레길|절벽|해안/.test(txt)) tips.push('☀️ 한여름 그늘 없는 야외 스팟은 오전에 — 한낮엔 실내·카페로 더위 피하기');
-      return tips.slice(0,2);
+      return tips.slice(0,_isOverseas?3:2);
     }
 
     // ── 이동 수단 판별 헬퍼 (renderDayColumns 공통) ──
@@ -3959,6 +4223,11 @@ function _runGenerate(){
       }
       // ── 스팟 렌더링 (이동 화살표 + 숙소→첫관광지 + 출처 링크 포함) ──
       const _bspots=_balancePeriods(day.spots);
+      // ① 체크인·체크아웃 충돌 감지용 날짜별 시간대 수집
+      _TRIP_DAYS.push({d:dn,date:_dateStr,city:cityName,
+        periods:_bspots.map(s=>s.p).filter(Boolean),
+        first:_bspots[0]?_bspots[0].n:'',
+        last:_bspots.length?_bspots[_bspots.length-1].n:''});
       // 숙소→첫관광지 정보
       if(_bspots.length>0){
         const _hotelEx=_getHotelExamples(cityName, style&&style.budget?style.budget:'중간');
@@ -4252,6 +4521,9 @@ function _runGenerate(){
   document.getElementById('result-body').innerHTML=html;
   go('result');
   buildResultNav(); // 섹션 바로가기 칩 (일정·항공·숙소·비용…)
+
+  // ── ① 체크인·체크아웃 충돌 점검 (일정 렌더 후 수집된 _TRIP_DAYS 사용) ──
+  _renderCheckinCard();
 
   // ── 실시간 이동시간 (Google Maps Routes API) ──
   _fetchRealTransitTimes();
@@ -4650,17 +4922,183 @@ function _fmtSecs(secs){
   return r>0?`${h}시간 ${r}분`:`${h}시간`;
 }
 
-async function _gmapsDuration(origin, destination, mode){
-  // TRANSIT은 departureTime 필수
+// Routes API 경유지 — 'place:<id>' 형식이면 placeId로, 아니면 주소 문자열로 넘긴다.
+// 호텔 이름 문자열 지오코딩은 엉뚱한 지점을 잡는 일이 잦아(예: 공항 호텔이 시내로 해석됨)
+// 숙소 비교처럼 정확도가 중요한 곳은 Places로 먼저 placeId를 확정한 뒤 호출한다.
+function _routeWaypoint(v){
+  const s=String(v||'');
+  return s.startsWith('place:')?{placeId:s.slice(6)}:{address:s};
+}
+
+// ══════════════════════════════════════════════
+// 목적지 현지 시간대 — "심야 도착"은 현지 시각 기준이어야 의미가 있다.
+// (기기 시간대로 계산하면 로마 자정이 한국 오후로 조회돼 결과가 통째로 어긋남)
+// ══════════════════════════════════════════════
+const COUNTRY_TZ={
+  '가나':'Africa/Accra','과테말라':'America/Guatemala','괌':'Pacific/Guam','그리스':'Europe/Athens',
+  '나이지리아':'Africa/Lagos','남아공':'Africa/Johannesburg','네덜란드':'Europe/Amsterdam','네팔':'Asia/Kathmandu',
+  '노르웨이':'Europe/Oslo','뉴질랜드':'Pacific/Auckland','뉴칼레도니아':'Pacific/Noumea','대만':'Asia/Taipei',
+  '대한민국':'Asia/Seoul','한국':'Asia/Seoul','덴마크':'Europe/Copenhagen','독일':'Europe/Berlin',
+  '라오스':'Asia/Vientiane','라트비아':'Europe/Riga','러시아':'Europe/Moscow','레바논':'Asia/Beirut',
+  '레위니옹':'Indian/Reunion','루마니아':'Europe/Bucharest','르완다':'Africa/Kigali','리투아니아':'Europe/Vilnius',
+  '마다가스카르':'Indian/Antananarivo','마카오':'Asia/Macau','말레이시아':'Asia/Kuala_Lumpur','말타':'Europe/Malta',
+  '멕시코':'America/Mexico_City','모나코':'Europe/Monaco','모로코':'Africa/Casablanca','모리셔스':'Indian/Mauritius',
+  '몬테네그로':'Europe/Podgorica','몰디브':'Indian/Maldives','몽골':'Asia/Ulaanbaatar','미국':'America/New_York',
+  '미국령':'Pacific/Saipan','미얀마':'Asia/Yangon','바누아투':'Pacific/Efate','베트남':'Asia/Ho_Chi_Minh',
+  '벨기에':'Europe/Brussels','보스니아':'Europe/Sarajevo','볼리비아':'America/La_Paz','북마케도니아':'Europe/Skopje',
+  '불가리아':'Europe/Sofia','브라질':'America/Sao_Paulo','브루나이':'Asia/Brunei','사모아':'Pacific/Apia',
+  '사우디아라비아':'Asia/Riyadh','세네갈':'Africa/Dakar','세르비아':'Europe/Belgrade','스리랑카':'Asia/Colombo',
+  '스웨덴':'Europe/Stockholm','스위스':'Europe/Zurich','스페인':'Europe/Madrid','슬로베니아':'Europe/Ljubljana',
+  '싱가포르':'Asia/Singapore','아랍에미리트':'Asia/Dubai','아르메니아':'Asia/Yerevan','아르헨티나':'America/Argentina/Buenos_Aires',
+  '아이슬란드':'Atlantic/Reykjavik','아일랜드':'Europe/Dublin','아제르바이잔':'Asia/Baku','알바니아':'Europe/Tirane',
+  '에스토니아':'Europe/Tallinn','에콰도르':'America/Guayaquil','에티오피아':'Africa/Addis_Ababa','영국':'Europe/London',
+  '오만':'Asia/Muscat','오스트리아':'Europe/Vienna','요르단':'Asia/Amman','우루과이':'America/Montevideo',
+  '우즈베키스탄':'Asia/Tashkent','우크라이나':'Europe/Kyiv','이란':'Asia/Tehran','이스라엘':'Asia/Jerusalem',
+  '이집트':'Africa/Cairo','이탈리아':'Europe/Rome','인도':'Asia/Kolkata','인도네시아':'Asia/Jakarta',
+  '일본':'Asia/Tokyo','잠비아':'Africa/Lusaka','조지아':'Asia/Tbilisi','중국':'Asia/Shanghai',
+  '짐바브웨':'Africa/Harare','체코':'Europe/Prague','칠레':'America/Santiago','카자흐스탄':'Asia/Almaty',
+  '카타르':'Asia/Qatar','캄보디아':'Asia/Phnom_Penh','캐나다':'America/Toronto','케냐':'Africa/Nairobi',
+  '코스타리카':'America/Costa_Rica','코트디부아르':'Africa/Abidjan','콜롬비아':'America/Bogota','쿠바':'America/Havana',
+  '쿠웨이트':'Asia/Kuwait','크로아티아':'Europe/Zagreb','키르기스스탄':'Asia/Bishkek','키프로스':'Asia/Nicosia',
+  '타지키스탄':'Asia/Dushanbe','탄자니아':'Africa/Dar_es_Salaam','태국':'Asia/Bangkok','터키':'Europe/Istanbul',
+  '튀르키예':'Europe/Istanbul','통가':'Pacific/Tongatapu','튀니지':'Africa/Tunis','트리니다드 토바고':'America/Port_of_Spain',
+  '파나마':'America/Panama','파라과이':'America/Asuncion','파푸아뉴기니':'Pacific/Port_Moresby','팔라우':'Pacific/Palau',
+  '페루':'America/Lima','포르투갈':'Europe/Lisbon','폴란드':'Europe/Warsaw','프랑스':'Europe/Paris',
+  '프랑스령 폴리네시아':'Pacific/Tahiti','프랑스령폴리네시아':'Pacific/Tahiti','피지':'Pacific/Fiji',
+  '핀란드':'Europe/Helsinki','필리핀':'Asia/Manila','헝가리':'Europe/Budapest','호주':'Australia/Sydney','홍콩':'Asia/Hong_Kong',
+};
+// 괄호로 시간대가 갈리는 지역 (국가 대표존을 쓰면 틀림)
+const COUNTRY_TZ_SUB={
+  '미국(알래스카)':'America/Anchorage','미국(하와이)':'Pacific/Honolulu',
+  '스페인(카나리아 제도)':'Atlantic/Canary','포르투갈(마데이라)':'Atlantic/Madeira',
+  '포르투갈(아조레스)':'Atlantic/Azores','이탈리아(시칠리아)':'Europe/Rome',
+  '인도(시킴)':'Asia/Kolkata','인도(카슈미르)':'Asia/Kolkata',
+};
+// 국가 대표존만으로는 부정확한 다중 시간대 국가 (도시명 매칭 실패 시 사용자에게 고지)
+const TZ_MULTI=new Set(['미국','캐나다','러시아','브라질','호주','인도네시아','멕시코','카자흐스탄','칠레','몽골']);
+let _ianaZonesCache=null;
+function _ianaZones(){
+  if(_ianaZonesCache) return _ianaZonesCache;
+  try{_ianaZonesCache=(typeof Intl.supportedValuesOf==='function')?Intl.supportedValuesOf('timeZone'):[];}
+  catch(_){_ianaZonesCache=[];}
+  return _ianaZonesCache;
+}
+// 반환: {tz, exact} | null — exact=false면 "국가 대표 시간대라 도시별로 다를 수 있음"
+function _destTz(dObj){
+  if(!dObj) return null;
+  // 1) 도시 영문명이 IANA 존 이름이면 가장 정확 (뉴욕·시드니 등 다중 시간대 국가에 특히 중요)
+  const en=(dObj.en||'').trim().replace(/\s+/g,'_');
+  if(en){
+    const hit=_ianaZones().find(z=>z.split('/').pop()===en);
+    if(hit) return {tz:hit,exact:true};
+  }
+  const raw=String(dObj.country||'').replace(/[\u{1F1E6}-\u{1F1FF}]/gu,'').replace(/[^\S\r\n]+/g,' ').trim()
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}️]/gu,'').trim();
+  if(COUNTRY_TZ_SUB[raw]) return {tz:COUNTRY_TZ_SUB[raw],exact:true};
+  const base=raw.replace(/\(.*\)/,'').trim();
+  const tz=COUNTRY_TZ[raw]||COUNTRY_TZ[base];
+  return tz?{tz,exact:!TZ_MULTI.has(base)}:null;
+}
+// 특정 시간대의 UTC 오프셋(분)
+function _tzOffsetMin(tz,date){
+  try{
+    const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:tz,hour12:false,
+      year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'})
+      .formatToParts(date).filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));
+    const asUTC=Date.UTC(+p.year,+p.month-1,+p.day,(+p.hour)%24,+p.minute,+p.second);
+    return Math.round((asUTC-date.getTime())/60000);
+  }catch(_){return null;}
+}
+// "YYYY-MM-DD 날짜의 현지 00:00 + minutes분" 을 절대 시각(Date)으로
+function _localInstant(dateStr,minutes,tz){
+  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr||'');
+  const baseUTC=m?Date.UTC(+m[1],+m[2]-1,+m[3]):(()=>{const d=new Date();return Date.UTC(d.getFullYear(),d.getMonth(),d.getDate());})();
+  if(!tz){ // 시간대 미확정 → 기기 로컬 기준 (호출부가 고지)
+    const d=new Date(baseUTC); return new Date(new Date(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()).getTime()+minutes*60000);
+  }
+  let t=baseUTC+minutes*60000;
+  for(let i=0;i<2;i++){ // DST 경계 대비 2회 수렴
+    const off=_tzOffsetMin(tz,new Date(t));
+    if(off==null) break;
+    t=baseUTC+minutes*60000-off*60000;
+  }
+  return new Date(t);
+}
+
+// 한글 조사 자동 선택 ('이/가', '은/는', '을/를', '으로/로')
+function _josa(word,pair){
+  const [a,b]=pair.split('/');
+  const ch=String(word||'').trim().slice(-1);
+  if(!ch) return b;
+  const code=ch.charCodeAt(0);
+  if(code<0xAC00||code>0xD7A3) return b; // 한글이 아니면 받침 없음으로 처리
+  const jong=(code-0xAC00)%28;
+  if(pair==='으로/로') return (jong===0||jong===8)?b:a; // ㄹ 받침은 '로'
+  return jong?a:b;
+}
+
+function _haversineKm(a,b){
+  const R=6371,r=Math.PI/180;
+  const dLat=(b[0]-a[0])*r, dLng=(b[1]-a[1])*r;
+  const s=Math.sin(dLat/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s));
+}
+
+// 텍스트 → 실제 장소 확정 (id·표시명·주소·좌표). 세션 캐시로 재호출 방지.
+// center([lat,lng])를 주면 그 도시 주변으로 검색을 편향시키고, 60km를 벗어난 결과는
+// 동명 브랜드의 다른 나라 지점으로 보고 버린다 (호이안의 동명 호텔이 잡히는 사례가 있었음).
+async function _resolvePlace(query, center){
+  const q=String(query||'').trim();
+  if(!q||!GMAPS_KEY) return null;
+  const ck='tm_pl:'+(center?center.map(n=>n.toFixed(2)).join(','):'')+':'+q;
+  try{
+    const hit=sessionStorage.getItem(ck);
+    if(hit!==null) return hit==='∅'?null:JSON.parse(hit);
+  }catch(_){}
+  let out=null;
+  try{
+    const body={textQuery:q,languageCode:'ko',maxResultCount:1};
+    if(center&&center.length===2){
+      body.locationBias={circle:{center:{latitude:center[0],longitude:center[1]},radius:30000}};
+    }
+    const res=await fetch('https://places.googleapis.com/v1/places:searchText',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'X-Goog-Api-Key':GMAPS_KEY,
+        'X-Goog-FieldMask':'places.id,places.displayName,places.formattedAddress,places.location'
+      },
+      body:JSON.stringify(body)
+    });
+    const data=await res.json();
+    const p=data.places&&data.places[0];
+    if(p&&p.id){
+      const lat=p.location&&p.location.latitude, lng=p.location&&p.location.longitude;
+      out={id:p.id,name:(p.displayName&&p.displayName.text)||q,addr:p.formattedAddress||'',lat,lng};
+      if(center&&lat!=null&&lng!=null&&_haversineKm(center,[lat,lng])>60) out=null; // 다른 도시·다른 나라
+    }
+  }catch(e){}
+  try{sessionStorage.setItem(ck,out===null?'∅':JSON.stringify(out));}catch(_){}
+  return out;
+}
+
+// 초 단위 실측 이동시간 — 합계·정렬이 필요한 곳(숙소 비교표·심야 판단)에서 사용.
+// 반환: {secs:Number, drive:Boolean} | null   (drive=TRANSIT 실패 후 DRIVE로 대체된 값)
+// depISO를 넘기면 그 출발시각 기준(심야 대중교통 끊김·야간 교통량 반영)으로 계산한다.
+async function _gmapsRouteSecs(origin, destination, mode, depISO){
+  // TRANSIT은 departureTime 필수 (미지정 시 내일 오전 9시 기준)
   const _depTime=()=>{const d=new Date();d.setDate(d.getDate()+1);d.setHours(9,0,0,0);return d.toISOString();};
+  // Routes API는 과거 시각을 거부 → 지나간 depISO는 무시
+  const _dep=(depISO&&new Date(depISO).getTime()>Date.now()+60000)?depISO:null;
   const _call=async(travelMode)=>{
     const body={
-      origin:{address:origin},
-      destination:{address:destination},
+      origin:_routeWaypoint(origin),
+      destination:_routeWaypoint(destination),
       travelMode,
       languageCode:'ko'
     };
-    if(travelMode==='TRANSIT') body.departureTime=_depTime();
+    if(travelMode==='TRANSIT') body.departureTime=_dep||_depTime();
+    else if(travelMode==='DRIVE'&&_dep){ body.departureTime=_dep; body.routingPreference='TRAFFIC_AWARE'; }
     const res=await fetch('https://routes.googleapis.com/directions/v2:computeRoutes',{
       method:'POST',
       headers:{
@@ -4672,29 +5110,342 @@ async function _gmapsDuration(origin, destination, mode){
     });
     return res.json();
   };
-  // 세션 캐시: 동일 (출발,도착,모드) 재호출 방지 — 유료 API 비용·대기시간 절감
-  const _ck=`tm_rt:${mode}:${origin}→${destination}`;
+  // 세션 캐시: 동일 (출발,도착,모드,출발시각) 재호출 방지 — 유료 API 비용·대기시간 절감
+  const _ck=`tm_rt2:${mode}:${_dep||''}:${origin}→${destination}`;
   try{
     const hit=sessionStorage.getItem(_ck);
-    if(hit!==null) return hit==='∅'?null:hit;
+    if(hit!==null) return hit==='∅'?null:JSON.parse(hit);
   }catch(_){}
   let _out=null;
   try{
     const travelMode=mode==='walking'?'WALK':mode==='transit'?'TRANSIT':'DRIVE';
     const data=await _call(travelMode);
     if(data.routes&&data.routes[0]&&data.routes[0].duration){
-      _out=_fmtSecs(parseInt(data.routes[0].duration));
+      _out={secs:parseInt(data.routes[0].duration),drive:false};
     } else if(travelMode==='TRANSIT'){
       // TRANSIT 실패 → DRIVE 재시도
       const data2=await _call('DRIVE');
       if(data2.routes&&data2.routes[0]&&data2.routes[0].duration){
-        _out=_fmtSecs(parseInt(data2.routes[0].duration))+' (차량)';
+        _out={secs:parseInt(data2.routes[0].duration),drive:true};
       }
     }
   }catch(e){}
-  try{sessionStorage.setItem(_ck,_out===null?'∅':_out);}catch(_){}
+  try{sessionStorage.setItem(_ck,_out===null?'∅':JSON.stringify(_out));}catch(_){}
   return _out;
 }
+
+async function _gmapsDuration(origin, destination, mode){
+  const r=await _gmapsRouteSecs(origin,destination,mode);
+  return r?_fmtSecs(r.secs)+(r.drive?' (차량)':''):null;
+}
+
+// ══════════════════════════════════════════════
+// 숙소 후보 실측 비교표 — 런타임 동작
+// (인라인 onclick 방식: 저장 스냅샷 복원 후에도 그대로 동작)
+// ══════════════════════════════════════════════
+function _acCmpReset(wrap){
+  wrap.querySelectorAll('td[data-col],td[data-total]').forEach(td=>{td.textContent='–';});
+  wrap.querySelectorAll('tr.ac-cmp-best').forEach(tr=>tr.classList.remove('ac-cmp-best'));
+  const v=wrap.querySelector('.ac-cmp-verdict'); if(v) v.remove();
+}
+function setAcCmpMode(btn,mode){
+  const wrap=btn.closest('.ac-cmp'); if(!wrap) return;
+  wrap.dataset.mode=mode;
+  wrap.querySelectorAll('.ac-cmp-mode').forEach(b=>b.classList.toggle('on',b===btn));
+  _acCmpReset(wrap); // 모드가 바뀌면 이전 실측값은 무효
+}
+function addAcCandidate(el){
+  const wrap=el.closest('.ac-cmp'); if(!wrap) return;
+  const input=wrap.querySelector('.ac-cmp-input');
+  const name=(input&&input.value||'').trim();
+  if(!name){showToast('추가할 숙소 이름을 입력해주세요');return;}
+  const tbody=wrap.querySelector('tbody');
+  if(!tbody) return;
+  if(tbody.querySelectorAll('tr').length>=8){showToast('후보는 8곳까지 비교할 수 있어요');return;}
+  const city=wrap.dataset.city||'';
+  const nCols=wrap.querySelectorAll('th[data-q]').length;
+  const tr=document.createElement('tr');
+  tr.dataset.q=`${name} ${city}`.trim();
+  tr.innerHTML=`<td class="ac-cmp-name">${escHtml(name)}<br><span class="ac-cmp-area">직접 추가</span>`
+    +`<button type="button" class="ac-slot-del" title="삭제" onclick="this.closest('tr').remove()">✕</button></td>`
+    +Array.from({length:nCols},()=>'<td data-col>–</td>').join('')
+    +'<td class="ac-cmp-total" data-total>–</td>';
+  tbody.appendChild(tr);
+  input.value='';
+  // ② 브랜드 혼동 경고 재계산 (후보가 늘어날수록 같은 체인이 섞이기 쉬움)
+  const warnEl=wrap.querySelector('.ac-cmp-chainwarn');
+  if(warnEl){
+    const names=[...tbody.querySelectorAll('td.ac-cmp-name')]
+      .map(td=>(td.childNodes[0]&&td.childNodes[0].textContent||'').trim()).filter(Boolean);
+    warnEl.innerHTML=_chainWarnHtml(names);
+  }
+  _acCmpReset(wrap);
+}
+async function runAcCompare(btn){
+  const wrap=btn.closest('.ac-cmp'); if(!wrap) return;
+  if(wrap.dataset.running==='1') return;
+  const ths=[...wrap.querySelectorAll('th[data-q]')];
+  const rows=[...wrap.querySelectorAll('tbody tr')];
+  if(!ths.length||!rows.length){showToast('비교할 후보를 먼저 추가해주세요');return;}
+  wrap.dataset.running='1';
+  btn.disabled=true;
+  const _label=btn.textContent;
+  const mode=wrap.dataset.mode||'walking';
+  const _routeDelay=()=>new Promise(r=>setTimeout(r,180)); // API quota 보호용 딜레이
+  _acCmpReset(wrap);
+  const scored=[];
+  try{
+    // 1단계: 후보·앵커를 Places로 실제 장소에 확정 (이름만으로 경로를 재면 엉뚱한 지점이 잡힘)
+    btn.textContent='⏳ 숙소 위치 확인 중…';
+    const _lat=parseFloat(wrap.dataset.lat), _lng=parseFloat(wrap.dataset.lng);
+    const center=(isFinite(_lat)&&isFinite(_lng))?[_lat,_lng]:null;
+    const unresolved=[];
+    for(const el of [...rows,...ths]){
+      if(el.dataset.pid) continue;
+      const p=await _resolvePlace(el.dataset.q,center);
+      const nameEl=el.querySelector('td.ac-cmp-name');
+      if(p){
+        el.dataset.pid='place:'+p.id;
+        // 확정된 실제 주소를 보여줘 "같은 브랜드 다른 지점"을 눈으로 검증할 수 있게 한다
+        if(nameEl&&p.addr&&!nameEl.querySelector('.ac-cmp-addr')){
+          const s=document.createElement('span');
+          s.className='ac-cmp-area ac-cmp-addr';
+          s.style.display='block';
+          s.textContent='📍 '+p.addr;
+          nameEl.appendChild(s);
+        }
+      } else if(nameEl){
+        // 도시 밖·미확인 → 실측에서 제외 (엉뚱한 좌표로 잰 값이 표에 섞이는 것을 막는다)
+        el.dataset.skip='1';
+        if(!nameEl.querySelector('.ac-cmp-addr')){
+          const s=document.createElement('span');
+          s.className='ac-cmp-area ac-cmp-addr';
+          s.style.display='block';
+          s.textContent='⚠️ 이 도시에서 못 찾았어요 — 이름을 더 정확히 쓰거나 주소로 다시 추가하세요';
+        nameEl.appendChild(s);
+        }
+        unresolved.push(el);
+      }
+      await _routeDelay();
+    }
+    unresolved.forEach(tr=>{
+      tr.querySelectorAll('td[data-col],td[data-total]').forEach(td=>{td.textContent='–';});
+    });
+    let done=0;
+    const total=ths.length*rows.filter(r=>r.dataset.skip!=='1').length;
+    for(const tr of rows){
+      if(tr.dataset.skip==='1') continue;
+      const cells=[...tr.querySelectorAll('td[data-col]')];
+      let sum=0,ok=true;
+      for(let i=0;i<ths.length;i++){
+        const cell=cells[i]; if(!cell) continue;
+        cell.textContent='⏳';
+        const r=await _gmapsRouteSecs(tr.dataset.pid||tr.dataset.q,ths[i].dataset.pid||ths[i].dataset.q,mode);
+        if(r){
+          // 도보 3시간 초과 = 사실상 걸어갈 수 없는 거리 (공항 호텔 등) — 숫자보다 판정을 보여준다
+          const far=(mode==='walking'&&r.secs>3*3600);
+          cell.textContent=(far?'🚫 ':'')+_fmtSecs(r.secs)+(r.drive?'*':'');
+          if(far) cell.title='도보권 밖 — 대중교통·차량 모드로 다시 비교해보세요';
+          sum+=r.secs;
+        }
+        else {cell.textContent='—';ok=false;}
+        done++;
+        btn.textContent=`⏳ 실측 중… ${done}/${total}`;
+        await _routeDelay();
+      }
+      const totEl=tr.querySelector('td[data-total]');
+      if(totEl) totEl.textContent=ok?_fmtSecs(sum):'일부 실패';
+      if(ok) scored.push({tr,sum});
+    }
+    // 🥇 총 이동시간 최단 후보 강조 + 2위와의 격차 안내
+    if(scored.length>=1){
+      scored.sort((a,b)=>a.sum-b.sum);
+      scored[0].tr.classList.add('ac-cmp-best');
+      const nameEl=scored[0].tr.querySelector('td.ac-cmp-name');
+      const best=(nameEl&&nameEl.childNodes[0]&&nameEl.childNodes[0].textContent||'').trim();
+      const gap=scored.length>=2?scored[1].sum-scored[0].sum:0;
+      const v=document.createElement('div');
+      v.className='ac-warn ok ac-cmp-verdict';
+      const bestTxt=_fmtSecs(scored[0].sum);
+      v.innerHTML=`🥇<div><b>${escHtml(best)}</b>${_josa(best,'이/가')} 핵심 동선 합계 <b>${bestTxt}</b>${_josa(bestTxt,'으로/로')} 가장 짧아요.`
+        +(scored.length>=2?` 2위와 <b>${_fmtSecs(gap)}</b> 차이 — 왕복·매일 반복이라 실제 체감은 이 값의 <b>${Math.max(2,(_TRIP_DAYS.length||2))}배 안팎</b>이에요.`:'')
+        +` 숙박비 차액이 이 시간값보다 작다면 가까운 쪽이 이득입니다.</div>`;
+      wrap.querySelector('.ac-cmp-scroll').insertAdjacentElement('afterend',v);
+    } else {
+      showToast('⚠️ 실측에 실패했어요. 숙소 이름을 더 구체적으로 적어보세요.');
+    }
+  }catch(e){
+    console.warn('[TripMind] 숙소 실측 비교 실패:',e);
+    showToast('⚠️ 실측 중 오류가 발생했어요.');
+  }finally{
+    btn.textContent=_label;
+    btn.disabled=false;
+    wrap.dataset.running='0';
+  }
+}
+
+// ── ⑥ 심야 도착 — 공항 1박 분리 vs 시내 직행 판단 ──
+async function runNightArrival(btn){
+  const box=btn.closest('.ac-night'); if(!box) return;
+  const out=box.querySelector('.ac-night-out'); if(!out) return;
+  const t=(box.querySelector('.ac-night-time')||{}).value||'';
+  const m=/^(\d{1,2}):(\d{2})$/.exec(t);
+  if(!m){out.innerHTML='<div class="ac-warn">⚠️<div>도착 시각을 입력해주세요.</div></div>';return;}
+  const arrMin=(+m[1])*60+(+m[2]);
+  // 입국심사·수하물 60분 → 실제 공항 출발 시각
+  const depMin=arrMin+60;
+  // 도착 시각은 "현지 시각" — 목적지 시간대로 절대 시각을 만든다
+  const tz=box.dataset.tz||'';
+  const tzExact=box.dataset.tzExact==='1';
+  const depISO=_localInstant(box.dataset.date,depMin,tz||null).toISOString();
+  const hhmm=`${String(Math.floor(depMin/60)%24).padStart(2,'0')}:${String(depMin%60).padStart(2,'0')}`;
+  let origin=`${box.dataset.airport} Airport`;
+  let target=box.dataset.target||'';
+  btn.disabled=true;
+  out.innerHTML='<div class="ac-warn">⏳<div>심야 시간대 실제 이동시간을 재는 중…</div></div>';
+  try{
+    // 공항·목적지도 placeId로 확정 (IATA 코드 문자열은 지오코딩이 흔들림)
+    const po=await _resolvePlace(origin); if(po) origin='place:'+po.id;
+    const pt=await _resolvePlace(target); if(pt) target='place:'+pt.id;
+    const rt=await _gmapsRouteSecs(origin,target,'transit',depISO);
+    await new Promise(r=>setTimeout(r,180));
+    const rd=await _gmapsRouteSecs(origin,target,'driving',depISO);
+    const transitTxt=(rt&&!rt.drive)?_fmtSecs(rt.secs):null;
+    const driveTxt=rd?_fmtSecs(rd.secs):null;
+    // 판단: ① 애초에 심야가 아니면 분리할 이유가 없다 ② 심야라면 자정 이후·대중교통 두절·40분 초과 시 분리
+    const refSecs=(rd?rd.secs:(rt?rt.secs:0));
+    const depOfDay=depMin%1440;
+    const lateNight=depOfDay>=22*60||depOfDay<5*60;
+    const veryLate=depOfDay>=23*60||depOfDay<5*60;
+    const split=lateNight&&(veryLate||!transitTxt||refSecs>=40*60);
+    const lines=[
+      `공항 출발 예상 <b>${hhmm}</b> (도착 ${t} + 입국·수하물 60분)`,
+      `🚇 대중교통: <b>${transitTxt||'해당 시각 운행 경로 없음 — 심야엔 끊깁니다'}</b>`,
+      `🚗 택시·차량: <b>${driveTxt||'조회 실패'}</b>`,
+    ];
+    out.innerHTML=`<div class="ac-warn ${split?'':'ok'}">${split?'🛬':'✅'}<div>
+      ${lines.join('<br>')}
+      <div style="margin-top:6px;">${split
+        ? `→ <b>첫 밤은 공항 인근 1박(분리) 권장.</b> ${veryLate?'자정 전후 체크인이라 ':''}시내 숙소로 바로 가면 짐 들고 심야 이동을 하게 돼요. 다음날 아침에 시내 숙소로 옮기면 이 왕복이 사라집니다. 공항호텔은 <b>무료 셔틀·심야 체크인 가능</b> 여부를 먼저 확인하세요.`
+        : lateNight
+        ? `→ <b>시내 숙소로 직행(통합) 가능.</b> 심야지만 이동이 짧고 대중교통도 살아 있어 숙소를 두 번 잡을 이유가 적어요. 다만 시내 숙소의 <b>심야 체크인(리셉션 24시간)</b> 가능 여부는 예약 전에 확인하세요.`
+        : `→ <b>심야 도착이 아니에요.</b> 공항 출발이 ${hhmm} — 그날 바로 시내 숙소로 들어가면 됩니다. (이 판단은 22시 이후 도착일 때 의미가 있어요)`}</div>
+      ${(!transitTxt&&lateNight)?'<div style="margin-top:5px;">🌙 심야엔 지하철·기차가 끊기고 앱택시 매칭도 느려요 — 공항·역의 <b>공식 택시 승강장</b>이 최종 안전판입니다.</div>':''}
+      ${(transitTxt&&lateNight)?'<div style="margin-top:5px;font-size:10.5px;">ℹ️ 대중교통 값은 <b>탑승 후 소요시간</b> 위주라, 첫차까지 기다리는 시간이 빠져 있을 수 있어요. 막차·첫차 시각표를 꼭 확인하세요.</div>':''}
+      ${tz?(tzExact?'':`<div style="margin-top:5px;font-size:10.5px;">ℹ️ 국가 대표 시간대(${escHtml(tz)}) 기준이에요. 시간대가 여러 개인 나라라 도시에 따라 1시간 이상 다를 수 있어요.</div>`)
+          :'<div style="margin-top:5px;font-size:10.5px;">ℹ️ 이 도시의 현지 시간대를 확정하지 못해 <b>기기 시간대</b>로 계산했어요. 결과를 참고용으로만 보세요.</div>'}
+    </div></div>`;
+  }catch(e){
+    out.innerHTML='<div class="ac-warn">⚠️<div>실측에 실패했어요. 잠시 후 다시 시도해주세요.</div></div>';
+  }finally{ btn.disabled=false; }
+}
+
+// ══════════════════════════════════════════════
+// ① 체크인·체크아웃 시각 충돌 감지
+// 일정 렌더링 중 수집한 날짜별 시간대(_TRIP_DAYS)를 체크인/체크아웃 시각과 대조한다.
+// ══════════════════════════════════════════════
+const _TRIP_DAYS=[]; // {d,date,city,periods:[],first,last}
+const _CI_PERIOD_START={'오전':9*60,'점심':12*60,'오후':14*60,'저녁':18*60,'야경':20*60,'일몰':18*60,'종일':9*60};
+const _CI_PERIOD_END  ={'오전':12*60,'점심':14*60,'오후':17*60,'저녁':21*60,'야경':22*60,'일몰':20*60,'종일':18*60};
+function _ciToMin(t){const m=/^(\d{1,2}):(\d{2})$/.exec(t||'');return m?(+m[1])*60+(+m[2]):null;}
+function _renderCheckinCard(){
+  const slot=document.getElementById('ci-conflict-card');
+  if(!slot) return;
+  if(_TRIP_DAYS.length<2){slot.innerHTML='';return;}
+  const data=_TRIP_DAYS.map(d=>({d:d.d,date:d.date,city:d.city,periods:d.periods,first:d.first,last:d.last}));
+  slot.innerHTML=`<div style="background:var(--card);border:1.5px solid var(--bdr);border-radius:14px;padding:14px 16px;margin-top:12px;" role="region" aria-label="체크인 체크아웃 충돌 점검">
+    <div style="font-size:13px;font-weight:700;color:var(--pri);margin-bottom:4px;">🕒 체크인·체크아웃 충돌 점검</div>
+    <div style="font-size:11.5px;color:var(--sub);line-height:1.55;margin-bottom:8px;">숙소의 체크인·체크아웃 시각을 넣으면 그 시각 <b>밖에 있는 일정</b>을 찾아 알려드려요. 짐을 어디 둘지가 그날 동선을 결정합니다.</div>
+    <div class="ci-box" data-days="${escHtml(JSON.stringify(data))}">
+      <div class="ac-timerow">
+        <div class="ac-timefield"><label>체크인</label><input type="time" class="ci-in" value="15:00" onchange="evalCheckinConflicts(this)"></div>
+        <div class="ac-timefield"><label>체크아웃</label><input type="time" class="ci-out-time" value="11:00" onchange="evalCheckinConflicts(this)"></div>
+      </div>
+      <div class="ci-result"></div>
+    </div>
+  </div>`;
+  evalCheckinConflicts(slot.querySelector('.ci-box'));
+}
+function evalCheckinConflicts(el){
+  const box=el.classList&&el.classList.contains('ci-box')?el:el.closest('.ci-box');
+  if(!box) return;
+  const res=box.querySelector('.ci-result'); if(!res) return;
+  let days=[];
+  try{days=JSON.parse(box.dataset.days||'[]');}catch(_){return;}
+  const ciM=_ciToMin((box.querySelector('.ci-in')||{}).value);
+  const coM=_ciToMin((box.querySelector('.ci-out-time')||{}).value);
+  const ciTxt=(box.querySelector('.ci-in')||{}).value||'';
+  const coTxt=(box.querySelector('.ci-out-time')||{}).value||'';
+  const warns=[];
+  days.forEach((d,i)=>{
+    const cityFirst=(i===0)||days[i-1].city!==d.city;   // 그 숙소의 체크인 날
+    const cityLast =(i===days.length-1)||days[i+1].city!==d.city; // 체크아웃 날
+    const periods=d.periods||[];
+    if(cityFirst&&ciM!=null){
+      const before=periods.filter(p=>(_CI_PERIOD_END[p]??17*60)<=ciM);
+      if(before.length) warns.push(`<b>Day ${d.d}${d.date?` (${d.date})`:''} · ${d.city}</b> — 체크인 ${ciTxt} 전에 일정 ${before.length}개(${[...new Set(before)].join('·')})가 있어요.<br>→ 얼리 체크인 가능 여부를 호스트에 문의하거나, <b>역 코인락커·호텔 짐보관(럭기지 스토리지)</b>에 맡기고 움직이세요. 첫 일정은 <b>숙소 가는 길목</b>에 있는 ${d.first?`"${escHtml(d.first)}"`:'스팟'} 같은 곳이 안전합니다.`);
+    }
+    if(cityLast&&coM!=null){
+      const after=periods.filter(p=>(_CI_PERIOD_START[p]??14*60)>=coM);
+      if(after.length){
+        const isMove=i<days.length-1; // 다음 도시로 이동하는 날
+        warns.push(`<b>Day ${d.d}${d.date?` (${d.date})`:''} · ${d.city}</b> — 체크아웃 ${coTxt} 뒤에 일정 ${after.length}개(${[...new Set(after)].join('·')})가 남아요.<br>→ 짐을 프런트에 맡기고(대부분 무료) 움직이거나 역 코인락커를 쓰세요.${isMove?` 다음 도시 이동일이라면 <b>오전 이동·오후 관광</b>으로 뒤집는 편이 짐 부담이 적어요.`:''}`);
+      }
+    }
+    if(cityLast&&i<days.length-1&&days[i+1].city!==d.city&&ciM!=null&&coM!=null&&ciM>coM){
+      warns.push(`<b>Day ${d.d}${d.date?` (${d.date})`:''} · ${d.city} → ${days[i+1].city}</b> — 체크아웃 ${coTxt}과 다음 숙소 체크인 ${ciTxt} 사이 <b>${_fmtSecs((ciM-coM)*60)}</b>의 짐 공백이 생겨요.<br>→ 이동 기차·비행 시간을 이 구간에 넣으면 공백이 사라집니다. 역·공항 근처 숙소가 이 날 특히 유리해요.`);
+    }
+  });
+  res.innerHTML=warns.length
+    ? warns.map(w=>`<div class="ac-warn">⚠️<div>${w}</div></div>`).join('')
+    : `<div class="ac-warn ok">✅<div>체크인 ${ciTxt} · 체크아웃 ${coTxt} 기준으로 <b>짐이 붕 뜨는 일정은 없어요.</b></div></div>`;
+}
+
+// ══════════════════════════════════════════════
+// ⑦ 예약 시간대 충돌 검사 — 시간지정 입장권·가이드투어끼리 겹치는지 확인
+// (명소별 시간슬롯 DB 없이도 동작하도록, 사용자가 실제 예약 후보를 직접 입력)
+// ══════════════════════════════════════════════
+function addTicketSlot(btn){
+  const box=btn.closest('.ts-box'); if(!box) return;
+  const list=box.querySelector('.ts-list'); if(!list) return;
+  if(list.querySelectorAll('.ac-slot-row').length>=10){showToast('한 번에 10건까지 확인할 수 있어요');return;}
+  const row=document.createElement('div');
+  row.className='ac-slot-row';
+  row.innerHTML=`<input type="text" class="ac-slot-name" placeholder="명소·투어 이름" oninput="evalTicketSlots(this)">
+    <input type="date" class="ts-date" oninput="evalTicketSlots(this)">
+    <input type="time" class="ts-time" oninput="evalTicketSlots(this)">
+    <input type="number" class="ts-dur" min="15" max="480" step="15" value="90" style="width:66px;" title="소요 시간(분)" oninput="evalTicketSlots(this)">
+    <span style="font-size:10px;color:var(--sub);">분</span>
+    <button type="button" class="ac-slot-del" title="삭제" onclick="const b=this.closest('.ts-box');this.closest('.ac-slot-row').remove();evalTicketSlots(b.querySelector('.ts-list'));">✕</button>`;
+  list.appendChild(row);
+}
+function evalTicketSlots(el){
+  const box=el.closest?el.closest('.ts-box'):null; if(!box) return;
+  const res=box.querySelector('.ts-result'); if(!res) return;
+  const items=[...box.querySelectorAll('.ac-slot-row')].map(r=>({
+    name:(r.querySelector('.ac-slot-name')||{}).value||'(이름 없음)',
+    date:(r.querySelector('.ts-date')||{}).value||'',
+    time:(r.querySelector('.ts-time')||{}).value||'',
+    dur:parseInt((r.querySelector('.ts-dur')||{}).value||'90',10)||90
+  })).filter(x=>x.date&&x.time);
+  if(items.length<2){res.innerHTML='';return;}
+  items.forEach(x=>{const m=_ciToMin(x.time);x.s=m;x.e=m+x.dur;});
+  items.sort((a,b)=>a.date===b.date?a.s-b.s:(a.date<b.date?-1:1));
+  const msgs=[];
+  for(let i=1;i<items.length;i++){
+    const p=items[i-1],c=items[i];
+    if(p.date!==c.date) continue;
+    if(c.s<p.e){
+      msgs.push({lvl:'bad',t:`<b>${escHtml(p.name)}</b>(${p.time}~${_minTxt(p.e)})와 <b>${escHtml(c.name)}</b>(${c.time})가 <b>${_fmtSecs((p.e-c.s)*60)} 겹칩니다.</b><br>→ 시간지정 입장권·가이드투어는 시각이 고정이라 하나를 다른 슬롯으로 옮겨야 해요. 통합권을 사기 전에 <b>포함된 곳들의 예약 시간대부터</b> 맞춰보세요.`});
+    } else if(c.s-p.e<30){
+      msgs.push({lvl:'warn',t:`<b>${escHtml(p.name)}</b> 종료(${_minTxt(p.e)})와 <b>${escHtml(c.name)}</b> 시작(${c.time}) 사이가 <b>${c.s-p.e}분</b>뿐이에요.<br>→ 이동·보안검색·화장실을 넣으면 사실상 붙어 있어요. 30분 이상 띄우거나 순서를 바꾸세요.`});
+    }
+  }
+  res.innerHTML=msgs.length
+    ? msgs.map(m=>`<div class="ac-warn">${m.lvl==='bad'?'⛔':'⚠️'}<div>${m.t}</div></div>`).join('')
+    : `<div class="ac-warn ok">✅<div>입력한 ${items.length}건은 <b>시간대가 겹치지 않아요.</b> (이동시간은 별도 — 위 실측 비교로 확인하세요)</div></div>`;
+}
+function _minTxt(m){return `${String(Math.floor(m/60)%24).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;}
 
 async function _fetchRealTransitTimes(){
   const container=document.getElementById('result-body');
