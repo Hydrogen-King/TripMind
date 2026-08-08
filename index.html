@@ -3367,6 +3367,135 @@ function _cityHub(dObj){
   return null;
 }
 
+// ══════════════════════════════════════════════
+// 회사 제휴 호텔 프로모션 (개인용 실데이터 · 현대차 복지포털 2026)
+// 종료일이 지나면 자동 비활성. 갱신 시 아래 배열만 고치면 된다.
+// ⚠️ 아코르 회사ID/액세스코드는 대외비라 소스에 넣지 않는다 — localStorage(_CORP_CODE_KEY)에 보관.
+// ══════════════════════════════════════════════
+const CORP_PROMO_ASOF='2026-08';
+const CORP_PROMOS=[
+  {
+    id:'marriott', chain:'마리엇', brandLabel:'Marriott Bonvoy',
+    title:'Taste of Platinum (플래티넘 엘리트 체험)',
+    type:'trial', from:'2026-08-04', to:'2026-09-30',
+    trialNote:'등록 후 48시간 내 플래티넘 부여 · 3개월 체험',
+    tiers:[{nights:15,label:'플래티넘 엘리트 최대 1년 유지'}],
+    // 체험 기간 중 "이번 숙박"에 바로 붙는 혜택
+    perk:{breakfast:true,lounge:true,upgrade:true,lateCheckout:true},
+    perkNote:'라운지 · 웰컴기프트(500~1000P/조식/어메니티 택1) · 오후 4시 레이트체크아웃 · 스위트 포함 업그레이드(가능시)',
+    bonusPctOfSpend:4,   // 50% 보너스포인트 ≈ 숙박료의 4% 상당
+    bonusNote:'50% 보너스 포인트',
+    eligible:'Marriott.com 직접예약(일반요금·임직원요금)만 실적 인정',
+    eligibleWarn:'OTA·포인트·여행사 선결제는 실적 불인정 — 부킹닷컴/아고다로 잡으면 15박 카운트가 안 됩니다',
+    q:'Marriott Sheraton Westin Ritz-Carlton hotel',
+  },
+  {
+    id:'ihg', chain:'IHG', brandLabel:'IHG One Rewards',
+    title:'임직원 프로모션 (골드/플래티넘 달성)',
+    type:'achieve', from:'2026-07-30', to:'2026-12-31',
+    trialNote:'체험 없음 — 숙박 완료 후 등급 확정, 이후 숙박부터 적용',
+    tiers:[{nights:2,label:'골드 엘리트 (2027년까지)'},{nights:5,label:'플래티넘 엘리트'}],
+    perk:{},
+    perkNote:'이번 숙박에 붙는 즉시 혜택은 없음 (등급은 체크아웃 후 부여)',
+    bonusPctOfSpend:0,
+    eligible:'',
+    q:'InterContinental Holiday Inn Crowne Plaza voco hotel',
+  },
+  {
+    id:'accor', chain:'아코르', brandLabel:'ALL Accor',
+    title:'3X Reward Points',
+    type:'multiplier', from:'2026-07-23', to:'2026-12-31',
+    trialNote:'등급 체험 아님 · 문턱 없이 매 숙박 적용',
+    tiers:[],
+    perk:{},
+    perkNote:'포인트 3배 적립 (등급 혜택은 별도)',
+    bonusPctOfSpend:5,   // 기본 ~2.5% → 3배, 추가분 ≈ 숙박료의 5%
+    bonusNote:'리워드 포인트 3배',
+    eligible:'호텔검색에서 "비즈니스 출장자" 선택 → 회사ID·액세스코드 입력 → "HYUNDAI GROUP 2026" 또는 "HYUNDAI 2026 Chain Discount" 요금으로 예약',
+    eligibleWarn:'다른 요금제로 예약하면 3배 적립이 적용되지 않습니다',
+    needsCode:true,
+    q:'Accor Novotel Mercure Sofitel Pullman ibis hotel',
+  },
+  {
+    id:'hilton', chain:'힐튼', brandLabel:'Hilton Honors',
+    title:'Fast Track (골드 체험)',
+    type:'trial', from:'2026-04-01', to:'2026-12-31',
+    trialNote:'등록 후 90일간 골드 체험',
+    tiers:[{nights:5,label:'골드 익년까지 연장'},{nights:10,label:'다이아몬드 (익년까지)'}],
+    perk:{breakfast:true,upgrade:true},
+    perkNote:'그레잇룸 또는 콘티넨탈 조식 · 체크인 시 무료 업그레이드(공간 여유시) · 리워드 5박째 무료',
+    bonusPctOfSpend:4,   // 80% 보너스포인트 ≈ 숙박료의 4% 상당
+    bonusNote:'80% 보너스 포인트(기본객실요금 기준)',
+    eligible:'',
+    q:'Hilton DoubleTree Hampton Conrad Waldorf hotel',
+  },
+  {
+    id:'hyatt', chain:'하얏트', brandLabel:'World of Hyatt',
+    title:'익스플로리스트 등급 체험',
+    type:'trial', from:'2026-01-08', to:'2026-12-31',
+    trialNote:'등록일부터 90일 체험 (연 30박 요건 없이 즉시 부여)',
+    tiers:[{nights:10,label:'익스플로리스트 2028-02까지'},{nights:20,label:'글로벌리스트 2028-02-29까지'}],
+    perk:{breakfast:true,lounge:true,upgrade:true,lateCheckout:true},
+    perkNote:'라운지 · 웰컴 어메니티 선택 · 스위트 포함 업그레이드 · 레이트체크아웃 연장 · 무제한 M라이프',
+    bonusPctOfSpend:1.7, // 20% 보너스포인트 ≈ 숙박료의 1.7% 상당
+    bonusNote:'20% 보너스 포인트',
+    eligible:'',
+    eligibleWarn:'회원당 3년에 1회만 참여 가능 — 기간 내 미달성 시 3년간 재참여 불가. 달성 가능성이 낮으면 나중을 위해 아껴두는 편이 나을 수 있습니다',
+    q:'Hyatt Park Hyatt Grand Hyatt Andaz hotel',
+  },
+];
+// 브랜드 키워드 → 체인 판별 (한/영 혼용 — Places는 현지·영문명을 섞어 돌려준다)
+const CHAIN_BRANDS={
+  marriott:['marriott','메리어트','마리어트','마리엇','ritz','리츠','westin','웨스틴','sheraton','쉐라톤','le meridien','르메르디앙','메리디앙','courtyard','코트야드','aloft','알로프트','moxy','목시','st. regis','st regis','세인트레지스','renaissance','르네상스','autograph','오토그래프','tribute','트리뷰트','edition','에디션','delta hotels','fairfield','페어필드','ac hotel','protea','gaylord'],
+  ihg:['intercontinental','인터컨티넨탈','holiday inn','홀리데이 인','홀리데이인','crowne plaza','크라운 플라자','크라운플라자','kimpton','킴튼','hotel indigo','호텔 인디고','인디고','voco','보코','staybridge','스테이브리지','candlewood','캔들우드','six senses','식스센스','regent','리젠트','avid','atwell','even hotel','hualuxe'],
+  accor:['accor','아코르','sofitel','소피텔','novotel','노보텔','ibis','이비스','mercure','머큐어','pullman','풀만','raffles','래플스','fairmont','페어몬트','swissotel','스위소텔','mgallery','엠갤러리','adagio','아다지오','mama shelter','pullman','banyan tree','반얀트리','tribe','25hours','movenpick','뫼벤픽'],
+  hilton:['hilton','힐튼','conrad','콘래드','waldorf','월도프','doubletree','더블트리','hampton','햄튼','햄프턴','embassy suites','엠버시','curio','큐리오','canopy','캐노피','tapestry','태피스트리','homewood','홈우드','home2','signia','시그니아','lxr','tempo','motto','tru by hilton'],
+  hyatt:['hyatt','하얏트','andaz','안다즈','alila','알릴라','thompson','톰슨','park hyatt','grand hyatt','캡션','caption','miraval','미라발','dream hotel','unbound','destination by hyatt','joie de vivre'],
+};
+const _CORP_CODE_KEY='tm_corp_codes_v1';
+function _corpCodes(){
+  try{return JSON.parse(localStorage.getItem(_CORP_CODE_KEY)||'{}');}catch(_){return{};}
+}
+function _corpSaveCodes(o){
+  try{localStorage.setItem(_CORP_CODE_KEY,JSON.stringify(o));return true;}catch(_){return false;}
+}
+// 종료일이 지난 프로모션은 자동 비활성 (데이터 갱신 규칙 #4)
+function _activePromos(now){
+  const t=(now||new Date()).setHours(0,0,0,0);
+  return CORP_PROMOS.filter(p=>{
+    const to=new Date(p.to+'T23:59:59').getTime();
+    const from=new Date(p.from+'T00:00:00').getTime();
+    return t<=to&&t>=from-0; // 시작 전이면 아직 등록 불가 → 제외
+  });
+}
+function _promoDaysLeft(p,now){
+  return Math.ceil((new Date(p.to+'T23:59:59').getTime()-(now||new Date()).getTime())/86400000);
+}
+function _chainOf(name){
+  const s=String(name||'').toLowerCase();
+  for(const [chain,kws] of Object.entries(CHAIN_BRANDS)){
+    if(kws.some(k=>s.includes(k))) return chain;
+  }
+  return null;
+}
+// 이번 숙박에 바로 붙는 혜택의 금전 환산 (도시 식비 데이터를 조식 단가로 사용)
+function _promoNightValue(p,dObj,ppl,rate){
+  const foodMid=(dObj&&dObj.costs&&dObj.costs.food&&dObj.costs.food[1])||60000;
+  const bfast=Math.round(foodMid/3/1000)*1000; // 1끼 환산
+  // 조식·라운지는 대부분 프로그램이 "등록 성인 2인"까지만 커버 — 인원수만큼 곱하면 과대평가된다
+  const n=Math.min(2,Math.max(1,ppl||2));
+  let v=0; const parts=[];
+  if(p.perk.breakfast||p.perk.lounge){const x=bfast*n;v+=x;parts.push(`조식 ${x.toLocaleString('ko-KR')}원(${n}인 기준)`);}
+  if(p.perk.lounge){const x=Math.round(bfast*0.6)*n;v+=x;parts.push(`라운지 이브닝 ${x.toLocaleString('ko-KR')}원`);}
+  if(p.perk.upgrade){v+=30000;parts.push('룸 업그레이드 30,000원');}
+  if(p.perk.lateCheckout){v+=15000;parts.push('레이트 체크아웃 15,000원');}
+  if(p.bonusPctOfSpend&&rate>0){
+    const x=Math.round(rate*p.bonusPctOfSpend/100);
+    v+=x;parts.push(`보너스 포인트 ~${x.toLocaleString('ko-KR')}원 (요금의 ${p.bonusPctOfSpend}%)`);
+  }
+  return {value:v,parts};
+}
+
 // ── [교훈] 같은 브랜드·다른 지점 혼동 경고 ──
 // "Ramada ○○" 같은 접두어만 같고 지점이 다른 후보가 섞이면 엉뚱한 지점을 예약하기 쉽다.
 // 이름 목록에서 첫 토큰(브랜드)이 겹치는 그룹을 찾아 반환.
@@ -3474,6 +3603,95 @@ function _renderAccomCompareCard(dObj,style){
       <div style="margin-top:9px;"><button type="button" class="ac-btn" onclick="runAcCompare(this)">📏 실측 비교 실행</button></div>
       <div style="font-size:10.5px;color:var(--sub);margin-top:6px;line-height:1.5;">API 호출이 발생하므로 버튼을 눌렀을 때만 실측해요. <b>*</b> 표시는 대중교통 경로가 없어 차량으로 대체된 값이에요.</div>
       ${nightHtml}
+    </div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════
+// 🎫 회사 제휴 프로모션 반영 숙소 추천
+// 판단 순서: ⓐ 지리적 게이트(동선 도보권에 실재하는가) → ⓑ 예정 박수 →
+//            ⓒ 즉시혜택 금전환산 / 문턱 달성 여부 → ⓓ 올해 누적 → ⓔ 실질가 정렬
+// ══════════════════════════════════════════════
+function _renderCorpPromoCard(dObj,style,defaultNights){
+  const now=new Date();
+  const active=_activePromos(now);
+  const expired=CORP_PROMOS.filter(p=>!active.includes(p));
+  const codes=_corpCodes();
+
+  // 데이터 갱신 규칙 #4 — 만료 임박·전량 만료 시 복지포털 재확인 안내
+  let renewal='';
+  if(!active.length){
+    renewal=`<div class="ac-warn">🔄<div><b>등록해 둔 제휴 프로모션이 모두 종료됐어요.</b> 복지포털에서 올해 프로모션을 다시 확인하고 <code>CORP_PROMOS</code>를 갱신하세요. (수록 기준: ${CORP_PROMO_ASOF})</div></div>`;
+  } else {
+    const soon=active.filter(p=>_promoDaysLeft(p,now)<=60)
+      .sort((a,b)=>_promoDaysLeft(a,now)-_promoDaysLeft(b,now));
+    if(soon.length) renewal=`<div class="ac-warn">⏳<div>${soon.map(p=>
+      `<b>${escHtml(p.chain)}</b> 등록기한 <b>D-${_promoDaysLeft(p,now)}</b> (${p.to})`).join(' · ')}
+      — 이 여행에 쓸 거면 먼저 등록부터 하세요.</div></div>`;
+  }
+
+  const chip=p=>{
+    const dl=_promoDaysLeft(p,now);
+    const dead=dl<0;
+    const typeLbl=p.type==='trial'?'체험형':p.type==='achieve'?'달성형':'포인트배수';
+    return `<div style="border:1px solid var(--bdr);border-radius:10px;padding:8px 10px;${dead?'opacity:.45;':''}">
+      <div style="display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;">
+        <b style="font-size:12px;color:var(--txt);">${escHtml(p.chain)}</b>
+        <span style="font-size:10px;font-weight:700;color:var(--pri);background:rgba(232,88,10,.1);border-radius:5px;padding:1px 6px;">${typeLbl}</span>
+        <span style="font-size:10px;color:var(--sub);">${dead?'만료됨':`~${p.to} (D-${dl})`}</span>
+      </div>
+      <div style="font-size:11px;color:var(--sub);line-height:1.5;margin-top:3px;">${escHtml(p.title)}</div>
+      <div style="font-size:10.5px;color:var(--sub);line-height:1.5;margin-top:2px;">${
+        p.tiers.length?p.tiers.map(t=>`${t.nights}박 → ${escHtml(t.label)}`).join(' · '):'문턱 없음'}</div>
+    </div>`;
+  };
+
+  const needCode=active.filter(p=>p.needsCode);
+  const codeBox=needCode.map(p=>{
+    const c=codes[p.id]||{};
+    const filled=c.company&&c.access;
+    return `<div class="ac-warn ${filled?'ok':''}" data-code-for="${escHtml(p.id)}">${filled?'🔑':'⚠️'}<div>
+      <b>${escHtml(p.chain)}</b>는 회사ID·액세스코드를 넣은 <b>전용 요금</b>으로 예약해야 적용돼요.
+      ${filled?'이 기기에 저장돼 있어요.':'코드는 대외비라 앱에 넣어두지 않았어요 — 이 기기에만 저장됩니다.'}
+      <div class="ac-slot-row" style="margin-top:6px;">
+        <input type="text" class="corp-company" placeholder="회사ID" value="${escHtml(c.company||'')}" style="max-width:130px;">
+        <input type="text" class="corp-access" placeholder="액세스코드" value="${escHtml(c.access||'')}" style="max-width:150px;">
+        <button type="button" class="ac-btn ghost" onclick="saveCorpCode(this,'${escHtml(p.id)}')">저장</button>
+        ${filled?`<button type="button" class="ac-btn ghost" onclick="copyCorpCode(this)">📋 복사</button>`:''}
+      </div>
+      <div style="font-size:10.5px;margin-top:4px;">${escHtml(p.eligible)}</div>
+    </div></div>`;
+  }).join('');
+
+  const _geo=(typeof GEO!=='undefined')?(GEO[dObj.kr]||null):null;
+  const spots=_primarySpots(dObj);
+  const anchorName=spots[0]?spots[0].n:'';
+  const anchorGeo=(typeof SPOT_GEO!=='undefined'&&anchorName&&SPOT_GEO[anchorName])?SPOT_GEO[anchorName]:_geo;
+  if(!anchorGeo) return ''; // 좌표가 없으면 지리적 게이트를 걸 수 없음
+
+  return `<div style="background:var(--card);border:1.5px solid var(--bdr);border-radius:14px;padding:14px 16px;margin-top:12px;" role="region" aria-label="회사 제휴 프로모션 반영 숙소">
+    <div style="font-size:13px;font-weight:700;color:var(--pri);margin-bottom:4px;">🎫 회사 제휴 프로모션 반영 숙소 <span style="font-weight:400;color:var(--sub);font-size:11px;">— 등록해 둔 5종 기준</span></div>
+    <div style="font-size:11.5px;color:var(--sub);line-height:1.55;margin-bottom:8px;">
+      제휴 체인이 <b>이 여행 동선에 실재하는지부터</b> 확인한 뒤(도보 20분 이내), 이번 숙박에 바로 붙는 혜택과 등급 문턱 달성 가능성을 따져 <b>실질가</b>로 비교해요.
+    </div>
+    ${renewal}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;margin:8px 0;">
+      ${CORP_PROMOS.map(chip).join('')}
+    </div>
+    ${expired.length?`<div style="font-size:10.5px;color:var(--sub);margin-bottom:6px;">※ 만료된 ${expired.length}건은 계산에서 자동 제외됩니다.</div>`:''}
+    ${codeBox}
+    <div class="corp-box" data-city="${escHtml(dObj.kr)}" data-lat="${anchorGeo[0]}" data-lng="${anchorGeo[1]}"
+         data-anchor="${escHtml(anchorName||dObj.kr)}" data-ppl="${ST.ppl||2}"
+         data-food="${(dObj.costs&&dObj.costs.food&&dObj.costs.food[1])||60000}">
+      <div class="ac-timerow" style="margin-top:8px;">
+        <div class="ac-timefield" style="max-width:120px;">
+          <label>이번 여행 예정 박수</label>
+          <input type="number" class="corp-nights" min="1" max="60" value="${Math.max(1,defaultNights||1)}" oninput="evalCorpPromos(this)">
+        </div>
+        <button type="button" class="ac-btn" onclick="findCorpChains(this)">🔎 이 동선에서 제휴 체인 찾기</button>
+      </div>
+      <div style="font-size:10.5px;color:var(--sub);margin-top:5px;">기준점: <b>${escHtml(anchorName||dObj.kr)}</b> — 첫 일정지에서 도보 20분 이내에 실재하는 지점만 후보로 삼아요.</div>
+      <div class="corp-result"></div>
     </div>
   </div>`;
 }
@@ -4032,6 +4250,15 @@ function _runGenerate(){
 
     // ── [교훈] 숙소 후보 실측 이동시간 비교 (Routes API) + 심야 도착 판단 ──
     if(_firstDest) html+=_renderAccomCompareCard(_firstDest,style);
+
+    // ── 🎫 회사 제휴 프로모션 반영 숙소 (개인용 실데이터) ──
+    if(_firstDest){
+      const _hasCd=Object.keys(ST.customDays).length>0&&destKeys.every(k=>ST.customDays[k]>0);
+      const _firstCityDays=isMulti
+        ? (_hasCd?(ST.customDays[destKeys[0]]||1):Math.ceil(days/destKeys.length))
+        : days;
+      html+=_renderCorpPromoCard(_firstDest,style,Math.max(1,isMulti?_firstCityDays:_firstCityDays-1));
+    }
 
     // ── [교훈] 체크인·체크아웃 충돌 점검 — 일정 렌더 후 _renderCheckinCard()가 채운다 ──
     html+='<div id="ci-conflict-card"></div>';
@@ -4927,7 +5154,12 @@ function _fmtSecs(secs){
 // 숙소 비교처럼 정확도가 중요한 곳은 Places로 먼저 placeId를 확정한 뒤 호출한다.
 function _routeWaypoint(v){
   const s=String(v||'');
-  return s.startsWith('place:')?{placeId:s.slice(6)}:{address:s};
+  if(s.startsWith('place:')) return {placeId:s.slice(6)};
+  if(s.startsWith('geo:')){
+    const [lat,lng]=s.slice(4).split(',').map(Number);
+    return {location:{latLng:{latitude:lat,longitude:lng}}};
+  }
+  return {address:s};
 }
 
 // ══════════════════════════════════════════════
@@ -5338,6 +5570,242 @@ async function runNightArrival(btn){
   }catch(e){
     out.innerHTML='<div class="ac-warn">⚠️<div>실측에 실패했어요. 잠시 후 다시 시도해주세요.</div></div>';
   }finally{ btn.disabled=false; }
+}
+
+// ══════════════════════════════════════════════
+// 🎫 회사 제휴 프로모션 — 런타임
+// ══════════════════════════════════════════════
+function saveCorpCode(btn,promoId){
+  const box=btn.closest('[data-code-for]'); if(!box) return;
+  const company=(box.querySelector('.corp-company')||{}).value||'';
+  const access=(box.querySelector('.corp-access')||{}).value||'';
+  const all=_corpCodes();
+  if(!company.trim()&&!access.trim()){delete all[promoId];}
+  else all[promoId]={company:company.trim(),access:access.trim()};
+  showToast(_corpSaveCodes(all)?'🔑 이 기기에 저장했어요':'⚠️ 저장 실패 — 저장 공간을 확인해주세요');
+}
+function copyCorpCode(btn){
+  const box=btn.closest('[data-code-for]'); if(!box) return;
+  const c=(box.querySelector('.corp-company')||{}).value||'';
+  const a=(box.querySelector('.corp-access')||{}).value||'';
+  const txt=`회사ID: ${c} / 액세스코드: ${a}`;
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(()=>showToast('📋 복사했어요'),()=>showToast('복사 실패'));
+  } else showToast('복사를 지원하지 않는 브라우저예요');
+}
+
+// ⓐ 지리적 게이트 — 제휴 체인이 이 동선에 실재하는지부터 확인한다.
+// (하얏트가 이스탄불 술탄아흐메트 도보권에 지점이 없어 조건이 무의미했던 사례)
+async function findCorpChains(btn){
+  const box=btn.closest('.corp-box'); if(!box) return;
+  if(box.dataset.running==='1') return;
+  const res=box.querySelector('.corp-result'); if(!res) return;
+  const active=_activePromos(new Date());
+  if(!active.length){res.innerHTML='<div class="ac-warn">🔄<div>활성 프로모션이 없어 검색할 체인이 없어요.</div></div>';return;}
+  const lat=parseFloat(box.dataset.lat), lng=parseFloat(box.dataset.lng);
+  if(!isFinite(lat)||!isFinite(lng)){res.innerHTML='<div class="ac-warn">⚠️<div>기준점 좌표가 없어 검색할 수 없어요.</div></div>';return;}
+  const center=[lat,lng], anchorQ=`geo:${lat},${lng}`;
+  box.dataset.running='1'; btn.disabled=true;
+  const label=btn.textContent;
+  const delay=()=>new Promise(r=>setTimeout(r,180));
+  res.innerHTML='<div class="ac-warn">⏳<div>동선 주변에서 제휴 체인 지점을 찾는 중…</div></div>';
+  try{
+    // 1) 체인별 후보 수집 → 직선거리 1.5km 이내로 1차 선별 (Routes 호출 수 절감)
+    const found=[];
+    for(const p of active){
+      btn.textContent=`⏳ ${p.chain} 검색 중…`;
+      const places=await _searchPlaces(p.q,center,6);
+      places.forEach(pl=>{
+        if(_chainOf(pl.name)!==p.id&&_chainOf(pl.addr)!==p.id) return; // 브랜드 오검출 제거
+        if(pl.lat==null) return;
+        const km=_haversineKm(center,[pl.lat,pl.lng]);
+        if(km>1.5) return;
+        found.push({promo:p,place:pl,km});
+      });
+      await delay();
+    }
+    // 체인별 가까운 순 3곳까지만 실측
+    const byChain={};
+    found.sort((a,b)=>a.km-b.km).forEach(f=>{
+      (byChain[f.promo.id]=byChain[f.promo.id]||[]).push(f);
+    });
+    const shortlist=Object.values(byChain).flatMap(a=>a.slice(0,3));
+    // 2) 도보 실측 → 20분 초과 제외
+    const kept=[];
+    let i=0;
+    for(const f of shortlist){
+      btn.textContent=`⏳ 도보 실측 ${++i}/${shortlist.length}`;
+      const r=await _gmapsRouteSecs('place:'+f.place.id,anchorQ,'walking');
+      if(r&&r.secs<=20*60) kept.push({...f,secs:r.secs});
+      await delay();
+    }
+    box.dataset.found=JSON.stringify(kept.map(k=>({
+      id:k.promo.id,name:k.place.name,addr:k.place.addr,secs:k.secs,placeId:k.place.id
+    })));
+    _renderCorpResults(box,active,kept);
+  }catch(e){
+    console.warn('[TripMind] 제휴 체인 검색 실패:',e);
+    res.innerHTML='<div class="ac-warn">⚠️<div>검색에 실패했어요. 잠시 후 다시 시도해주세요.</div></div>';
+  }finally{
+    btn.textContent=label; btn.disabled=false; box.dataset.running='0';
+  }
+}
+// Places 텍스트 검색 (복수 결과) — 숙소 탐색용
+async function _searchPlaces(query,center,limit){
+  if(!GMAPS_KEY) return [];
+  const ck=`tm_pls:${center?center.map(n=>n.toFixed(2)).join(','):''}:${limit}:${query}`;
+  try{const hit=sessionStorage.getItem(ck); if(hit!==null) return JSON.parse(hit);}catch(_){}
+  let out=[];
+  try{
+    const body={textQuery:query,languageCode:'ko',maxResultCount:Math.min(20,limit||5),includedType:'lodging'};
+    if(center) body.locationBias={circle:{center:{latitude:center[0],longitude:center[1]},radius:3000}};
+    const r=await fetch('https://places.googleapis.com/v1/places:searchText',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Goog-Api-Key':GMAPS_KEY,
+        'X-Goog-FieldMask':'places.id,places.displayName,places.formattedAddress,places.location'},
+      body:JSON.stringify(body)
+    });
+    const d=await r.json();
+    out=(d.places||[]).map(p=>({id:p.id,name:(p.displayName&&p.displayName.text)||'',
+      addr:p.formattedAddress||'',lat:p.location&&p.location.latitude,lng:p.location&&p.location.longitude}));
+  }catch(e){}
+  try{sessionStorage.setItem(ck,JSON.stringify(out));}catch(_){}
+  return out;
+}
+function _renderCorpResults(box,active,kept){
+  const res=box.querySelector('.corp-result'); if(!res) return;
+  const byChain={};
+  kept.forEach(k=>{(byChain[k.promo.id]=byChain[k.promo.id]||[]).push(k);});
+  const blocks=active.map(p=>{
+    const hits=byChain[p.id]||[];
+    if(!hits.length){
+      // ⓐ 지리적 게이트 탈락 — 조건이 아무리 좋아도 제외
+      return `<div class="ac-warn" style="opacity:.7;">🚫<div><b>${escHtml(p.chain)}</b> — 이 동선 도보 20분 이내에 지점이 없어요. <b>조건과 무관하게 제외</b>합니다.</div></div>`;
+    }
+    const rows=hits.map((h,i)=>`<div class="ac-slot-row" data-hotel="${escHtml(h.place.id)}">
+      <span style="flex:1;min-width:130px;font-size:11.5px;">
+        <b>${escHtml(h.place.name)}</b>
+        <span class="ac-cmp-area" style="display:block;">🚶 ${_fmtSecs(h.secs)} · ${escHtml(h.place.addr)}</span>
+      </span>
+      <input type="number" class="corp-rate" min="0" step="10000" placeholder="1박 요금(원)" style="width:120px;" oninput="evalCorpPromos(this)">
+    </div>`).join('');
+    return `<div class="corp-chain" data-promo="${escHtml(p.id)}" style="border:1px solid var(--bdr);border-radius:11px;padding:10px 12px;margin-top:8px;">
+      <div style="display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;margin-bottom:5px;">
+        <b style="font-size:12.5px;color:var(--txt);">${escHtml(p.chain)}</b>
+        <span style="font-size:10.5px;color:var(--sub);">${escHtml(p.title)}</span>
+      </div>
+      <div style="font-size:10.5px;color:var(--sub);line-height:1.5;margin-bottom:6px;">${escHtml(p.perkNote)}</div>
+      ${rows}
+      <div class="ac-slot-row" style="margin-top:4px;">
+        <label style="font-size:10.5px;color:var(--sub);">올해 이 체인으로 <b>추가 예정</b> 박수</label>
+        <input type="number" class="corp-extra" min="0" max="200" value="0" style="width:70px;" oninput="evalCorpPromos(this)">
+        <span style="font-size:10.5px;color:var(--sub);">박</span>
+      </div>
+      <div class="corp-chain-out"></div>
+      ${p.eligibleWarn?`<div class="ac-warn">⚠️<div>${escHtml(p.eligibleWarn)}</div></div>`:''}
+    </div>`;
+  }).join('');
+  res.innerHTML=blocks+'<div class="corp-summary"></div>';
+  evalCorpPromos(res);
+}
+// ⓑ~ⓔ 예정 박수 → 즉시혜택·문턱 → 실질가 정렬
+function evalCorpPromos(el){
+  const box=el.closest?el.closest('.corp-box'):null; if(!box) return;
+  const nights=Math.max(1,parseInt((box.querySelector('.corp-nights')||{}).value||'1',10)||1);
+  const ppl=parseInt(box.dataset.ppl||'2',10)||2;
+  const dObjLike={costs:{food:[0,parseInt(box.dataset.food||'60000',10)||60000,0]}};
+  const cands=[];
+  box.querySelectorAll('.corp-chain').forEach(cb=>{
+    const p=CORP_PROMOS.find(x=>x.id===cb.dataset.promo); if(!p) return;
+    const extra=Math.max(0,parseInt((cb.querySelector('.corp-extra')||{}).value||'0',10)||0);
+    const out=cb.querySelector('.corp-chain-out'); if(!out) return;
+    const total=nights+extra;
+    const lines=[];
+
+    // ⓒ 체험형: 즉시혜택은 문턱과 무관하게 실현된 가치 — 0으로 취급하지 않는다
+    const rates=[...cb.querySelectorAll('.corp-rate')].map(i=>parseFloat(i.value)||0);
+    const refRate=rates.find(r=>r>0)||0;
+    const nv=_promoNightValue(p,dObjLike,ppl,refRate);
+    if(p.type==='trial'&&nv.value>0){
+      lines.push(`💠 <b>이번 숙박 즉시 혜택 ~${(nv.value*nights).toLocaleString('ko-KR')}원</b> (1박 ${nv.value.toLocaleString('ko-KR')}원 × ${nights}박)<br><span style="font-size:10.5px;">${nv.parts.join(' · ')}</span>`);
+    } else if(p.type==='multiplier'&&nv.value>0){
+      lines.push(`💠 <b>포인트 추가 적립 ~${(nv.value*nights).toLocaleString('ko-KR')}원 상당</b> (${escHtml(p.bonusNote||'')})`);
+    } else if(p.type==='achieve'){
+      lines.push(`💠 이번 숙박 즉시 혜택 <b>없음</b> — 등급은 체크아웃 후 부여되어 <b>다음 숙박부터</b> 적용돼요.`);
+    }
+
+    // ⓓ 문턱: 이번 여행 + 올해 추가 예정 누적
+    if(p.tiers.length){
+      const hit=[...p.tiers].reverse().find(t=>total>=t.nights);
+      const next=p.tiers.find(t=>total<t.nights);
+      if(hit) lines.push(`🎯 <b>${total}박 → ${escHtml(hit.label)} 달성</b>${extra?` (이번 ${nights}박 + 추가 예정 ${extra}박)`:''}`);
+      if(next){
+        const pct=Math.min(100,Math.round(total/next.nights*100));
+        lines.push(`📊 ${escHtml(next.label)}까지 <b>${total}/${next.nights}박</b> (${pct}%) — ${next.nights-total}박 부족
+          <div style="height:5px;background:var(--bdr);border-radius:3px;margin-top:4px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:var(--pri);"></div></div>`);
+        if(!hit&&!extra) lines.push(`<span style="font-size:10.5px;">이 여행만으로는 문턱을 못 채워요. 올해 이 체인으로 다른 숙박 계획이 있으면 위에 박수를 넣어보세요 — <b>없다면 등급 연장 가치는 0</b>으로 봅니다.</span>`);
+      }
+    }
+    if(p.eligible) lines.push(`<span style="font-size:10.5px;">📌 ${escHtml(p.eligible)}</span>`);
+    out.innerHTML=`<div class="ac-warn ${p.type==='achieve'&&!p.tiers.some(t=>total>=t.nights)?'':'ok'}">${p.type==='achieve'?'📈':'💠'}<div>${lines.join('<br>')}</div></div>`;
+
+    // ⓔ 실질가 후보 수집
+    cb.querySelectorAll('.ac-slot-row[data-hotel]').forEach(row=>{
+      const rate=parseFloat((row.querySelector('.corp-rate')||{}).value)||0;
+      if(rate<=0) return;
+      const v=_promoNightValue(p,dObjLike,ppl,rate);
+      const nameEl=row.querySelector('b');
+      const walkEl=row.querySelector('.ac-cmp-area');
+      const secs=(()=>{const m=/🚶\s*([^·]+)/.exec(walkEl?walkEl.textContent:'');return m?m[1].trim():'';})();
+      cands.push({chain:p.chain,promo:p,name:nameEl?nameEl.textContent:'',walk:secs,
+        rate,perNight:v.value,net:rate-v.value,
+        walkSecs:(()=>{const t=walkEl?walkEl.textContent:'';const h=/(\d+)시간/.exec(t),mm=/(\d+)분/.exec(t);
+          return (h?+h[1]*3600:0)+(mm?+mm[1]*60:0);})()});
+    });
+  });
+
+  const sum=box.querySelector('.corp-summary'); if(!sum) return;
+  if(cands.length<1){
+    sum.innerHTML=`<div class="ac-warn">💰<div>후보 호텔의 <b>1박 요금</b>을 넣으면 (요금 − 프로모션 가치) 기준 <b>실질가</b>로 정렬해 드려요. 요금은 각 체인 공식 사이트에서 확인한 값을 넣으세요.</div></div>`;
+    return;
+  }
+  cands.sort((a,b)=>a.net-b.net);
+  const rows=cands.map((c,i)=>`<tr${i===0?' class="ac-cmp-best"':''}>
+    <td class="ac-cmp-name">${escHtml(c.name)}<span class="ac-cmp-area" style="display:block;">${escHtml(c.chain)} · 🚶 ${escHtml(c.walk)}</span></td>
+    <td>${c.rate.toLocaleString('ko-KR')}원</td>
+    <td>−${c.perNight.toLocaleString('ko-KR')}원</td>
+    <td class="ac-cmp-total">${c.net.toLocaleString('ko-KR')}원</td>
+  </tr>`).join('');
+
+  // 3. 동가격대 트레이드오프 — 알고리즘이 승자를 임의로 정하지 않는다
+  let tradeoff='';
+  if(cands.length>=2){
+    const a=cands[0],b=cands[1];
+    const close=Math.abs(a.net-b.net)<=Math.max(20000,a.net*0.2);
+    const walkGap=b.walkSecs-a.walkSecs;
+    if(close&&Math.abs(walkGap)>=5*60){
+      const nearer=walkGap>0?a:b, better=walkGap>0?b:a;
+      tradeoff=`<div class="ac-warn">⚖️<div><b>실질가가 비슷해요 (차이 ${Math.abs(a.net-b.net).toLocaleString('ko-KR')}원) — 승자를 정하지 않을게요.</b>
+        <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:130px;background:rgba(66,133,244,.07);border-radius:9px;padding:8px 10px;">
+            <div style="font-size:11px;font-weight:700;color:var(--txt);">🚶 위치 우위</div>
+            <div style="font-size:10.5px;margin-top:3px;">${escHtml(nearer.name)}<br>도보 ${escHtml(nearer.walk)} · 실질가 ${nearer.net.toLocaleString('ko-KR')}원</div>
+          </div>
+          <div style="flex:1;min-width:130px;background:rgba(232,88,10,.07);border-radius:9px;padding:8px 10px;">
+            <div style="font-size:11px;font-weight:700;color:var(--txt);">🎫 프로모션 우위</div>
+            <div style="font-size:10.5px;margin-top:3px;">${escHtml(better.name)}<br>혜택 ${better.perNight.toLocaleString('ko-KR')}원/박 · 실질가 ${better.net.toLocaleString('ko-KR')}원</div>
+          </div>
+        </div>
+        <div style="margin-top:6px;font-size:10.5px;">매일 걷는 편의를 살지, 로열티 혜택을 살지는 취향 문제예요 — 등급을 실제로 쓸 계획이 없다면 위치를 고르세요.</div>
+      </div></div>`;
+    }
+  }
+  sum.innerHTML=`<div style="font-size:12px;font-weight:700;color:var(--txt);margin:10px 0 5px;">💰 실질가 비교 (1박 기준)</div>
+    <div class="ac-cmp-scroll"><table class="ac-cmp-tbl">
+      <thead><tr><th style="text-align:left;">후보</th><th>요금</th><th>프로모션 가치</th><th>실질가</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>${tradeoff}
+    <div style="font-size:10.5px;color:var(--sub);margin-top:6px;line-height:1.5;">프로모션 가치는 조식·라운지·업그레이드·레이트체크아웃·보너스포인트를 <b>추정 환산</b>한 값이에요(조식 단가는 이 도시 식비 데이터 기준, <b>등록 성인 2인까지</b>만 계산 — 대부분 프로그램 기준). 실제 체감은 라운지를 쓰는지·업그레이드가 나는지에 따라 달라집니다.</div>`;
 }
 
 // ══════════════════════════════════════════════

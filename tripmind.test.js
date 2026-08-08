@@ -536,7 +536,11 @@ test('[ACMP-03] _gmapsDuration()은 _gmapsRouteSecs 래퍼로 유지 (기존 호
   assertContains(html, 'const r=await _gmapsRouteSecs(origin,destination,mode);', '_gmapsDuration 래퍼');
 });
 test('[ACMP-04] Routes 경유지가 placeId를 지원 (이름 지오코딩 오인식 방지)', () => {
-  assertContains(html, "return s.startsWith('place:')?{placeId:s.slice(6)}:{address:s};", '_routeWaypoint placeId');
+  assertContains(html, "if(s.startsWith('place:')) return {placeId:s.slice(6)};", '_routeWaypoint placeId');
+});
+test('[ACMP-04b] Routes 경유지가 좌표(geo:)도 지원', () => {
+  assertContains(html, "if(s.startsWith('geo:')){", '_routeWaypoint geo');
+  assertContains(html, 'return {location:{latLng:{latitude:lat,longitude:lng}}};', 'latLng 변환');
 });
 test('[ACMP-05] Places 검색에 도시 locationBias 적용', () => {
   assertContains(html, 'body.locationBias={circle:{center:{latitude:center[0],longitude:center[1]},radius:30000}}', 'locationBias');
@@ -633,6 +637,73 @@ test('[CHK-01] 심야 이동 체크리스트 항목 추가됨', () => {
 });
 test('[JOSA-01] 한글 조사 자동 선택 함수 존재', () => {
   assertContains(html, "function _josa(word,pair)", '_josa()');
+});
+
+/* ══════════════════════════════════════════════
+   21. 회사 제휴 프로모션 반영 숙소
+   ══════════════════════════════════════════════ */
+test('[CORP-01] 프로모션 실데이터 5종 정의됨', () => {
+  assertContains(html, 'const CORP_PROMOS=[', 'CORP_PROMOS');
+  ['marriott','ihg','accor','hilton','hyatt'].forEach(id =>
+    assertContains(html, `id:'${id}'`, `${id} 프로모션`));
+});
+test('[CORP-02] 프로모션 구조 3종(체험/달성/배수) 구분됨', () => {
+  assertContains(html, "type:'trial'", '체험형');
+  assertContains(html, "type:'achieve'", '달성형');
+  assertContains(html, "type:'multiplier'", '포인트배수형');
+});
+test('[CORP-03] 종료일 지난 프로모션 자동 비활성', () => {
+  assertContains(html, 'function _activePromos(now)', '_activePromos()');
+  assertContains(html, "const to=new Date(p.to+'T23:59:59').getTime();", '종료일 비교');
+});
+test('[CORP-04] 갱신 확인 안내 존재', () => {
+  assertContains(html, '복지포털에서 올해 프로모션을 다시 확인', '갱신 안내');
+});
+test('[CORP-05] 아코르 코드는 소스에 없고 localStorage 사용 (대외비 보호)', () => {
+  assertNotContains(html, 'SCP148480', '회사ID 하드코딩 금지');
+  assertNotContains(html, 'HY693GB774', '액세스코드 하드코딩 금지');
+  assertContains(html, "const _CORP_CODE_KEY='tm_corp_codes_v1'", '코드 저장 키');
+});
+test('[CORP-06] 브랜드 → 체인 판별 맵 존재', () => {
+  assertContains(html, 'const CHAIN_BRANDS={', 'CHAIN_BRANDS');
+  assertContains(html, 'function _chainOf(name)', '_chainOf()');
+});
+test('[CORP-07] 지리적 게이트 — 도보 20분 초과 제외', () => {
+  assertContains(html, 'if(r&&r.secs<=20*60) kept.push(', '20분 게이트');
+});
+test('[CORP-08] 직선거리 1.5km 1차 선별 (Routes 호출 절감)', () => {
+  assertContains(html, 'if(km>1.5) return;', '직선거리 선별');
+});
+test('[CORP-09] 지점 없는 체인은 조건 무관 제외 안내', () => {
+  assertContains(html, '조건과 무관하게 제외', '지리 게이트 탈락 문구');
+});
+test('[CORP-10] 체험형 즉시혜택 금전환산 함수 존재', () => {
+  assertContains(html, 'function _promoNightValue(p,dObj,ppl,rate)', '_promoNightValue()');
+});
+test('[CORP-11] 달성형은 즉시혜택 0으로 명시', () => {
+  assertContains(html, '이번 숙박 즉시 혜택 <b>없음</b>', '달성형 즉시혜택 없음');
+});
+test('[CORP-12] 올해 추가 예정 박수로 문턱 누적 계산', () => {
+  assertContains(html, 'const total=nights+extra;', '누적 박수');
+  assertContains(html, '없다면 등급 연장 가치는 0', '미달 시 가치 0');
+});
+test('[CORP-13] 실질가 = 요금 − 프로모션 가치 로 정렬', () => {
+  assertContains(html, 'net:rate-v.value', '실질가 계산');
+  assertContains(html, 'cands.sort((a,b)=>a.net-b.net);', '실질가 정렬');
+});
+test('[CORP-14] 동가격대는 승자를 정하지 않고 두 축 병렬 제시', () => {
+  assertContains(html, '승자를 정하지 않을게요', '트레이드오프 문구');
+  assertContains(html, '🚶 위치 우위', '위치 축');
+  assertContains(html, '🎫 프로모션 우위', '프로모션 축');
+});
+test('[CORP-15] 마리엇 OTA 실적 불인정 경고 존재', () => {
+  assertContains(html, 'OTA·포인트·여행사 선결제는 실적 불인정', '마리엇 예약경로 경고');
+});
+test('[CORP-16] 하얏트 3년 1회 제한 경고 존재', () => {
+  assertContains(html, '3년에 1회만 참여 가능', '하얏트 참여제한');
+});
+test('[CORP-17] IHG 2박 문턱이 가장 낮게 정의됨', () => {
+  assertContains(html, "tiers:[{nights:2,label:'골드 엘리트 (2027년까지)'}", 'IHG 2박 문턱');
 });
 
 /* ══════════════════════════════════════════════
