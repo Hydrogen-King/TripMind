@@ -707,6 +707,70 @@ test('[CORP-17] IHG 2박 문턱이 가장 낮게 정의됨', () => {
 });
 
 /* ══════════════════════════════════════════════
+   22. 교통수단 (도시 내 전략 · 도시 간 이동 · 구간 다중수단)
+   ══════════════════════════════════════════════ */
+test('[TRN-01] 도시별 교통 DB 존재', () => {
+  assertContains(html, 'const CITY_TRANSIT={', 'CITY_TRANSIT');
+  ['로마','베네치아','도쿄','이스탄불','런던'].forEach(c =>
+    assertContains(html, `'${c}':{modes:`, `${c} 교통정보`));
+});
+test('[TRN-02] 국가 폴백 + 도시명 별칭 해소', () => {
+  assertContains(html, 'const COUNTRY_TRANSIT={', 'COUNTRY_TRANSIT');
+  assertContains(html, "const _TRANSIT_ALIAS={'LA':'로스앤젤레스'", '별칭 맵');
+});
+test('[TRN-03] 렌트 적합도 3단계 구분', () => {
+  assertContains(html, 'const _RENTAL_UI={', '_RENTAL_UI');
+  ['no','suburb','yes'].forEach(k => assertContains(html, `${k}:{icon:`, `rental ${k}`));
+});
+test('[TRN-04] 렌트 필수 도시(LA·제주) 명시', () => {
+  assertContains(html, 'LA는 렌트가 사실상 필수', 'LA 렌트');
+  assertContains(html, '제주는 렌트가 정답', '제주 렌트');
+});
+test('[TRN-05] 지역 특화 수단 반영 (바포레토·페리·컨택리스)', () => {
+  assertContains(html, '바포레토', '베네치아 바포레토');
+  assertContains(html, '이스탄불카트', '이스탄불카트');
+  assertContains(html, '오이스터카드 살 필요 없어요', '런던 컨택리스');
+});
+test('[TRN-06] 도시 내 교통 카드 렌더 함수 존재', () => {
+  assertContains(html, 'function _renderCityTransitCard(destKeys)', '_renderCityTransitCard()');
+});
+test('[ICT-01] 도시 간 이동 카드 렌더 함수 존재', () => {
+  assertContains(html, 'function _renderIntercityCard(destKeys)', '_renderIntercityCard()');
+});
+test('[ICT-02] 거리 밴드별 수단 추천 로직', () => {
+  assertContains(html, 'function _intercityAdvice(km,sameCountry)', '_intercityAdvice()');
+  assertContains(html, 'if(km<300) return', '300km 밴드');
+  assertContains(html, 'if(km<700) return', '700km 밴드');
+});
+test('[ICT-03] 자차 실측 함수 존재', () => {
+  assertContains(html, 'async function measureIntercity(btn)', 'measureIntercity()');
+});
+test('[ICT-04] 국가별 택시 km당 요금 테이블', () => {
+  assertContains(html, 'const TAXI_KM_KRW=', 'TAXI_KM_KRW');
+  assertContains(html, 'function _taxiKmKrw(dObj)', '_taxiKmKrw()');
+});
+test('[ICT-05] 렌트 손익분기 계산 — 인원수 곱셈 반영', () => {
+  assertContains(html, 'function calcRentBreakeven(el)', 'calcRentBreakeven()');
+  assertContains(html, 'const trainTotal=train1*ppl;', '기차는 인원수 곱');
+});
+test('[ICT-06] Rome2Rio 범용 비교 링크', () => {
+  assertContains(html, 'https://www.rome2rio.com/map/', 'Rome2Rio 링크');
+});
+test('[SEG-01] 구간 이동은 도보를 먼저 측정', () => {
+  assertContains(html, "const walk=await _gmapsRouteSecs(from,to,'walking');", '도보 우선 측정');
+});
+test('[SEG-02] 도보 20분 이하면 도보만 표기', () => {
+  assertContains(html, 'if(walk&&walk.secs<=20*60){', '20분 임계');
+});
+test('[SEG-03] 20~90분은 도보·대중교통 병기', () => {
+  assertContains(html, 'if(walk&&alt&&walk.secs<=90*60){', '90분 임계');
+  assertContains(html, "timeEl.innerHTML=`🚶 ${_fmtSecs(walk.secs)} · ${alt.drive?'🚗':'🚇'} ${_fmtSecs(alt.secs)}`;", '병기 표기');
+});
+test('[SEG-04] 도보 90분 초과는 도보 숫자를 감춤', () => {
+  assertContains(html, '걸어갈 거리가 아니에요', '도보 불가 안내');
+});
+
+/* ══════════════════════════════════════════════
    결과 출력
    ══════════════════════════════════════════════ */
 console.log('\n====================================');

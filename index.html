@@ -3360,6 +3360,150 @@ const CITY_HUBS={
   '뉴욕':'Grand Central Terminal, New York','시카고':'Chicago Union Station','로스앤젤레스':'Los Angeles Union Station',
   '샌프란시스코':'San Francisco Salesforce Transit Center','시드니':'Sydney Central Station','멜버른':'Southern Cross Station, Melbourne',
 };
+// ══════════════════════════════════════════════
+// 도시별 교통 전략 DB — 그 도시에서만 통하는 수단·패스·렌트 판단
+// rental: 'no'=시내 렌트 비추 / 'suburb'=근교 이동에만 / 'yes'=렌트가 유리
+// 요금은 대략치(2025~26 기준) — 정확한 금액은 현지 확인 필요
+// ══════════════════════════════════════════════
+const CITY_TRANSIT={
+  '로마':{modes:['🚇 지하철 A·B선','🚋 트램','🚌 버스'],card:'Metrebus 1회 €1.50 / 24h €7 / 48h €12.50',
+    pass:{name:'로마패스',note:'48h €36·72h €59 — 명소 1~2곳 무료 입장 + 대중교통 무제한. 명소 안 갈 거면 교통권만 사는 게 쌉니다'},
+    airport:[{n:'레오나르도 익스프레스 (FCO↔테르미니)',t:'32분',c:'€14'},{n:'공항버스',t:'55분',c:'€6~7'},{n:'택시 정액',t:'45분',c:'€55 고정(시내 성벽 안)'}],
+    rental:'no',rentalNote:'ZTL(제한통행구역) 카메라 과태료가 악명 높아요 — 시내는 렌트 금지 수준. 근교는 기차가 편합니다',
+    special:'역사지구는 지하철역이 듬성듬성해서 <b>걷는 게 빠른 구간</b>이 많아요(판테온·나보나·트레비는 도보권). 지하철은 A선(바티칸)·B선(콜로세움) 두 축만 기억하면 됩니다'},
+  '피렌체':{modes:['🚶 도보','🚋 트램 T1·T2','🚌 ATAF 버스'],card:'1회 €1.70(90분)',
+    airport:[{n:'트램 T2 (FLR↔SMN역)',t:'20분',c:'€1.70'}],
+    rental:'suburb',rentalNote:'시내 전역이 ZTL — 토스카나 근교(시에나·산지미냐노) 갈 때만 렌트',
+    special:'<b>구시가는 전부 도보권</b>이라 대중교통이 거의 필요 없어요. 미켈란젤로 광장만 버스(12·13번) 또는 오르막 도보 25분'},
+  '베네치아':{modes:['🚤 바포레토(수상버스)','🚶 도보','🚣 트라게토'],card:'바포레토 1회 €9.50(75분) / 24h €25 / 48h €35 / 72h €45',
+    pass:{name:'베네치아 우니카',note:'교통권+명소 묶음. 2일 이상 머물며 섬(무라노·부라노)까지 가면 다회권이 확실히 이득'},
+    airport:[{n:'알릴라구나 수상버스 (VCE↔산마르코)',t:'70분',c:'€15'},{n:'버스 (VCE↔로마광장)',t:'25분',c:'€10'}],
+    rental:'no',rentalNote:'차가 들어갈 수 없는 도시예요. 로마광장·트론케토 주차장에 세우고 걸어야 합니다',
+    special:'⚠️ <b>바포레토 1회권 €9.50은 비싸서 2~3번만 타도 24h권이 이득</b>이에요. 본섬은 대부분 도보가 빠르고, 무라노·부라노 갈 때 진가를 발휘합니다. 다리 계단이 많아 큰 캐리어는 고생'},
+  '밀라노':{modes:['🚇 지하철 M1~M5','🚋 트램','🚌 버스'],card:'1회 €2.20 / 1일 €7.60',
+    airport:[{n:'말펜사 익스프레스 (MXP↔첸트랄레)',t:'50분',c:'€13'},{n:'공항버스',t:'50분',c:'€10'}],
+    rental:'no',rentalNote:'Area C 혼잡통행료 + 주차난',special:'지하철망이 이탈리아에서 가장 촘촘해요 — 대중교통만으로 충분합니다'},
+  '나폴리':{modes:['🚇 지하철','🚋 푸니콜라레(케이블카)','🚆 치르쿰베수비아나'],card:'1회 €1.30',
+    rental:'no',rentalNote:'운전 난이도가 이탈리아 최상급 — 절대 비추',
+    special:'폼페이·소렌토는 <b>치르쿰베수비아나</b> 사철로 갑니다(냉방·치안이 열악하니 소지품 주의). 카프리는 항구에서 페리'},
+  '이스탄불':{modes:['🚋 트램 T1','🚇 지하철 M2','⛴️ 페리','🚌 메트로버스'],card:'이스탄불카트(İstanbulkart) — 카드 ₺130 + 충전, 1회 ₺27 내외 · 환승 할인',
+    airport:[{n:'M11 지하철 (IST↔가이레테페)',t:'35분',c:'이스탄불카트'},{n:'하바이스트 공항버스',t:'60~90분',c:'₺180 내외'}],
+    rental:'no',rentalNote:'교통체증·주차난이 극심하고 운전 문화가 거칠어요',
+    special:'⚠️ <b>이스탄불카트는 1장으로 여러 명이 찍을 수 있어요</b>(가족 여행에 유리). 유럽·아시아 사이드 이동은 지하철보다 <b>페리가 싸고 경치도 좋습니다</b>(₺27, 20분). 술탄아흐메트 관광지는 T1 트램 한 줄에 다 붙어 있어요'},
+  '파리':{modes:['🚇 메트로 1~14호선','🚈 RER','🚌 버스'],card:'Navigo Easy 카드 €2 + 1회 €2.50 / 10회권 €17.35',
+    pass:{name:'Paris Visite / Navigo Jour',note:'하루 5회 이상 탈 때만 이득 — 파리는 역 간격이 짧아 걷는 구간이 많습니다'},
+    airport:[{n:'RER B (CDG↔시내)',t:'35분',c:'€11.80'},{n:'로시버스',t:'60분',c:'€16.60'}],
+    rental:'no',rentalNote:'주차·저배출구역(ZFE) 규제. 시내는 메트로가 압도적',
+    special:'메트로 역 간격이 500m 내외라 <b>1~2정거장은 걷는 게 빠릅니다</b>. 몽마르트르 언덕은 푸니쿨라(메트로 티켓 사용)'},
+  '런던':{modes:['🚇 튜브','🚌 더블데커 버스','🚆 오버그라운드'],card:'컨택리스 카드/폰 탭 — 별도 티켓 불필요, 일일 상한(Zone1-2 £8.90) 자동 적용',
+    airport:[{n:'히스로 익스프레스',t:'15분',c:'£25'},{n:'피카딜리 라인',t:'50분',c:'£5.60'}],
+    rental:'no',rentalNote:'혼잡통행료 £15/일 + ULEZ £12.50',
+    special:'⚠️ <b>오이스터카드 살 필요 없어요</b> — 해외 컨택리스 카드를 그대로 탭하면 일일 상한까지 자동 계산됩니다. 버스는 £1.75 균일 + 1시간 내 환승 무료'},
+  '바르셀로나':{modes:['🚇 메트로','🚌 버스','🚋 트램'],card:'T-casual 10회권 €12.55(여러 명이 나눠 쓸 수 있음)',
+    airport:[{n:'Aerobús',t:'35분',c:'€7.25'},{n:'메트로 L9S',t:'32분',c:'€5.75'}],
+    rental:'no',special:'<b>T-casual 10회권은 일행이 돌려 쓸 수 있어요</b> — 4인이면 1장으로 2.5회씩. 고딕지구는 도보가 최선'},
+  '마드리드':{modes:['🚇 메트로','🚌 버스'],card:'Multi 카드 €2.50 + 10회권 €12.20',rental:'suburb',
+    airport:[{n:'메트로 8호선',t:'30분',c:'€5(공항 추가요금 포함)'}],special:'톨레도·세고비아는 기차로 30분대 — 렌트보다 빠릅니다'},
+  '프라하':{modes:['🚋 트램','🚇 지하철','🚌 버스'],card:'30분권 30Kč / 90분권 40Kč / 24h 120Kč',rental:'no',
+    special:'<b>22번 트램</b>이 프라하성~말라스트라나~국립극장을 훑는 관광 노선이에요. 구시가는 도보권'},
+  '빈':{modes:['🚇 U-Bahn','🚋 트램','🚌 버스'],card:'1회 €2.40 / 24h €8 / 48h €14.10',rental:'no',
+    special:'링 트램(1·2·D번)이 구시가를 한 바퀴 돕니다 — 일반 승차권으로 관광 효과'},
+  '암스테르담':{modes:['🚋 트램','🚲 자전거','🚇 메트로'],card:'GVB 1시간 €3.40 / 24h €9',rental:'no',
+    special:'⚠️ <b>자전거가 사실상 주력 교통수단</b>이에요(대여 하루 €10~15). 단 자전거도로 규칙이 엄격하고 트램 레일에 바퀴가 끼기 쉬우니 초보는 도보+트램 권장'},
+  '베를린':{modes:['🚇 U-Bahn','🚆 S-Bahn','🚋 트램','🚌 버스'],card:'AB존 1회 €3.80 / 1일 €10.60',rental:'suburb',
+    special:'U+S반이 통합 요금이라 환승이 자유로워요. 100·200번 버스가 주요 명소를 지나는 관광버스 대용'},
+  '뮌헨':{modes:['🚇 U-Bahn','🚆 S-Bahn','🚋 트램'],card:'1일권 €9.90 / 그룹 1일권 €18.80(최대 5인)',rental:'suburb',
+    special:'⚠️ <b>그룹 1일권(€18.80)이 5인까지 커버</b>돼서 가족 여행엔 압도적으로 쌉니다. 노이슈반슈타인은 기차+버스 조합'},
+  '취리히':{modes:['🚋 트램','🚌 버스','🚆 S-Bahn'],card:'24h €8.80',rental:'suburb',
+    special:'스위스는 <b>스위스 트래블 패스</b>가 전국 기차·버스·유람선까지 커버 — 3일 이상 이동하면 개별 구매보다 유리'},
+  '리스본':{modes:['🚋 트램 28번','🚇 메트로','🚡 아센소르(케이블카)'],card:'Viva Viagem 카드 €0.50 + 1회 €1.80 / 24h €6.80',rental:'no',
+    special:'<b>28번 트램</b>은 관광 명물이자 소매치기 명소예요 — 가방 앞으로. 언덕이 많아 아센소르(엘리베이터/케이블카)를 적극 활용하세요'},
+  '도쿄':{modes:['🚇 지하철','🚆 JR 야마노테선','🚌 버스'],card:'Suica/PASMO IC카드 — 편의점·자판기도 결제 가능',
+    pass:{name:'도쿄 서브웨이 티켓',note:'24h ¥800·48h ¥1200·72h ¥1500 — 지하철 무제한. 단 JR은 미포함이라 야마노테선은 별도'},
+    airport:[{n:'나리타 익스프레스 (NRT)',t:'60분',c:'¥3,070'},{n:'게이세이 스카이라이너',t:'41분',c:'¥2,580'},{n:'하네다 모노레일 (HND)',t:'20분',c:'¥500'}],
+    rental:'no',rentalNote:'주차비가 30분 ¥400~600으로 살인적이고 도로가 좁아요',
+    special:'⚠️ <b>JR과 지하철(도쿄메트로·도에이)은 회사가 달라 환승 시 요금이 따로 붙어요.</b> JR패스는 도쿄 안에서만 다닐 거면 손해 — 지방 이동이 있을 때만 이득'},
+  '오사카':{modes:['🚇 지하철 미도스지선','🚆 JR 순환선','🚋 한신·한큐'],card:'ICOCA IC카드',
+    pass:{name:'오사카 주유패스',note:'1일 ¥3,300 — 40곳 이상 무료 입장 + 지하철 무제한. 명소 3곳만 가도 본전'},
+    airport:[{n:'난카이 라피트 (KIX)',t:'38분',c:'¥1,490'},{n:'JR 하루카 (KIX)',t:'50분',c:'¥2,400'}],
+    rental:'no',special:'<b>주유패스는 이 도시에서 가장 확실한 패스</b>예요 — 우메다 공중정원·오사카성·아쿠아리움이 다 포함'},
+  '교토':{modes:['🚌 시내버스','🚇 지하철','🚆 게이한·한큐'],card:'ICOCA / 버스 1회 ¥230',
+    rental:'no',special:'⚠️ <b>교토는 버스 도시예요</b>(지하철 2개 노선뿐). 단 관광철 버스는 극심하게 밀려서 <b>자전거 대여(하루 ¥1,000)가 의외로 최적해</b>일 때가 많습니다. 아라시야마·후시미이나리는 전철이 빠름'},
+  '서울':{modes:['🚇 지하철 1~9호선','🚌 버스'],card:'T-money / 기후동행카드(월 6.5만원)',rental:'no',
+    airport:[{n:'공항철도 직통 (ICN)',t:'43분',c:'11,000원'},{n:'공항철도 일반',t:'59분',c:'4,750원'},{n:'리무진버스',t:'70분',c:'17,000원'}],
+    special:'지하철 환승이 무료이고 배차가 촘촘해요. 심야엔 N버스'},
+  '부산':{modes:['🚇 지하철 1~4호선','🚌 버스'],card:'T-money / 캐시비',rental:'suburb',
+    special:'해운대·광안리·남포동이 지하철로 연결돼요. 기장·송정은 <b>동해선 광역전철</b>이 편합니다'},
+  '방콕':{modes:['🚈 BTS 스카이트레인','🚇 MRT','🛥️ 짜오프라야 보트','🛺 툭툭'],card:'Rabbit 카드(BTS) / MRT는 별도',
+    rental:'no',rentalNote:'교통체증이 세계 최악급 — 지상 도로는 피하세요',
+    special:'⚠️ <b>BTS/MRT가 안 닿는 곳은 그랩(Grab)이 택시보다 안전·투명</b>합니다. 왕궁·왓포는 <b>짜오프라야 익스프레스 보트</b>(15밧)가 도로 정체를 피하는 최선. 툭툭은 흥정 필수라 관광용으로만'},
+  '싱가포르':{modes:['🚇 MRT','🚌 버스'],card:'컨택리스 카드 직접 탭 또는 EZ-Link',rental:'no',
+    special:'MRT가 거의 모든 관광지를 커버해요. 택시·그랩도 저렴하고 정직한 편'},
+  '홍콩':{modes:['🚇 MTR','🚋 트램(딩딩)','⛴️ 스타페리'],card:'옥토퍼스 카드',rental:'no',
+    special:'<b>스타페리 HK$5</b>와 <b>2층 트램 HK$3</b>은 그 자체가 관광이에요. 피크트램은 별도 요금'},
+  '타이베이':{modes:['🚇 MRT','🚌 버스','🚲 유바이크'],card:'이지카드(悠遊卡)',rental:'no',
+    special:'MRT가 깨끗하고 저렴해요. 지우펀·예류는 버스 또는 기차+버스 조합'},
+  '뉴욕':{modes:['🚇 서브웨이','🚌 버스'],card:'OMNY 컨택리스 탭 — 주 12회 후 무료(자동 상한)',
+    airport:[{n:'AirTrain + 지하철 (JFK)',t:'60분',c:'$11'},{n:'택시 정액 (JFK↔맨해튼)',t:'45~70분',c:'$70 고정 + 팁·통행료'}],
+    rental:'no',rentalNote:'주차비가 하루 $50 이상, 혼잡통행료도 부과돼요',
+    special:'⚠️ <b>OMNY는 같은 카드로 계속 탭하면 주 12회 후 자동 무료</b>예요 — 무제한권을 따로 살 필요가 없습니다. 급행/완행(express/local) 구분에 주의'},
+  '로스앤젤레스':{modes:['🚗 자동차','🚇 메트로(제한적)'],card:'TAP 카드',rental:'yes',
+    rentalNote:'✅ <b>LA는 렌트가 사실상 필수</b>예요 — 대중교통망이 관광지를 제대로 연결하지 못합니다',
+    special:'명소 간 거리가 멀어요(산타모니카↔할리우드 25km). 렌트 또는 우버 예산을 넉넉히 잡으세요'},
+  '두바이':{modes:['🚇 메트로','🚕 택시'],card:'Nol 카드',rental:'suburb',
+    special:'택시가 저렴하고(기본 12디르함) 더위 때문에 도보 이동이 힘들어요. 메트로 레드라인이 주요 축을 커버'},
+  '시드니':{modes:['🚆 트레인','⛴️ 페리','🚌 버스','🚋 라이트레일'],card:'컨택리스 카드 탭 — 일일/주간 상한 자동',
+    rental:'suburb',special:'<b>맨리행 페리</b>는 교통편이자 최고의 하버 관광이에요(오팔 요금 적용). 블루마운틴은 기차'},
+  '제주':{modes:['🚗 렌터카','🚌 급행/간선버스'],rental:'yes',
+    rentalNote:'✅ <b>제주는 렌트가 정답</b>이에요 — 버스로는 동선이 극도로 비효율적입니다',
+    special:'성수기엔 렌터카가 조기 매진되니 미리 예약하세요. 운전 못 하면 택시투어(8시간 15~20만원)나 버스투어 검토'},
+  '강릉':{modes:['🚗 렌터카','🚌 시내버스'],rental:'yes',rentalNote:'해안 스팟이 흩어져 있어 렌트가 편해요',
+    special:'KTX로 서울↔강릉 2시간 — 기차로 가서 현지 렌트가 합리적입니다'},
+  '경주':{modes:['🚗 렌터카','🚌 시내버스','🚲 자전거'],rental:'suburb',
+    special:'황리단길·대릉원 일대는 도보권이고 <b>자전거 대여</b>가 잘 돼 있어요. 불국사·석굴암은 버스나 차 필요'},
+};
+// 국가 단위 폴백 (도시 항목이 없을 때)
+const COUNTRY_TRANSIT={
+  '일본':{modes:['🚆 JR·사철','🚇 지하철'],card:'Suica/ICOCA 등 IC카드 전국 호환',rental:'suburb',
+    special:'JR패스는 <b>장거리 신칸센을 2회 이상</b> 탈 때부터 이득이에요 — 한 도시만 머물면 손해'},
+  '이탈리아':{modes:['🚆 트레니탈리아/이탈로','🚌 버스'],rental:'suburb',
+    rentalNote:'대부분 구시가가 ZTL이라 시내 운전은 피하세요',special:'도시 간은 고속철(프레차로사)이 빠르고 저렴해요 — 미리 예약하면 반값'},
+  '프랑스':{modes:['🚆 TGV','🚇 지하철'],rental:'suburb',special:'TGV는 미리 예약할수록 쌉니다(Ouigo 저가 옵션도 있어요)'},
+  '스페인':{modes:['🚆 렌페 AVE','🚇 지하철'],rental:'suburb'},
+  '독일':{modes:['🚆 DB','🚇 U/S-Bahn'],rental:'suburb',special:'도이칠란트티켓(월 €58)은 장기 체류·완행 위주일 때 검토'},
+  '스위스':{modes:['🚆 SBB','🚡 산악열차'],rental:'no',special:'스위스 트래블 패스가 기차·버스·유람선·일부 산악열차까지 커버'},
+  '영국':{modes:['🚆 내셔널레일','🚇 지하철'],rental:'suburb',special:'기차는 미리 살수록 극적으로 싸요(Advance 티켓)'},
+  '터키':{modes:['🚌 시외버스','✈️ 국내선'],rental:'suburb',
+    special:'<b>시외버스망이 매우 좋고 저렴</b>해요. 장거리는 국내선 항공이 버스와 가격 차이가 크지 않습니다'},
+  '태국':{modes:['✈️ 국내선','🚆 기차','🚌 버스'],rental:'no',special:'국내선 저가항공이 매우 싸요. 그랩(Grab) 앱이 필수'},
+  '베트남':{modes:['✈️ 국내선','🚌 슬리핑버스','🏍️ 그랩바이크'],rental:'no',special:'그랩이 택시보다 안전·투명해요'},
+  '미국':{modes:['🚗 렌터카','✈️ 국내선'],rental:'yes',
+    rentalNote:'대도시(뉴욕·시카고·보스턴·샌프란시스코) 외에는 렌트가 사실상 필수예요'},
+  '대한민국':{modes:['🚄 KTX','🚌 고속버스','🚇 지하철'],rental:'suburb'},
+  '한국':{modes:['🚄 KTX','🚌 고속버스','🚇 지하철'],rental:'suburb'},
+};
+// 국가별 택시 대략 요금 (원/km) — 도시 간 택시 타당성 판단용
+const TAXI_KM_KRW={'이탈리아':2200,'터키':600,'일본':3500,'대한민국':1500,'한국':1500,'태국':500,'베트남':700,
+  '미국':2500,'프랑스':2500,'영국':3000,'스페인':1800,'독일':3000,'스위스':4000,'싱가포르':1500,'홍콩':1500,
+  '대만':1200,'중국':1000,'인도네시아':600,'말레이시아':800,'포르투갈':1600,'체코':1400,'헝가리':1200,'폴란드':1300,
+  '그리스':1500,'네덜란드':2800,'오스트리아':2600,'벨기에':2600,'아랍에미리트':1200,'호주':2800,'캐나다':2200};
+// DB 도시명 ↔ 교통DB 키 불일치 해소 (_getHotelExamples의 별칭과 같은 문제)
+const _TRANSIT_ALIAS={'LA':'로스앤젤레스','제주도':'제주','나하':'오키나와','베니스':'베네치아','플로렌스':'피렌체'};
+function _cityTransit(dObj){
+  if(!dObj) return null;
+  const key=CITY_TRANSIT[dObj.kr]?dObj.kr:(_TRANSIT_ALIAS[dObj.kr]||dObj.kr);
+  const c=CITY_TRANSIT[key];
+  if(c&&c.modes&&c.modes.length) return {...c,_src:'city'};
+  const country=String(dObj.country||'').replace(/[\u{1F1E6}-\u{1F1FF}]/gu,'').replace(/\(.*\)/,'').trim();
+  const k=COUNTRY_TRANSIT[country];
+  if(k) return {...k,_src:'country'};
+  return null;
+}
+function _taxiKmKrw(dObj){
+  const country=String(dObj&&dObj.country||'').replace(/[\u{1F1E6}-\u{1F1FF}]/gu,'').replace(/\(.*\)/,'').trim();
+  return TAXI_KM_KRW[country]||2000;
+}
+
 function _cityHub(dObj){
   if(!dObj) return null;
   if(CITY_HUBS[dObj.kr]) return {label:'교통 허브',q:CITY_HUBS[dObj.kr]};
@@ -3603,6 +3747,116 @@ function _renderAccomCompareCard(dObj,style){
       <div style="margin-top:9px;"><button type="button" class="ac-btn" onclick="runAcCompare(this)">📏 실측 비교 실행</button></div>
       <div style="font-size:10.5px;color:var(--sub);margin-top:6px;line-height:1.5;">API 호출이 발생하므로 버튼을 눌렀을 때만 실측해요. <b>*</b> 표시는 대중교통 경로가 없어 차량으로 대체된 값이에요.</div>
       ${nightHtml}
+    </div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════
+// 🚉 교통 전략 — 도시 내부 수단·패스·렌트 판단
+// ══════════════════════════════════════════════
+const _RENTAL_UI={
+  no:{icon:'🚫',label:'렌트 비추천',color:'rgba(220,38,38,.09)'},
+  suburb:{icon:'🚙',label:'근교 이동에만',color:'rgba(232,88,10,.08)'},
+  yes:{icon:'✅',label:'렌트 권장',color:'rgba(34,153,84,.09)'},
+};
+function _renderCityTransitCard(destKeys){
+  const cities=destKeys.map(k=>findDest(k)).filter(d=>d&&d.kr);
+  if(!cities.length) return '';
+  const blocks=cities.map(d=>{
+    const t=_cityTransit(d);
+    if(!t) return '';
+    const ru=_RENTAL_UI[t.rental]||null;
+    return `<div style="border:1px solid var(--bdr);border-radius:11px;padding:11px 13px;margin-top:8px;">
+      <div style="display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;margin-bottom:6px;">
+        <b style="font-size:13px;color:var(--txt);">${escHtml(d.kr)}</b>
+        ${t._src==='country'?`<span style="font-size:10px;color:var(--sub);">국가 일반 정보</span>`:''}
+        ${ru?`<span style="font-size:10.5px;font-weight:700;border-radius:5px;padding:2px 7px;background:${ru.color};">${ru.icon} ${ru.label}</span>`:''}
+      </div>
+      ${t.modes&&t.modes.length?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px;">${
+        t.modes.map(m=>`<span style="font-size:11px;background:var(--card2);border:1px solid var(--bdr);border-radius:20px;padding:3px 9px;">${m}</span>`).join('')}</div>`:''}
+      ${t.card?`<div style="font-size:11.5px;color:var(--sub);line-height:1.55;margin-bottom:4px;">🎟️ <b>교통권</b> — ${t.card}</div>`:''}
+      ${t.pass?`<div style="font-size:11.5px;color:var(--sub);line-height:1.55;margin-bottom:4px;">🎫 <b>${escHtml(t.pass.name)}</b> — ${t.pass.note}</div>`:''}
+      ${t.airport&&t.airport.length?`<div style="font-size:11.5px;color:var(--sub);line-height:1.55;margin-bottom:4px;">✈️ <b>공항↔시내</b><br>${
+        t.airport.map(a=>`&nbsp;&nbsp;· ${escHtml(a.n)} — <b>${escHtml(a.t)}</b> · ${escHtml(a.c)}`).join('<br>')}</div>`:''}
+      ${t.rentalNote?`<div style="font-size:11.5px;color:var(--sub);line-height:1.55;margin-bottom:4px;">🚗 ${t.rentalNote}</div>`:''}
+      ${t.special?`<div class="ac-warn" style="margin-top:6px;">💡<div>${t.special}</div></div>`:''}
+    </div>`;
+  }).filter(Boolean).join('');
+  if(!blocks) return '';
+  return `<div style="background:var(--card);border:1.5px solid var(--bdr);border-radius:14px;padding:14px 16px;margin-top:12px;" role="region" aria-label="도시 내 교통 전략">
+    <div style="font-size:13px;font-weight:700;color:var(--pri);margin-bottom:4px;">🚉 도시 내 교통 전략 <span style="font-weight:400;color:var(--sub);font-size:11px;">— 그 도시에서만 통하는 것들</span></div>
+    <div style="font-size:11.5px;color:var(--sub);line-height:1.55;">어떤 수단이 주력인지, 교통권을 사는 게 이득인지, <b>렌트를 해야 하는 도시인지</b>를 먼저 정하고 동선을 짜세요.</div>
+    ${blocks}
+    <div style="font-size:10.5px;color:var(--sub);margin-top:8px;">요금은 2025~26년 대략치예요 — 실제 금액은 현지에서 확인하세요.</div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════
+// 🔀 도시 간 이동 — 거리 밴드별 수단 추천 + 실측 + 렌트 손익분기
+// ══════════════════════════════════════════════
+function _intercityAdvice(km,sameCountry){
+  if(km<80) return {best:'🚆 기차 · 🚌 버스',note:'가까워서 어떤 수단이든 1시간대예요. 인원이 3명 이상이면 택시도 경쟁력 있습니다.'};
+  if(km<300) return {best:'🚄 고속철·기차',note:'이 거리대는 기차가 거의 항상 이깁니다 — 공항 대기·이동 시간을 더하면 비행기가 오히려 느려요.'};
+  if(km<700) return {best:sameCountry?'🚄 고속철 vs ✈️ 국내선':'🚄 고속철 vs ✈️ 저가항공',note:'분기점 구간이에요. <b>기차는 도심↔도심</b>, 비행기는 공항 왕복 2~3시간을 추가로 잡고 비교하세요.'};
+  if(km<1500) return {best:'✈️ 항공',note:'항공이 유리해요. 다만 저가항공은 수하물·공항 위치(외곽)를 확인해야 실제 비용이 나옵니다.'};
+  return {best:'✈️ 항공',note:'장거리 구간이라 항공 외에는 현실적인 선택지가 없어요.'};
+}
+function _renderIntercityCard(destKeys){
+  const cities=destKeys.map(k=>findDest(k)).filter(d=>d&&d.kr);
+  if(cities.length<2) return '';
+  const legs=[];
+  for(let i=0;i<cities.length-1;i++){
+    const a=cities[i],b=cities[i+1];
+    const ga=(typeof GEO!=='undefined')?GEO[a.kr]:null, gb=(typeof GEO!=='undefined')?GEO[b.kr]:null;
+    if(!ga||!gb) continue;
+    const km=Math.round(_haversineKm(ga,gb));
+    const ca=String(a.country||'').replace(/[\u{1F1E6}-\u{1F1FF}]/gu,'').trim();
+    const cb=String(b.country||'').replace(/[\u{1F1E6}-\u{1F1FF}]/gu,'').trim();
+    const same=ca===cb;
+    const adv=_intercityAdvice(km,same);
+    const taxi=Math.round(km*1.25*_taxiKmKrw(a)/1000)*1000; // 도로거리 보정 1.25배
+    const r2r=`https://www.rome2rio.com/map/${encodeURIComponent(a.en||a.kr)}/${encodeURIComponent(b.en||b.kr)}`;
+    legs.push({a,b,km,same,adv,taxi,r2r,ga,gb});
+  }
+  if(!legs.length) return '';
+  const rows=legs.map((l,i)=>`
+    <div class="ic-leg" data-from="geo:${l.ga[0]},${l.ga[1]}" data-to="geo:${l.gb[0]},${l.gb[1]}"
+         data-km="${l.km}" data-taxi="${l.taxi}" data-ppl="${ST.ppl||2}"
+         style="border:1px solid var(--bdr);border-radius:11px;padding:11px 13px;margin-top:8px;">
+      <div style="display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;margin-bottom:5px;">
+        <b style="font-size:12.5px;color:var(--txt);">${escHtml(l.a.kr)} → ${escHtml(l.b.kr)}</b>
+        <span style="font-size:10.5px;color:var(--sub);">직선 ${l.km}km${l.same?'':' · 국가 이동'}</span>
+      </div>
+      <div style="font-size:11.5px;color:var(--sub);line-height:1.55;margin-bottom:5px;">
+        <b style="color:var(--pri);">추천: ${l.adv.best}</b> — ${l.adv.note}
+      </div>
+      <div class="ic-out" style="font-size:11.5px;color:var(--sub);line-height:1.6;">
+        🚕 택시 추정 <b>~${l.taxi.toLocaleString('ko-KR')}원</b> (${(ST.ppl||2)}인 나누면 1인 ${Math.round(l.taxi/(ST.ppl||2)/1000)*1000>0?(Math.round(l.taxi/(ST.ppl||2)/1000)*1000).toLocaleString('ko-KR'):0}원)
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;">
+        <button type="button" class="ac-btn ghost" onclick="measureIntercity(this)">🚗 자차 실측</button>
+        <a class="ac-btn ghost" style="text-decoration:none;display:inline-block;" href="${l.r2r}" target="_blank" rel="noopener">🔎 Rome2Rio 전체 비교</a>
+      </div>
+    </div>`).join('');
+
+  // 렌트 vs 대중교통 손익분기 — 전체 여정 기준
+  const totalKm=legs.reduce((s,l)=>s+l.km,0);
+  return `<div style="background:var(--card);border:1.5px solid var(--bdr);border-radius:14px;padding:14px 16px;margin-top:12px;" role="region" aria-label="도시 간 이동 수단 비교">
+    <div style="font-size:13px;font-weight:700;color:var(--pri);margin-bottom:4px;">🔀 도시 간 이동 수단 <span style="font-weight:400;color:var(--sub);font-size:11px;">— 구간별로 정답이 다릅니다</span></div>
+    <div style="font-size:11.5px;color:var(--sub);line-height:1.55;">거리에 따라 유리한 수단이 갈려요. <b>공항 왕복 2~3시간</b>을 더하면 중거리에선 기차가 비행기를 이기는 경우가 많습니다.</div>
+    ${rows}
+    <div class="rent-box" data-km="${totalKm}" data-ppl="${ST.ppl||2}" style="margin-top:11px;padding-top:9px;border-top:1px solid var(--bdr);">
+      <div style="font-size:12px;font-weight:700;color:var(--txt);margin-bottom:5px;">🚗 렌트 vs 대중교통 손익분기</div>
+      <div style="font-size:11px;color:var(--sub);line-height:1.55;margin-bottom:7px;">전 구간 합계 약 <b>${totalKm}km</b> 기준. 렌트는 <b>차 1대에 인원수와 무관</b>하지만 기차·버스는 인원수만큼 곱해집니다 — 그래서 사람이 많을수록 렌트가 유리해져요.</div>
+      <div class="ac-slot-row">
+        <label style="font-size:10.5px;color:var(--sub);">렌트 1일</label>
+        <input type="number" class="rent-day" value="70000" step="10000" min="0" style="width:90px;" oninput="calcRentBreakeven(this)">
+        <label style="font-size:10.5px;color:var(--sub);">일수</label>
+        <input type="number" class="rent-days" value="${Math.max(1,legs.length+1)}" min="1" max="60" style="width:60px;" oninput="calcRentBreakeven(this)">
+        <label style="font-size:10.5px;color:var(--sub);">1인 기차운임 합</label>
+        <input type="number" class="rent-train" value="0" step="10000" min="0" placeholder="예: 120000" style="width:100px;" oninput="calcRentBreakeven(this)">
+      </div>
+      <div class="rent-out"></div>
     </div>
   </div>`;
 }
@@ -4250,6 +4504,10 @@ function _runGenerate(){
 
     // ── [교훈] 숙소 후보 실측 이동시간 비교 (Routes API) + 심야 도착 판단 ──
     if(_firstDest) html+=_renderAccomCompareCard(_firstDest,style);
+
+    // ── 🚉 도시 내 교통 전략 + 🔀 도시 간 이동 수단 ──
+    html+=_renderCityTransitCard(destKeys);
+    html+=_renderIntercityCard(destKeys);
 
     // ── 🎫 회사 제휴 프로모션 반영 숙소 (개인용 실데이터) ──
     if(_firstDest){
@@ -5573,6 +5831,61 @@ async function runNightArrival(btn){
 }
 
 // ══════════════════════════════════════════════
+// 🔀 도시 간 이동 — 런타임
+// ══════════════════════════════════════════════
+async function measureIntercity(btn){
+  const leg=btn.closest('.ic-leg'); if(!leg) return;
+  const out=leg.querySelector('.ic-out'); if(!out) return;
+  if(leg.dataset.running==='1') return;
+  leg.dataset.running='1'; btn.disabled=true;
+  const label=btn.textContent; btn.textContent='⏳ 실측 중…';
+  try{
+    const r=await _gmapsRouteSecs(leg.dataset.from,leg.dataset.to,'driving');
+    const ppl=parseInt(leg.dataset.ppl||'2',10)||2;
+    const taxi=parseInt(leg.dataset.taxi||'0',10)||0;
+    if(r){
+      const per=Math.round(taxi/ppl/1000)*1000;
+      out.innerHTML=`🚗 <b>자차·택시 실주행 ${_fmtSecs(r.secs)}</b><br>
+        🚕 택시 추정 <b>~${taxi.toLocaleString('ko-KR')}원</b> (${ppl}인 나누면 1인 ${per.toLocaleString('ko-KR')}원)<br>
+        <span style="font-size:10.5px;">기차·버스 요금을 1인 ${per.toLocaleString('ko-KR')}원과 비교해보세요 — 그보다 비싸면 택시가 이깁니다.</span>`;
+    } else {
+      out.innerHTML='🚗 자차 경로를 찾지 못했어요 (섬·해협 구간이면 페리·항공만 가능합니다)<br>'+out.innerHTML;
+    }
+  }catch(e){
+    out.innerHTML='⚠️ 실측에 실패했어요.';
+  }finally{ btn.textContent=label; btn.disabled=false; leg.dataset.running='0'; }
+}
+function calcRentBreakeven(el){
+  const box=el.closest('.rent-box'); if(!box) return;
+  const out=box.querySelector('.rent-out'); if(!out) return;
+  const ppl=parseInt(box.dataset.ppl||'2',10)||2;
+  const day=Math.max(0,parseFloat((box.querySelector('.rent-day')||{}).value)||0);
+  const days=Math.max(1,parseInt((box.querySelector('.rent-days')||{}).value||'1',10)||1);
+  const train1=Math.max(0,parseFloat((box.querySelector('.rent-train')||{}).value)||0);
+  const km=parseInt(box.dataset.km||'0',10)||0;
+  // 렌트 총액 = 대여료 + 연료(도로거리 1.25배 · 12km/L · 2,000원/L) + 통행료·주차 추정
+  const fuel=Math.round(km*1.25/12*2000);
+  const extra=Math.round(km*1.25*60); // 통행료·주차 대략 60원/km
+  const rentTotal=day*days+fuel+extra;
+  const trainTotal=train1*ppl;
+  if(!train1){
+    out.innerHTML=`<div class="ac-warn">🧮<div>렌트 총액 추정 <b>${rentTotal.toLocaleString('ko-KR')}원</b>
+      (대여 ${(day*days).toLocaleString('ko-KR')} + 연료 ~${fuel.toLocaleString('ko-KR')} + 통행료·주차 ~${extra.toLocaleString('ko-KR')})<br>
+      1인 기차운임 합계를 넣으면 비교해 드려요. <b>손익분기: 1인 ${Math.round(rentTotal/ppl/1000)*1000>0?(Math.round(rentTotal/ppl/1000)*1000).toLocaleString('ko-KR'):0}원</b> — 기차가 이보다 비싸면 렌트가 이깁니다.</div></div>`;
+    return;
+  }
+  const win=rentTotal<trainTotal;
+  const gap=Math.abs(rentTotal-trainTotal);
+  out.innerHTML=`<div class="ac-warn ${win?'':'ok'}">${win?'🚗':'🚄'}<div>
+    렌트 <b>${rentTotal.toLocaleString('ko-KR')}원</b> vs 기차 <b>${trainTotal.toLocaleString('ko-KR')}원</b> (${ppl}인 × ${train1.toLocaleString('ko-KR')}원)<br>
+    → <b>${win?'렌트':'기차'}가 ${gap.toLocaleString('ko-KR')}원 저렴</b>합니다.
+    <div style="margin-top:5px;font-size:10.5px;">${win
+      ?'다만 렌트는 주차·ZTL 과태료·운전 피로가 비용에 안 잡혀요. 위 "도시 내 교통 전략"에서 렌트 비추 도시인지 먼저 확인하세요.'
+      :'기차는 도심↔도심이라 이동 후 바로 관광이 가능한 점도 이점이에요. 짐이 많거나 유아 동반이면 렌트 쪽에 가산점을 주세요.'}</div>
+  </div></div>`;
+}
+
+// ══════════════════════════════════════════════
 // 🎫 회사 제휴 프로모션 — 런타임
 // ══════════════════════════════════════════════
 function saveCorpCode(btn,promoId){
@@ -5922,20 +6235,45 @@ async function _fetchRealTransitTimes(){
   const _routeDelay=()=>new Promise(r=>setTimeout(r,180)); // API quota 보호용 딜레이
 
   // ── 스팟 간 이동 화살표 실시간 업데이트 ──
+  // 도보를 먼저 재고, 걸어갈 만하면(20분 이하) 그것만 보여준다.
+  // 멀면 대중교통도 추가로 재서 "🚶 32분 · 🚇 12분"처럼 나란히 — 수단 선택은 사용자 몫.
   const connectors=container.querySelectorAll('.transit-connector[data-from][data-to]');
   for(const conn of connectors){
     const city=conn.dataset.city||'';
     const timeEl=conn.querySelector('.t-time');
+    const modeEl=conn.querySelector('.t-mode');
     if(!timeEl) continue;
     const fallback=timeEl.textContent;
     timeEl.textContent='⏳';
-    const dur=await _gmapsDuration(
-      `${conn.dataset.from} ${city}`.trim(),
-      `${conn.dataset.to} ${city}`.trim(),
-      conn.dataset.mode||'driving'
-    );
-    timeEl.textContent=dur||fallback;
+    const from=`${conn.dataset.from} ${city}`.trim();
+    const to=`${conn.dataset.to} ${city}`.trim();
+    const walk=await _gmapsRouteSecs(from,to,'walking');
     await _routeDelay();
+    if(walk&&walk.secs<=20*60){
+      if(modeEl) modeEl.textContent='🚶 도보';
+      timeEl.textContent=_fmtSecs(walk.secs);
+      timeEl.title='걸어갈 만한 거리예요';
+      continue;
+    }
+    // 도보가 멀거나 실패 → 그 도시 주력 수단으로 한 번 더
+    const alt=await _gmapsRouteSecs(from,to,conn.dataset.mode==='walking'?'transit':(conn.dataset.mode||'transit'));
+    await _routeDelay();
+    if(walk&&alt&&walk.secs<=90*60){
+      // 20~90분: 걸을 수도 있는 구간이라 두 수단을 나란히 — 짐·날씨·인원 보고 고르게
+      if(modeEl) modeEl.textContent='';
+      timeEl.innerHTML=`🚶 ${_fmtSecs(walk.secs)} · ${alt.drive?'🚗':'🚇'} ${_fmtSecs(alt.secs)}`;
+      timeEl.title='도보 vs 대중교통 — 짐·날씨·인원에 따라 고르세요';
+    } else if(alt){
+      // 도보 90분 초과 = 걸어갈 수 있는 거리가 아님 → 도보 숫자는 노이즈라 감춘다
+      if(modeEl) modeEl.textContent=alt.drive?'🚗 차량':'🚇 대중교통';
+      timeEl.textContent=_fmtSecs(alt.secs);
+      timeEl.title=walk?`도보로는 ${_fmtSecs(walk.secs)} — 걸어갈 거리가 아니에요`:'';
+    } else if(walk){
+      if(modeEl) modeEl.textContent='🚶 도보';
+      timeEl.textContent=_fmtSecs(walk.secs);
+    } else {
+      timeEl.textContent=fallback;
+    }
   }
 
   // ── 숙소→첫관광지 실시간 업데이트 ──
