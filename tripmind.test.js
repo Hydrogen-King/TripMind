@@ -811,6 +811,35 @@ test('[COV-04] 미수록 도시용 범용 링크 존재', () => {
 test('[COV-05] 국가명 정규화 헬퍼 (국기·이모지 제거)', () => {
   assertContains(html, 'function _normCountry(raw)', '_normCountry()');
 });
+test('[COV-06] CITY_TRANSIT 키 중복 없음', () => {
+  const block = /const CITY_TRANSIT=\{([\s\S]*?)\n\};/.exec(html);
+  assert(block, 'CITY_TRANSIT 블록 없음');
+  const keys = []; let x; const rk = /^  '([^']+)':\{/gm;
+  while ((x = rk.exec(block[1]))) keys.push(x[1]);
+  const dup = keys.filter((k, i) => keys.indexOf(k) !== i);
+  assert(dup.length === 0, `중복 키: ${dup.join(', ')}`);
+  assert(keys.length >= 90, `상세 도시가 너무 적음: ${keys.length}`);
+});
+test('[COV-07] 상세 도시 키가 실제 DB 도시명과 연결됨 (별칭 포함)', () => {
+  let src = html;
+  ['db_extra.js','db_extra2.js','db_extra3.js','db_extra4.js','db_extra5.js',
+   'db_extra6.js','db_extra7.js','db_extra8.js','db_extra9.js']
+    .forEach(f => { src += fs.readFileSync(f, 'utf8'); });
+  const dbCities = new Set(); let m; const rc = /kr:'([^']+)'/g;
+  while ((m = rc.exec(src))) dbCities.add(m[1]);
+  const block = /const CITY_TRANSIT=\{([\s\S]*?)\n\};/.exec(html);
+  const keys = []; let x; const rk = /^  '([^']+)':\{/gm;
+  while ((x = rk.exec(block[1]))) keys.push(x[1]);
+  const am = /const _TRANSIT_ALIAS=\{([\s\S]*?)\};/.exec(html)[1];
+  const aliasTargets = new Set(); let a; const ra = /'([^']+)':'([^']+)'/g;
+  while ((a = ra.exec(am))) aliasTargets.add(a[2]);
+  // DB에도 없고 별칭 대상도 아닌 키 = 아무 도시에도 연결되지 않는 죽은 항목
+  const orphan = keys.filter(k => !dbCities.has(k) && !aliasTargets.has(k));
+  // 인천·대구·통영은 DB 미수록이지만 추후 추가 대비로 남겨둔 항목
+  const allowed = new Set(['인천', '대구', '통영']);
+  const bad = orphan.filter(k => !allowed.has(k));
+  assert(bad.length === 0, `DB 도시와 연결 안 되는 키: ${bad.join(', ')}`);
+});
 test('[DTR-01] 데이트 권역별 교통 DB 존재', () => {
   assertContains(dateJs, 'const KR_REGION_TRANSIT={', 'KR_REGION_TRANSIT');
   ['서울','부산','제주','강원'].forEach(r =>
