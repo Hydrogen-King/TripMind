@@ -1069,18 +1069,40 @@ function _renderDateTransitCard(areaData,areaCoord,timeSlots){
     `:''}
   </div>`;
 }
+// 데이트 DB 스팟명은 "실제 장소명 + 활동어" 형태가 많다(서울숲 산책·피크닉 / 성수 카페거리 야경).
+// 활동어를 그대로 검색하면 Places가 엉뚱한 곳을 잡아 도보 20분 넘는 값이 나온다 → 활동어를 떼고 검색.
+const _ACTIVITY_WORDS=['산책','피크닉','관람','야경','투어','체험','구경','나들이','즐기기','감상',
+  '탐방','힐링','쇼핑','먹방','데이트','코스','사진','인생샷','드라이브','등반','트레킹'];
+function _cleanSpotQuery(name){
+  let s=String(name||'').replace(/\([^)]*\)/g,' ').trim();   // 괄호 설명 제거
+  const kept=s.split(/\s+/).map(tok=>
+    tok.split('·').filter(p=>p&&!_ACTIVITY_WORDS.includes(p)).join(' ')
+  ).filter(Boolean);
+  const out=kept.join(' ').trim();
+  // 전부 활동어였으면 원본을 그대로 (지역 편향 검색에 맡긴다)
+  return out||s;
+}
+
 // 슬롯의 실측 기준점
 //  · 실제 추천 스팟 → 네이버 좌표(정확)
-//  · 그 외 → 이름을 지역 편향 검색으로 확정 시도(근사). "서울숲 산책"처럼 실재하는 이름은 잘 잡히고,
-//    "전시·미술관 관람" 같은 순수 카테고리는 그 동네의 대표 장소로 잡히므로 ≈ 로 표기한다.
+//  · 그 외 → 활동어를 뗀 이름을 지역 편향 검색으로 확정 시도(근사) → ≈ 로 표기
 function _slotWaypoint(idx){
   const card=document.getElementById('dslot-'+idx);
   if(!card) return null;
   const lat=parseFloat(card.dataset.lat),lng=parseFloat(card.dataset.lng);
-  if(isFinite(lat)&&isFinite(lng)) return {q:`geo:${lat},${lng}`,exact:true};
+  if(isFinite(lat)&&isFinite(lng)) return {coord:[lat,lng],q:`geo:${lat},${lng}`,exact:true};
   const nm=card.dataset.vname||(card.querySelector('.date-slot-name')||{}).textContent||'';
-  const clean=String(nm).replace(/실제 추천|🟢 영업중|🔴 영업종료/g,'').trim();
+  const raw=String(nm).replace(/실제 추천|🟢 영업중|🔴 영업종료/g,'').trim();
+  const clean=_cleanSpotQuery(raw);
   return clean?{name:clean,exact:false}:null;
+}
+// ⚠️ Google은 한국에서 도보·자동차 경로를 제공하지 않는다(지도 반출 제한) — WALK는 항상 null이고
+//    TRANSIT은 70m 거리에도 버스를 태워 18분을 돌려준다. 그래서 국내 구간의 도보는
+//    실제 좌표로 직접 계산한다. (해외는 Routes API 도보가 정상 동작하므로 그쪽은 그대로 둔다)
+const _WALK_KMH=4.5, _ROAD_FACTOR=1.3;   // 직선거리 → 실제 보행거리 보정
+function _walkSecsFromCoords(a,b){
+  if(!a||!b) return null;
+  return Math.round(_dist(a,b)*_ROAD_FACTOR/_WALK_KMH*3600);
 }
 async function measureDateSegments(btn){
   const card=btn.closest('.date-transit-card'); if(!card) return;
@@ -1095,14 +1117,16 @@ async function measureDateSegments(btn){
   const label=btn.textContent;
   const delay=()=>new Promise(r=>setTimeout(r,180));
   // 좌표/실제 장소가 있는 구간만 잰다 — 카테고리 슬롯끼리 재면 엉뚱한 값이 나온다
-  // 동네 밖(3km 초과)으로 잡히면 잘못 확정된 것 — 버린다
+  // 3km를 넘으면 다른 동네의 동명 장소로 보고 버린다.
+  // 서울숲처럼 인접 랜드마크가 동네 중심에서 1.5~2km 떨어진 경우가 흔해 너무 조이면 안 된다.
+  // 반환: {q, coord} — coord가 있어야 도보를 계산할 수 있다
   const resolve=async(wp)=>{
     if(!wp) return null;
-    if(wp.q) return wp.q;
+    if(wp.q) return {q:wp.q,coord:wp.coord||null};
     const p=await _resolvePlace(`${wp.name} ${area}`.trim(),center);
     if(!p) return null;
     if(center&&p.lat!=null&&_dist(center,[p.lat,p.lng])>3) return null;
-    return 'place:'+p.id;
+    return {q:'place:'+p.id,coord:(p.lat!=null&&p.lng!=null)?[p.lat,p.lng]:null};
   };
   let done=0,skipped=0;
   try{
@@ -1125,19 +1149,24 @@ async function measureDateSegments(btn){
         skipped++; continue;
       }
       if(approx) seg.title='한쪽 장소를 이름으로 찾아 맞춘 근사값이에요 (≈)';
-      const walk=await _gmapsRouteSecs(o,d,'walking'); await delay();
-      if(walk&&walk.secs<=20*60){
-        seg.innerHTML=`↓ 🚶 ${mk('도보')} <b>${_fmtSecs(walk.secs)}</b>`; done++; continue;
+
+      // 도보: 좌표로 직접 계산 (국내는 Google 도보 경로가 없음)
+      const walkSecs=_walkSecsFromCoords(o.coord,d.coord);
+      const km=(o.coord&&d.coord)?_dist(o.coord,d.coord):null;
+      if(walkSecs!=null&&walkSecs<=20*60){
+        seg.innerHTML=`↓ 🚶 ${mk('도보')} <b>${_fmtSecs(walkSecs)}</b>`
+          +(km!=null?` <span class="date-transit-est">(${km<1?Math.round(km*1000)+'m':km.toFixed(1)+'km'})</span>`:'');
+        seg.title=(seg.title?seg.title+' · ':'')+'좌표 직선거리 기반 도보 추정';
+        done++; continue;
       }
-      const tr=await _gmapsRouteSecs(o,d,'transit'); await delay();
-      if(walk&&tr&&walk.secs<=90*60){
-        seg.innerHTML=`↓ ${mk(`🚶 ${_fmtSecs(walk.secs)}`)} · ${tr.drive?'🚗':'🚇'} <b>${_fmtSecs(tr.secs)}</b>`; done++;
+      // 걸어가기 먼 구간만 대중교통 조회 (국내에서 짧은 구간에 부르면 버스를 태워 오히려 느리게 나옴)
+      const tr=await _gmapsRouteSecs(o.q,d.q,'transit'); await delay();
+      if(walkSecs!=null&&tr){
+        seg.innerHTML=`↓ ${mk(`🚶 ${_fmtSecs(walkSecs)}`)} · ${tr.drive?'🚗':'🚇'} <b>${_fmtSecs(tr.secs)}</b>`; done++;
       } else if(tr){
-        seg.innerHTML=`↓ ${mk(tr.drive?'🚗 차량':'🚇 대중교통')} <b>${_fmtSecs(tr.secs)}</b>`;
-        if(walk) seg.title=`도보로는 ${_fmtSecs(walk.secs)} — 걸어갈 거리가 아니에요`;
-        done++;
-      } else if(walk){
-        seg.innerHTML=`↓ 🚶 ${mk('도보')} <b>${_fmtSecs(walk.secs)}</b>`; done++;
+        seg.innerHTML=`↓ ${mk(tr.drive?'🚗 차량':'🚇 대중교통')} <b>${_fmtSecs(tr.secs)}</b>`; done++;
+      } else if(walkSecs!=null){
+        seg.innerHTML=`↓ 🚶 ${mk('도보')} <b>${_fmtSecs(walkSecs)}</b>`; done++;
       } else skipped++;
     }
     _toast(done

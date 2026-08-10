@@ -869,9 +869,22 @@ test('[DTR-06] 확정 실패 구간은 추정임을 밝히고, 이름으로 찾�
 test('[DTR-08] 동네 밖(3km 초과)으로 잡힌 장소는 폐기', () => {
   assertContains(dateJs, '_dist(center,[p.lat,p.lng])>3) return null;', '3km 거리 가드');
 });
-test('[DTR-07] 데이트 구간도 도보 우선 3단계 적용', () => {
-  assertContains(dateJs, 'if(walk&&walk.secs<=20*60){', '20분 임계');
-  assertContains(dateJs, 'if(walk&&tr&&walk.secs<=90*60){', '90분 임계');
+test('[DTR-09] 국내 도보는 좌표로 계산 (Google이 한국 도보경로를 안 줌)', () => {
+  assertContains(dateJs, 'function _walkSecsFromCoords(a,b)', '_walkSecsFromCoords()');
+  assertContains(dateJs, 'const _WALK_KMH=4.5, _ROAD_FACTOR=1.3;', '보행 속도·도로 보정');
+  assertContains(dateJs, '한국에서 도보·자동차 경로를 제공하지 않는다', '한계 주석');
+});
+test('[DTR-10] 활동어를 뗀 뒤 장소를 검색 (서울숲 산책·피크닉 → 서울숲)', () => {
+  assertContains(dateJs, 'function _cleanSpotQuery(name)', '_cleanSpotQuery()');
+  assertContains(dateJs, "const _ACTIVITY_WORDS=", '활동어 목록');
+});
+test('[DTR-11] 도보 구간엔 거리를 함께 표기', () => {
+  assertContains(dateJs, "Math.round(km*1000)+'m':km.toFixed(1)+'km'", '거리 표기');
+});
+test('[DTR-07] 데이트 구간도 도보 우선 — 20분 이하면 대중교통을 아예 조회하지 않음', () => {
+  assertContains(dateJs, 'if(walkSecs!=null&&walkSecs<=20*60){', '20분 임계');
+  // 짧은 구간에 국내 TRANSIT을 부르면 버스를 태워 도보보다 느린 값이 나온다
+  assertContains(dateJs, '걸어가기 먼 구간만 대중교통 조회', '단거리 대중교통 조회 회피');
 });
 
 /* ══════════════════════════════════════════════

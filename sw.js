@@ -12,7 +12,7 @@
 //   둘을 합쳐, 같은 캐시 세대에서 HTML+JS가 항상 한 쌍으로 일관되게 갱신됨.
 // ────────────────────────────────────────────────────────────
 
-const SW_VERSION   = 'v-202608102348';     // ← 의미 있는 배포마다 올리면 즉시 갱신
+const SW_VERSION   = 'v-202608102358';     // ← 의미 있는 배포마다 올리면 즉시 갱신
 const CACHE_PREFIX = 'tripmind-';
 const CACHE_NAME   = CACHE_PREFIX + SW_VERSION;
 const STATIC_ASSETS = [
