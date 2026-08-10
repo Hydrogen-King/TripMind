@@ -888,6 +888,41 @@ test('[DTR-07] 데이트 구간도 도보 우선 — 20분 이하면 대중교�
 });
 
 /* ══════════════════════════════════════════════
+   24. 예약 서류 보관함 · 동행 공유
+   ══════════════════════════════════════════════ */
+test('[DOC-01] IndexedDB 기반 보관함 (localStorage로는 PDF를 못 담음)', () => {
+  assertContains(html, "const _DOC_DB='tripmind-docs'", '_DOC_DB');
+  assertContains(html, 'function _docDB()', '_docDB()');
+  assertContains(html, 'indexedDB.open(_DOC_DB,1)', 'IDB open');
+});
+test('[DOC-02] 파일 추가·열기·삭제 함수 존재', () => {
+  ['async function addDocs(input)', 'async function openDoc(id)', 'async function deleteDoc(id)']
+    .forEach(f => assertContains(html, f, f));
+});
+test('[DOC-03] Blob 원본을 그대로 저장 (오프라인 열람용)', () => {
+  assertContains(html, 'size:f.size,ts:Date.now(),blob:f', 'Blob 저장');
+});
+test('[DOC-04] 파일당 8MB 상한', () => {
+  assertContains(html, 'if(f.size>8*1024*1024)', '용량 상한');
+});
+test('[DOC-05] 보관함 모달 마크업 존재', () => {
+  assertContains(html, 'id="doc-modal"', 'doc-modal');
+  assertContains(html, '이 기기에만 저장됩니다', '로컬 저장 고지');
+});
+test('[SHARE-01] 여행 내보내기/불러오기 함수 존재', () => {
+  assertContains(html, 'function exportTripFile()', 'exportTripFile()');
+  assertContains(html, 'function importTripFile(input)', 'importTripFile()');
+});
+test('[SHARE-02] 파일 형식 검증 후 불러오기', () => {
+  assertContains(html, "d._app!=='TripMind'", '형식 검증');
+  assertContains(html, "_app:'TripMind', _v:1", '형식 표기');
+});
+test('[SHARE-03] 저장 목록은 덮어쓰지 않고 병합', () => {
+  assertContains(html, '// 저장 목록은 덮어쓰지 않고 병합', '병합 주석');
+  assertContains(html, 'd.saves.filter(x=>!ids.has(String(x.id)))', '중복 제외 병합');
+});
+
+/* ══════════════════════════════════════════════
    결과 출력
    ══════════════════════════════════════════════ */
 console.log('\n====================================');

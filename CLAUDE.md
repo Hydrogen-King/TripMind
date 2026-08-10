@@ -228,3 +228,13 @@ DayPilot에 이미 VAPID Web Push가 있어 푸시를 새로 만들지 않고 **
 - 활동어 제거(`_cleanSpotQuery`): 데이트 DB 스팟명이 "서울숲 산책·피크닉"처럼 장소명+활동어라
   그대로 검색하면 엉뚱한 곳이 잡힌다 → 활동어를 떼고 검색.
 - 결과: 성수동 코스가 도보 4분(232m)·5분(302m)·7분(389m)·12분(708m)·9분(547m)으로 정상화.
+
+## ✔ 2026-08-11 반영 — 📎 예약 서류 보관함 · 📤 동행 공유
+- **서류 보관함** (`openDocVault`/`addDocs`/`openDoc`/`deleteDoc`) — 항공권·바우처·기차표를
+  **IndexedDB**(`tripmind-docs`)에 Blob 원본으로 저장. ⚠️ localStorage는 5MB 문자열 제한이라 PDF를 못 담는다.
+  파일당 8MB 상한, 열기는 `URL.createObjectURL` → 새 탭. 현지에서 데이터가 안 터져도 열린다.
+  모바일은 바텀시트(`align-items:flex-end`), 600px 이상은 중앙 모달.
+- **동행 공유** (`exportTripFile`/`importTripFile`) — `{_app:'TripMind',_v:1,ST,saves}` JSON 파일.
+  서버 계정 없이 파일로 넘긴다. ⚠️ 불러올 때 **저장 목록은 덮어쓰지 않고 병합** — 동행 파일 때문에
+  내 기록이 사라지면 안 된다. 서류(Blob)는 용량이 커서 제외.
+- 테스트 219 → **227개 전부 통과**.
