@@ -3695,6 +3695,85 @@ const COUNTRY_TRANSIT={
   '인도(시킴)':{modes:['🚙 공유 지프'],rental:'no',special:'산악 도로라 공유 지프가 일반적이에요'},
   '인도(카슈미르)':{modes:['🚙 지프','🚕 택시'],rental:'no'},
 };
+// ── 국가별 현지 차량호출 앱 ──
+// [교훈] "볼트(Bolt)로 숙소 이동"처럼 앱 이름을 알아야 실제로 부를 수 있다.
+// 유럽 다수 지역은 Bolt가 Uber보다 싸고, 동남아·중동·중국은 Uber가 아예 없거나 약하다.
+const HAIL_APPS={
+  '이탈리아':'FreeNow · itTaxi (우버는 우버블랙 위주라 비쌈)','프랑스':'Uber · Bolt · G7',
+  '스페인':'Uber · Cabify · Bolt','포르투갈':'Bolt · Uber (Bolt가 대체로 저렴)',
+  '영국':'Uber · Bolt · FreeNow','독일':'Uber · Bolt · FreeNow','오스트리아':'Bolt · Uber',
+  '네덜란드':'Uber · Bolt','벨기에':'Uber · Bolt','체코':'Bolt · Uber','폴란드':'Bolt · Uber · FreeNow',
+  '헝가리':'Bolt (우버 영업 안 함)','그리스':'Uber(=택시 호출) · FreeNow','크로아티아':'Bolt · Uber',
+  '루마니아':'Bolt · Uber','불가리아':'Bolt','에스토니아':'Bolt (볼트 본사)','라트비아':'Bolt','리투아니아':'Bolt',
+  '세르비아':'CarGo','우크라이나':'Bolt · Uklon','스웨덴':'Uber · Bolt','노르웨이':'Bolt · Uber',
+  '덴마크':'Bolt · Viggo','핀란드':'Bolt · Uber','아일랜드':'FreeNow · Uber(=택시)','스위스':'Uber · Bolt',
+  '터키':'BiTaksi · Uber(=택시 연결)','튀르키예':'BiTaksi · Uber(=택시 연결)',
+  '아랍에미리트':'Careem · Uber','사우디아라비아':'Careem · Uber','카타르':'Careem · Uber','쿠웨이트':'Careem',
+  '이집트':'Uber · Careem','모로코':'Careem · inDrive','요르단':'Careem · Uber','레바논':'Bolt · Careem',
+  '이스라엘':'Gett','오만':'Careem','바레인':'Careem',
+  '일본':'GO · Uber(=택시 호출) · DiDi','대한민국':'카카오T · 우티','한국':'카카오T · 우티',
+  '중국':'DiDi(디디추싱) — 알리페이/위챗 안에서도 호출 가능','대만':'Uber · 台灣大車隊',
+  '홍콩':'Uber · HKTaxi','마카오':'Uber 불가 — 택시·셔틀',
+  '태국':'Grab · Bolt','베트남':'Grab · Be · Xanh SM','싱가포르':'Grab · Gojek','말레이시아':'Grab',
+  '인도네시아':'Grab · Gojek','필리핀':'Grab','캄보디아':'Grab · PassApp','미얀마':'Grab','라오스':'LOCA',
+  '인도':'Uber · Ola · Rapido','네팔':'Pathao · InDrive','스리랑카':'PickMe · Uber',
+  '미국':'Uber · Lyft','캐나다':'Uber · Lyft','멕시코':'Uber · DiDi','브라질':'Uber · 99',
+  '아르헨티나':'Cabify · DiDi · Uber','칠레':'Uber · Cabify · DiDi','콜롬비아':'Uber · DiDi · Cabify',
+  '페루':'Uber · Cabify · DiDi','에콰도르':'Uber · Cabify','우루과이':'Uber · Cabify',
+  '호주':'Uber · DiDi · Ola','뉴질랜드':'Uber · Zoomy',
+  '남아공':'Uber · Bolt','케냐':'Uber · Bolt · Little','나이지리아':'Uber · Bolt','탄자니아':'Uber · Bolt',
+  '가나':'Uber · Bolt','우간다':'Uber · Bolt','튀니지':'Bolt · InDrive','르완다':'Move · Yego',
+  '조지아':'Bolt · Yandex Go','아르메니아':'Yandex Go · GG','아제르바이잔':'Bolt · Uber',
+  '우즈베키스탄':'Yandex Go','카자흐스탄':'Yandex Go · inDrive','키르기스스탄':'Yandex Go · Namba',
+  '러시아':'Yandex Go','몽골':'UBCab','몰디브':'리조트 전용 보트(호출앱 없음)',
+};
+function _hailApp(dObj){
+  const c=_normCountry(dObj&&dObj.country);
+  return HAIL_APPS[c]||HAIL_APPS[c.replace(/\(.*\)/,'').trim()]||null;
+}
+
+// ══════════════════════════════════════════════
+// 🎫 명소별 예약 오픈 창 (booking window) — 교훈 ☐#10
+// openDays: 방문 N일 전에 예약이 열림 / null = 상시 예약 가능
+// [교훈] 오픈일을 "알아두는 것"으로는 부족하다 — 그 날짜에 액션으로 꽂혀야 실제로 예약한다.
+// ══════════════════════════════════════════════
+const BOOKING_WINDOWS={
+  '바티칸 & 시스티나 예배당':{openDays:60,url:'https://tickets.museivaticani.va',note:'가이드투어는 더 빨리 매진'},
+  '바티칸 박물관':{openDays:60,url:'https://tickets.museivaticani.va'},
+  '콜로세움':{openDays:30,url:'https://ecm.coopculture.it',note:'아레나·지하 입장은 별도 등급이고 훨씬 빨리 매진'},
+  '보르게세 미술관':{openDays:30,url:'https://galleriaborghese.beniculturali.it',note:'2시간 단위 인원 제한 — 창이 짧고 좁아요'},
+  '우피치 미술관':{openDays:30,url:'https://www.uffizi.it'},
+  '두오모 대성당 & 쿠폴라':{openDays:30,url:'https://duomo.firenze.it',note:'쿠폴라 등반은 시간지정제'},
+  '아카데미아 미술관':{openDays:30,url:'https://www.galleriaaccademiafirenze.it'},
+  '최후의 만찬 (다빈치)':{openDays:60,url:'https://cenacolovinciano.vivaticket.it',note:'15분 단위 35명 — 가장 빨리 매진되는 명소 중 하나'},
+  '두칼레 궁전':{openDays:30,url:'https://palazzoducale.visitmuve.it',note:'Secret Itineraries 가이드투어는 시간 고정'},
+  '산마르코 광장 & 대성당':{openDays:30,url:'https://www.basilicasanmarco.it'},
+  '알함브라':{openDays:90,url:'https://tickets.alhambra-patronato.es',note:'나스르 궁전은 입장 시각 엄수 — 늦으면 무효'},
+  '사그라다 파밀리아':{openDays:60,url:'https://sagradafamilia.org'},
+  '안네 프랑크의 집':{openDays:42,url:'https://www.annefrank.org',note:'6주 전 오픈 후 며칠 만에 매진'},
+  '톱카프 궁전':{openDays:15,url:'https://muze.gov.tr'},
+  '돌마바흐체 궁전':{openDays:15,url:'https://millisaraylar.gov.tr'},
+  '아야소피아':{openDays:15,url:'https://muze.gov.tr',note:'외국인 방문객은 상층 갤러리 별도 티켓'},
+  '에펠탑':{openDays:60,url:'https://www.toureiffel.paris'},
+  '루브르 박물관':{openDays:60,url:'https://www.louvre.fr'},
+  '베르사유 궁전':{openDays:60,url:'https://www.chateauversailles.fr'},
+};
+// 여행 시작일 기준으로 "지금 예약 가능 / N일 후 오픈 / 이미 늦음"을 판정
+function _bookingStatus(spotName,visitISO,todayISO){
+  const w=BOOKING_WINDOWS[spotName];
+  if(!w) return null;
+  const visit=new Date(visitISO+'T00:00:00');
+  const today=new Date((todayISO||new Date().toISOString().slice(0,10))+'T00:00:00');
+  if(isNaN(visit.getTime())) return null;
+  const daysToVisit=Math.round((visit-today)/86400000);
+  if(w.openDays==null) return {...w,state:'always',daysToVisit};
+  const opensAt=new Date(visit.getTime()-w.openDays*86400000);
+  const daysToOpen=Math.round((opensAt-today)/86400000);
+  return {...w,spot:spotName,daysToVisit,daysToOpen,
+    opensISO:opensAt.toISOString().slice(0,10),
+    state:daysToOpen>0?'pending':(daysToVisit>=0?'open':'past')};
+}
+
 // 국가별 택시 대략 요금 (원/km) — 도시 간 택시 타당성 판단용
 const TAXI_KM_KRW={'이탈리아':2200,'터키':600,'일본':3500,'대한민국':1500,'한국':1500,'태국':500,'베트남':700,
   '미국':2500,'프랑스':2500,'영국':3000,'스페인':1800,'독일':3000,'스위스':4000,'싱가포르':1500,'홍콩':1500,
@@ -3997,6 +4076,65 @@ function _renderAccomCompareCard(dObj,style){
 }
 
 // ══════════════════════════════════════════════
+// ✅ 예약 액션 아이템 — "언제 무엇을 해야 하는가"를 날짜에 꽂는다
+// 체크리스트에 모아두면 안 하게 된다. 발동 시점을 계산해 D-day로 보여준다.
+// ══════════════════════════════════════════════
+function _renderBookingActions(destKeys){
+  if(!ST.from) return '';
+  const todayISO=new Date().toISOString().slice(0,10);
+  const items=[];
+  // 일정에 등장하는 스팟 중 예약 창이 있는 것만 — 방문일은 도시별 체류 시작일로 근사
+  const _hasCd=Object.keys(ST.customDays).length>0&&destKeys.every(k=>ST.customDays[k]>0);
+  const totalDays=Math.round((new Date(ST.to)-new Date(ST.from))/86400000)+1;
+  let cursor=0;
+  destKeys.forEach((k,ci)=>{
+    const d=findDest(k); if(!d) return;
+    const cityDays=destKeys.length>1
+      ? (_hasCd?(ST.customDays[k]||1):Math.ceil(totalDays/destKeys.length))
+      : totalDays;
+    const cityStart=new Date(new Date(ST.from).getTime()+cursor*86400000).toISOString().slice(0,10);
+    cursor+=cityDays;
+    _primarySpots(d).forEach(s=>{
+      const st=_bookingStatus(s.n,cityStart,todayISO);
+      if(st) items.push({...st,city:d.kr});
+    });
+  });
+  if(!items.length) return '';
+  items.sort((a,b)=>(a.daysToOpen??0)-(b.daysToOpen??0));
+  const row=it=>{
+    const badge=it.state==='pending'
+      ? `<span style="font-size:10.5px;font-weight:700;border-radius:5px;padding:2px 7px;background:rgba(232,88,10,.1);color:var(--pri);">D-${it.daysToOpen} 후 오픈</span>`
+      : it.state==='open'
+      ? `<span style="font-size:10.5px;font-weight:700;border-radius:5px;padding:2px 7px;background:rgba(34,153,84,.12);color:#1e874b;">지금 예약 가능</span>`
+      : `<span style="font-size:10.5px;font-weight:700;border-radius:5px;padding:2px 7px;background:rgba(220,38,38,.1);color:#dc2626;">방문일 지남</span>`;
+    return `<div style="border:1px solid var(--bdr);border-radius:10px;padding:9px 11px;margin-top:7px;">
+      <div style="display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;">
+        <b style="font-size:12.5px;color:var(--txt);">${escHtml(it.spot)}</b>
+        <span style="font-size:10.5px;color:var(--sub);">${escHtml(it.city)}</span>
+        ${badge}
+      </div>
+      <div style="font-size:11px;color:var(--sub);line-height:1.55;margin-top:4px;">
+        방문 <b>${it.openDays}일 전</b> 오픈 → <b>${it.opensISO}</b>부터 예매${it.note?` · ${escHtml(it.note)}`:''}
+      </div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;">
+        <a class="spot-src-btn" href="${it.url}" target="_blank" rel="noopener">🏛️ 공식 예매</a>
+        <button type="button" class="spot-src-btn" style="cursor:pointer;"
+          onclick="addBookingReminder(this,'${escHtml(it.spot)}','${it.opensISO}','${escHtml(it.url)}')">🔔 알림 예약</button>
+      </div>
+    </div>`;
+  };
+  const pending=items.filter(i=>i.state==='pending').length;
+  const openNow=items.filter(i=>i.state==='open').length;
+  return `<div style="background:var(--card);border:1.5px solid var(--bdr);border-radius:14px;padding:14px 16px;margin-top:12px;" role="region" aria-label="예약 액션 아이템">
+    <div style="font-size:13px;font-weight:700;color:var(--pri);margin-bottom:4px;">✅ 예약 액션 <span style="font-weight:400;color:var(--sub);font-size:11px;">— 언제 무엇을 예매해야 하는지</span></div>
+    <div style="font-size:11.5px;color:var(--sub);line-height:1.55;">인기 명소는 <b>방문 N일 전에야 예약이 열리고</b> 며칠 만에 매진돼요. 체크리스트로 모아두면 놓치니까 <b>오픈 날짜</b>로 보여드립니다.
+      ${openNow?`<b style="color:#1e874b;">지금 ${openNow}건 예약 가능</b>`:''}${openNow&&pending?' · ':''}${pending?`${pending}건 대기 중`:''}</div>
+    ${items.map(row).join('')}
+    <div style="font-size:10.5px;color:var(--sub);margin-top:8px;line-height:1.5;">오픈 시점은 명소 공지에 따라 바뀔 수 있어요 — 공식 사이트에서 최종 확인하세요.</div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════
 // 🚉 교통 전략 — 도시 내부 수단·패스·렌트 판단
 // ══════════════════════════════════════════════
 const _RENTAL_UI={
@@ -4030,6 +4168,7 @@ function _renderCityTransitCard(destKeys){
       ${t.airport&&t.airport.length?`<div style="font-size:11.5px;color:var(--sub);line-height:1.55;margin-bottom:4px;">✈️ <b>공항↔시내</b><br>${
         t.airport.map(a=>`&nbsp;&nbsp;· ${escHtml(a.n)} — <b>${escHtml(a.t)}</b> · ${escHtml(a.c)}`).join('<br>')}</div>`:''}
       ${t.rentalNote?`<div style="font-size:11.5px;color:var(--sub);line-height:1.55;margin-bottom:4px;">🚗 ${t.rentalNote}</div>`:''}
+      ${_hailApp(d)?`<div style="font-size:11.5px;color:var(--sub);line-height:1.55;margin-bottom:4px;">📱 <b>차량 호출</b> — ${escHtml(_hailApp(d))}</div>`:''}
       ${t.special?`<div class="ac-warn" style="margin-top:6px;">💡<div>${t.special}</div></div>`:''}
       <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;">
         ${links.map(l=>`<a class="spot-src-btn" href="${l.u}" target="_blank" rel="noopener">${l.n}</a>`).join('')}
@@ -4758,6 +4897,9 @@ function _runGenerate(){
 
     // ── [교훈] 숙소 후보 실측 이동시간 비교 (Routes API) + 심야 도착 판단 ──
     if(_firstDest) html+=_renderAccomCompareCard(_firstDest,style);
+
+    // ── ✅ 예약 액션 아이템 (오픈일 D-day) ──
+    html+=_renderBookingActions(destKeys);
 
     // ── 🚉 도시 내 교통 전략 + 🔀 도시 간 이동 수단 ──
     html+=_renderCityTransitCard(destKeys);
@@ -6082,6 +6224,46 @@ async function runNightArrival(btn){
   }catch(e){
     out.innerHTML='<div class="ac-warn">⚠️<div>실측에 실패했어요. 잠시 후 다시 시도해주세요.</div></div>';
   }finally{ btn.disabled=false; }
+}
+
+// ── 예약 오픈일 알림 — 폰 캘린더(.ics)에 알람 포함 일정으로 등록 ──
+// DayPilot 푸시 연동 전까지는 캘린더가 가장 확실한 채널(앱이 닫혀 있어도 울림)
+function addBookingReminder(btn,spot,opensISO,url){
+  // DayPilot 푸시에도 등록 시도 (토큰 미설정이면 워커가 조용히 skip → 캘린더만 동작)
+  try{
+    fetch('/api/reminders',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({uid:_getUid(),item:{id:`${spot}|${opensISO}`,spot,opensISO,url}})
+    }).then(r=>r.ok?r.json():null).then(d=>{
+      if(d&&d.push) showToast('🔔 DayPilot 푸시에도 등록했어요',2500);
+    }).catch(()=>{});
+  }catch(_){}
+  try{
+    const d=opensISO.replace(/-/g,'');
+    const stamp=new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+/,'')+'Z';
+    const ics=[
+      'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//TripMind//Booking//KO','CALSCALE:GREGORIAN','METHOD:PUBLISH',
+      'BEGIN:VEVENT',
+      `UID:tripmind-book-${d}-${Math.random().toString(36).slice(2)}@tripmind`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART;VALUE=DATE:${d}`,
+      `DTEND;VALUE=DATE:${d}`,
+      `SUMMARY:🎫 ${spot} 예약 오픈 — 오늘 예매`,
+      `DESCRIPTION:오늘부터 예약이 열려요. 매진되기 전에 공식 사이트에서 예매하세요.\\n${url}`,
+      `URL:${url}`,
+      // 오픈 당일 오전 9시 알림
+      'BEGIN:VALARM','TRIGGER:PT9H','ACTION:DISPLAY',`DESCRIPTION:🎫 ${spot} 예약 오픈 — 지금 예매`,'END:VALARM',
+      'END:VEVENT','END:VCALENDAR'
+    ].join('\r\n');
+    const blob=new Blob([ics],{type:'text/calendar;charset=utf-8'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=`예약오픈_${spot.replace(/[\/\\?%*:|"<>]/g,'_')}_${opensISO}.ics`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+    if(btn) btn.textContent='✅ 등록됨';
+    showToast(`📅 ${opensISO} 오전 9시 알림으로 등록했어요`,3500);
+  }catch(e){ showToast('⚠️ 알림 등록에 실패했어요'); }
 }
 
 // ══════════════════════════════════════════════
@@ -11730,7 +11912,9 @@ function exportToCalendar(){
     `DTSTART;VALUE=DATE:${_fmt(ST.from)}`,
     `DTEND;VALUE=DATE:${_fmt(new Date(new Date(ST.to).getTime()+86400000))}`,
     `SUMMARY:✈️ TripMind — ${dest} 여행`,
-    `DESCRIPTION:TripMind로 생성한 여행 계획 (${totalDays}일)\\nhttps://hydrogen-king.github.io/TripMind`,
+    `DESCRIPTION:TripMind로 생성한 여행 계획 (${totalDays}일)\\nhttps://tripmind.kangjuno980126.workers.dev`,
+    // 출발 3일 전 알림 — 종일 이벤트라 -P3D가 출발일 00시 기준으로 걸린다
+    'BEGIN:VALARM','TRIGGER:-P3D','ACTION:DISPLAY','DESCRIPTION:✈️ 3일 뒤 출발 — 짐·서류 최종 점검','END:VALARM',
     'END:VEVENT'
   );
   // 일별 이벤트
@@ -11750,6 +11934,8 @@ function exportToCalendar(){
         `DTEND;VALUE=DATE:${_fmt(new Date(d.getTime()+86400000))}`,
         `SUMMARY:📅 ${dayTitle}`,
         `DESCRIPTION:${spotNames.join(' → ')}`,
+        // 전날 저녁 알림 — 다음날 동선을 미리 확인하게
+        'BEGIN:VALARM','TRIGGER:-PT12H','ACTION:DISPLAY',`DESCRIPTION:내일 동선: ${spotNames.slice(0,3).join(' → ')}`,'END:VALARM',
         'END:VEVENT'
       );
     }

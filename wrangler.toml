@@ -13,7 +13,15 @@ not_found_handling = "single-page-application"
 binding = "TRIPMIND_KV"
 id      = "84aa1e07ebf246728e2dcd3005d57181"     # 2026-07-09 생성
 
+# ── 예약 오픈 알림 발송 (KST 09:00 = UTC 00:00) ───────────────────
+# 등록된 예약 오픈일이 되면 DayPilot Web Push로 알림을 보낸다.
+[triggers]
+crons = ["0 0 * * *"]
+
 # ── 환경변수 (배포 시 wrangler secret put 으로 등록) ──────────────
 # BUILD_VERSION 은 배포 스크립트(deploy.sh)가 주입. 없으면 타임스탬프 사용.
+# DAYPILOT_TOKEN — DayPilot /api/agent/alert 용 Bearer 토큰.
+#   ⚠️ 브라우저에 노출하면 안 되므로 반드시 시크릿으로:
+#   npx wrangler secret put DAYPILOT_TOKEN
 # [vars]
 # BUILD_VERSION = "manual"
