@@ -771,6 +771,81 @@ test('[SEG-04] 도보 90분 초과는 도보 숫자를 감춤', () => {
 });
 
 /* ══════════════════════════════════════════════
+   23. 교통 전 도시 커버리지 + 데이트 코스 교통
+   ══════════════════════════════════════════════ */
+const dateJs = fs.readFileSync('_date_new.js', 'utf8').replace(/\r\n/g, '\n');
+
+test('[COV-01] 모든 도시가 교통 정보를 받는다 (도시/국가/파생 3층)', () => {
+  // DB의 국가 목록을 모아 COUNTRY_TRANSIT 커버리지를 검사
+  let src = html;
+  ['db_extra.js','db_extra2.js','db_extra3.js','db_extra4.js','db_extra5.js',
+   'db_extra6.js','db_extra7.js','db_extra8.js','db_extra9.js']
+    .forEach(f => { src += fs.readFileSync(f, 'utf8'); });
+  const countries = new Set();
+  let m; const rc = /country:'([^']+)'/g;
+  while ((m = rc.exec(src))) {
+    countries.add(m[1].replace(/[\u{1F1E6}-\u{1F1FF}]/gu,'')
+      .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}️]/gu,'').replace(/\s+/g,' ').trim());
+  }
+  const block = /const COUNTRY_TRANSIT=\{([\s\S]*?)\n\};/.exec(html);
+  assert(block, 'COUNTRY_TRANSIT 블록을 찾지 못함');
+  const have = new Set();
+  const rk = /^  '([^']+)':\{/gm; let x;
+  while ((x = rk.exec(block[1]))) have.add(x[1]);
+  const missing = [...countries].filter(c => !have.has(c) && !have.has(c.replace(/\(.*\)/,'').trim()));
+  assert(missing.length === 0, `교통 정보 없는 국가: ${missing.join(', ')}`);
+});
+test('[COV-02] 괄호 지역(하와이·시칠리아 등)은 본토와 별도 항목', () => {
+  ['미국(하와이)','미국(알래스카)','이탈리아(시칠리아)','포르투갈(마데이라)']
+    .forEach(k => assertContains(html, `'${k}':{modes:`, `${k} 별도 항목`));
+});
+test('[COV-03] 좌표 분산 기반 자동 판정 존재', () => {
+  assertContains(html, 'function _spotSpreadKm(dObj)', '_spotSpreadKm()');
+  assertContains(html, 'function _spreadVerdict(km)', '_spreadVerdict()');
+  assertContains(html, "if(km<=2)  return {icon:'🚶',label:'도보권 도시'", '도보권 판정');
+});
+test('[COV-04] 미수록 도시용 범용 링크 존재', () => {
+  assertContains(html, 'function _universalTransitLinks(dObj)', '_universalTransitLinks()');
+  assertContains(html, 'travelmode=transit', 'Google Maps 대중교통 링크');
+});
+test('[COV-05] 국가명 정규화 헬퍼 (국기·이모지 제거)', () => {
+  assertContains(html, 'function _normCountry(raw)', '_normCountry()');
+});
+test('[DTR-01] 데이트 권역별 교통 DB 존재', () => {
+  assertContains(dateJs, 'const KR_REGION_TRANSIT={', 'KR_REGION_TRANSIT');
+  ['서울','부산','제주','강원'].forEach(r =>
+    assertContains(dateJs, `'${r}':{`, `${r} 권역 교통`));
+});
+test('[DTR-02] 심야 귀가 안내 존재 (막차·심야할증)', () => {
+  assertContains(dateJs, 'N버스(심야버스)', '서울 심야버스');
+  assertContains(dateJs, '심야할증', '심야할증 안내');
+});
+test('[DTR-03] 데이트 교통 카드 렌더 함수 존재', () => {
+  assertContains(dateJs, 'function _renderDateTransitCard(', '_renderDateTransitCard()');
+});
+test('[DTR-04] 구간 실측 함수가 window에 노출됨 (인라인 onclick)', () => {
+  assertContains(dateJs, 'async function measureDateSegments(btn)', 'measureDateSegments()');
+  assertContains(dateJs, 'measureDateSegments   //', 'window 노출');
+});
+test('[DTR-05] 실제 추천 스팟의 네이버 좌표를 실측에 사용', () => {
+  assertContains(dateJs, "card.dataset.real='1';", 'real 플래그');
+  assertContains(dateJs, 'if(v._c){ card.dataset.lat=v._c[0]; card.dataset.lng=v._c[1]; }', '좌표 보관');
+  assertContains(dateJs, 'function _slotWaypoint(idx)', '_slotWaypoint()');
+});
+test('[DTR-06] 확정 실패 구간은 추정임을 밝히고, 이름으로 찾은 값은 ≈로 표기', () => {
+  assertContains(dateJs, '(추정 · 같은 동네)', '추정 표기');
+  assertContains(dateJs, "const approx=!(a&&a.exact&&b&&b.exact);", '근사 판정');
+  assertContains(dateJs, "const mk=(s)=>approx?'≈ '+s:s;", '≈ 표기');
+});
+test('[DTR-08] 동네 밖(3km 초과)으로 잡힌 장소는 폐기', () => {
+  assertContains(dateJs, '_dist(center,[p.lat,p.lng])>3) return null;', '3km 거리 가드');
+});
+test('[DTR-07] 데이트 구간도 도보 우선 3단계 적용', () => {
+  assertContains(dateJs, 'if(walk&&walk.secs<=20*60){', '20분 임계');
+  assertContains(dateJs, 'if(walk&&tr&&walk.secs<=90*60){', '90분 임계');
+});
+
+/* ══════════════════════════════════════════════
    결과 출력
    ══════════════════════════════════════════════ */
 console.log('\n====================================');

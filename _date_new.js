@@ -720,6 +720,45 @@ function _timeBand(timeStr){
 }
 
 // ══════════════════════════════════════════════
+// 지역별 교통 정보 (데이트 코스용) — 권역 단위
+// ══════════════════════════════════════════════
+const KR_REGION_TRANSIT={
+  '서울':{card:'T-money·기후동행카드(월 6.5만원, 서울 시내 무제한)',
+    modes:['🚇 지하철 1~9호선·신분당','🚌 시내버스','🚲 따릉이(1시간 1,000원)'],
+    late:'지하철 막차는 대략 자정~00:30. 이후엔 <b>N버스(심야버스)</b>가 다니고, 카카오T 심야할증은 00:00~04:00에 20~40% 붙어요.',
+    tip:'환승은 30분 내 무료(21~07시는 60분). <b>따릉이는 한강·성수·연남처럼 평지 코스</b>에서 특히 좋아요.'},
+  '경기':{card:'T-money (수도권 통합환승)',
+    modes:['🚇 수도권 전철','🚌 광역버스(빨간버스)','🚕 택시'],
+    late:'광역버스 막차가 서울 지하철보다 이른 편이라 <b>귀가 시간을 먼저 확인</b>하세요.',
+    tip:'서울↔경기 환승 시 거리비례 추가요금이 붙어요.'},
+  '인천':{card:'T-money (수도권 통합환승)',modes:['🚇 인천 1·2호선','🚌 버스','🚈 공항철도'],
+    late:'공항철도 막차가 늦은 편이라 서울 귀가에 활용할 수 있어요.',
+    tip:'차이나타운·개항장은 도보권, 송도는 넓어서 버스·택시가 필요해요.'},
+  '부산':{card:'T-money·캐시비',modes:['🚇 지하철 1~4호선','🚌 버스','🚈 동해선 광역전철'],
+    late:'지하철 막차가 자정 전후로 서울보다 이릅니다 — <b>야경 코스는 귀가편을 먼저 확인</b>하세요.',
+    tip:'해운대·광안리·남포동은 지하철로 연결돼요. 기장·송정은 동해선이 편합니다.'},
+  '대구':{card:'T-money',modes:['🚇 지하철 1~3호선','🚌 버스'],
+    tip:'김광석길·서문시장·동성로는 지하철로 이어져요. 3호선은 모노레일이라 전망이 좋습니다.'},
+  '대전':{card:'T-money',modes:['🚇 지하철 1호선','🚌 버스'],
+    tip:'지하철이 1개 노선뿐이라 <b>버스·택시 비중이 큽니다</b>.'},
+  '광주':{card:'T-money',modes:['🚇 지하철 1호선','🚌 버스'],tip:'지하철 노선이 제한적이라 버스가 주력이에요.'},
+  '울산':{card:'T-money',modes:['🚌 버스','🚕 택시'],tip:'도시철도가 없어 버스·택시 위주예요.'},
+  '강원':{card:'T-money',modes:['🚗 자동차','🚌 시내버스','🚄 KTX-이음'],
+    tip:'✅ <b>해안 스팟이 흩어져 있어 차량이 편해요.</b> 서울에서는 KTX로 가서 현지 택시·렌트가 합리적입니다.'},
+  '제주':{card:'T-money',modes:['🚗 렌터카','🚌 급행·간선버스'],
+    tip:'✅ <b>렌터카가 사실상 정답</b>이에요. 성수기엔 조기 매진되니 미리 예약하세요.'},
+  '충청':{card:'T-money',modes:['🚌 버스','🚗 자동차'],tip:'도시 간 이동은 시외버스나 기차가 편해요.'},
+  '전라':{card:'T-money',modes:['🚌 버스','🚗 자동차'],tip:'한옥마을 등 구도심은 도보권, 근교는 차량이 필요해요.'},
+  '경상':{card:'T-money',modes:['🚌 버스','🚗 자동차'],tip:'시내는 버스, 근교 스팟은 차량이 편합니다.'},
+};
+function _krRegionTransit(region){
+  if(!region) return null;
+  if(KR_REGION_TRANSIT[region]) return {...KR_REGION_TRANSIT[region],_name:region};
+  const hit=Object.keys(KR_REGION_TRANSIT).find(k=>String(region).includes(k));
+  return hit?{...KR_REGION_TRANSIT[hit],_name:hit}:null;
+}
+
+// ══════════════════════════════════════════════
 // 코스 생성
 // ══════════════════════════════════════════════
 // 실내 활동 풀(영화·도서관·전시 등) — 실내 보강 & 비 오는 날 대안
@@ -986,11 +1025,12 @@ function generateDateCourse(){
             <a href="https://search.naver.com/search.naver?where=blog&query=${mapQ}" target="_blank" rel="noopener" class="date-ext date-ext-blog">📝 블로그</a>
           </div>
         </div>
-        ${!isLast?`<div class="date-transit">↓ 도보·이동 약 ${travelMins[timeSlots[i+1]?.type]||15}분</div>`:''}
+        ${!isLast?`<div class="date-transit" data-from="${esc(s.spot.name)}" data-to="${esc(timeSlots[i+1]?.spot?.name||'')}">↓ 도보·이동 약 ${travelMins[timeSlots[i+1]?.type]||15}분 <span class="date-transit-est">(추정)</span></div>`:''}
       </div>
     </div>`;
   });
   html+=`</div>
+  ${_renderDateTransitCard(areaData,areaCoord,timeSlots)}
   <div id="date-real-data"></div>
   <div id="date-exhibit"></div>
   <div class="date-tip-card">
@@ -1003,6 +1043,110 @@ function generateDateCourse(){
   _loadExhibitions(DST.area);
   _renderDateMap(areas, dep1, c1, dep2, c2, firstSpot, timeSlots.map(s=>({name:s.spot.name,label:s.label,time:s.time})));
   _enhanceCourse(areas, timeSlots.map((s,i)=>({idx:i,type:s.type})));
+}
+
+// ══════════════════════════════════════════════
+// 🚇 데이트 교통 카드 — 권역 교통 정보 + 구간 실측
+// ══════════════════════════════════════════════
+function _renderDateTransitCard(areaData,areaCoord,timeSlots){
+  const rt=_krRegionTransit(areaData&&areaData.region);
+  const canMeasure=(typeof _gmapsRouteSecs==='function')&&timeSlots&&timeSlots.length>=2;
+  if(!rt&&!canMeasure) return '';
+  const spots=(timeSlots||[]).map(s=>s.spot&&s.spot.name).filter(Boolean);
+  return `<div class="date-transit-card" data-area="${esc(DST.area.split('·')[0])}"
+       ${areaCoord?`data-lat="${areaCoord[0]}" data-lng="${areaCoord[1]}"`:''}
+       data-spots="${esc(JSON.stringify(spots))}">
+    <div class="date-tip-title">🚇 이동·교통</div>
+    ${rt?`
+      <div class="date-transit-modes">${rt.modes.map(m=>`<span class="date-transit-chip">${m}</span>`).join('')}</div>
+      ${rt.card?`<div class="date-transit-row">🎟️ <b>교통권</b> — ${rt.card}</div>`:''}
+      ${rt.tip?`<div class="date-transit-row">💡 ${rt.tip}</div>`:''}
+      ${rt.late?`<div class="date-transit-row late">🌙 <b>귀가</b> — ${rt.late}</div>`:''}
+    `:''}
+    ${canMeasure?`
+      <button type="button" class="date-transit-btn" onclick="measureDateSegments(this)">📏 구간별 실제 이동시간 재기</button>
+      <div class="date-transit-note">코스 순서대로 <b>도보·대중교통</b>을 실제로 재서 위 타임라인에 반영해요.</div>
+    `:''}
+  </div>`;
+}
+// 슬롯의 실측 기준점
+//  · 실제 추천 스팟 → 네이버 좌표(정확)
+//  · 그 외 → 이름을 지역 편향 검색으로 확정 시도(근사). "서울숲 산책"처럼 실재하는 이름은 잘 잡히고,
+//    "전시·미술관 관람" 같은 순수 카테고리는 그 동네의 대표 장소로 잡히므로 ≈ 로 표기한다.
+function _slotWaypoint(idx){
+  const card=document.getElementById('dslot-'+idx);
+  if(!card) return null;
+  const lat=parseFloat(card.dataset.lat),lng=parseFloat(card.dataset.lng);
+  if(isFinite(lat)&&isFinite(lng)) return {q:`geo:${lat},${lng}`,exact:true};
+  const nm=card.dataset.vname||(card.querySelector('.date-slot-name')||{}).textContent||'';
+  const clean=String(nm).replace(/실제 추천|🟢 영업중|🔴 영업종료/g,'').trim();
+  return clean?{name:clean,exact:false}:null;
+}
+async function measureDateSegments(btn){
+  const card=btn.closest('.date-transit-card'); if(!card) return;
+  if(card.dataset.running==='1') return;
+  const body=document.getElementById('date-result-body'); if(!body) return;
+  const segs=[...body.querySelectorAll('.date-transit[data-from][data-to]')];
+  if(!segs.length){_toast('잴 구간이 없어요');return;}
+  const area=card.dataset.area||'';
+  const lat=parseFloat(card.dataset.lat),lng=parseFloat(card.dataset.lng);
+  const center=(isFinite(lat)&&isFinite(lng))?[lat,lng]:null;
+  card.dataset.running='1'; btn.disabled=true;
+  const label=btn.textContent;
+  const delay=()=>new Promise(r=>setTimeout(r,180));
+  // 좌표/실제 장소가 있는 구간만 잰다 — 카테고리 슬롯끼리 재면 엉뚱한 값이 나온다
+  // 동네 밖(3km 초과)으로 잡히면 잘못 확정된 것 — 버린다
+  const resolve=async(wp)=>{
+    if(!wp) return null;
+    if(wp.q) return wp.q;
+    const p=await _resolvePlace(`${wp.name} ${area}`.trim(),center);
+    if(!p) return null;
+    if(center&&p.lat!=null&&_dist(center,[p.lat,p.lng])>3) return null;
+    return 'place:'+p.id;
+  };
+  let done=0,skipped=0;
+  try{
+    for(let i=0;i<segs.length;i++){
+      const seg=segs[i];
+      const a=_slotWaypoint(i), b=_slotWaypoint(i+1);
+      const approx=!(a&&a.exact&&b&&b.exact); // 한쪽이라도 이름으로 찾았으면 근사값
+      const mk=(s)=>approx?'≈ '+s:s;
+      if(!a||!b){
+        seg.innerHTML=`↓ 도보·이동 약 15분 <span class="date-transit-est">(추정 · 같은 동네)</span>`;
+        seg.title='이 구간은 장소를 확정할 수 없어 추정치예요';
+        skipped++; continue;
+      }
+      btn.textContent=`⏳ 실측 중… ${i+1}/${segs.length}`;
+      const o=await resolve(a); if(!a.q) await delay();
+      const d=await resolve(b); if(!b.q) await delay();
+      if(!o||!d){
+        seg.innerHTML=`↓ 도보·이동 약 15분 <span class="date-transit-est">(추정 · 같은 동네)</span>`;
+        seg.title='이 동네에서 해당 장소를 확정하지 못했어요';
+        skipped++; continue;
+      }
+      if(approx) seg.title='한쪽 장소를 이름으로 찾아 맞춘 근사값이에요 (≈)';
+      const walk=await _gmapsRouteSecs(o,d,'walking'); await delay();
+      if(walk&&walk.secs<=20*60){
+        seg.innerHTML=`↓ 🚶 ${mk('도보')} <b>${_fmtSecs(walk.secs)}</b>`; done++; continue;
+      }
+      const tr=await _gmapsRouteSecs(o,d,'transit'); await delay();
+      if(walk&&tr&&walk.secs<=90*60){
+        seg.innerHTML=`↓ ${mk(`🚶 ${_fmtSecs(walk.secs)}`)} · ${tr.drive?'🚗':'🚇'} <b>${_fmtSecs(tr.secs)}</b>`; done++;
+      } else if(tr){
+        seg.innerHTML=`↓ ${mk(tr.drive?'🚗 차량':'🚇 대중교통')} <b>${_fmtSecs(tr.secs)}</b>`;
+        if(walk) seg.title=`도보로는 ${_fmtSecs(walk.secs)} — 걸어갈 거리가 아니에요`;
+        done++;
+      } else if(walk){
+        seg.innerHTML=`↓ 🚶 ${mk('도보')} <b>${_fmtSecs(walk.secs)}</b>`; done++;
+      } else skipped++;
+    }
+    _toast(done
+      ?`📏 ${done}개 구간을 실측값으로 바꿨어요${skipped?` (${skipped}개는 장소 미확정)`:''}`
+      :'실측 가능한 구간이 없어요 — 실제 추천 스팟이 채워진 뒤 다시 눌러보세요');
+  }catch(e){
+    console.warn('[TripMind] 데이트 구간 실측 실패:',e);
+    _toast('⚠️ 실측에 실패했어요');
+  }finally{ btn.textContent=label; btn.disabled=false; card.dataset.running='0'; }
 }
 
 // ── 동선 지도 (Leaflet + OSM, API 키 불필요) ──
@@ -1116,6 +1260,10 @@ async function _enhanceCourse(areas,slots){
 }
 function _applyRealSlot(idx,type,v,meet,dong){
   const card=document.getElementById('dslot-'+idx); if(!card) return;
+  // 실측용 좌표 보관 — 네이버가 준 실제 좌표라 이름 지오코딩보다 정확하다
+  card.dataset.real='1';
+  card.dataset.vname=_decodeEnt(v.name);
+  if(v._c){ card.dataset.lat=v._c[0]; card.dataset.lng=v._c[1]; }
   const dKm=(v._c&&meet)?_dist(meet,v._c):null;
   const reason=(dKm!=null&&dKm<2.6)?`📍 동선상 가까워요 · 만남지점서 ${dKm<1?Math.round(dKm*1000)+'m':dKm.toFixed(1)+'km'}`:'🔥 이 동네 인기 스팟';
   const blog=v.blogTotal?`📝 ${Number(v.blogTotal).toLocaleString()}`:'';
@@ -1181,6 +1329,7 @@ else setTimeout(_initDateRegion,100);
 Object.assign(window,{
   filterDepLoc,selectDepLoc,showDateRegion,selectDateArea,clearDateArea,
   updateDateDayLabel,togDateMood,togDateBudget,togDateWeather,togDateCuisine,generateDateCourse,shareDateCourse,
-  _dateCat,dateStep,inputStep,inputNext1
+  _dateCat,dateStep,inputStep,inputNext1,
+  measureDateSegments   // 교통 카드의 "구간별 실제 이동시간 재기" 버튼 (인라인 onclick)
 });
 })();

@@ -292,6 +292,17 @@ textarea.fi2{resize:vertical;min-height:90px;}
 .date-map-link{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(3,199,90,.1);color:#03C75A;border:1px solid rgba(3,199,90,.25);text-decoration:none;}
 .date-tip-card{background:var(--card);border:1px solid var(--bdr);border-radius:14px;padding:14px 16px;margin-top:16px;}
 .date-tip-title{font-size:13px;font-weight:800;margin-bottom:8px;}
+/* ══ 데이트 교통 카드 ══ */
+.date-transit-est{opacity:.6;}
+.date-transit-card{background:var(--card);border:1px solid var(--bdr);border-radius:14px;padding:14px 16px;margin-top:16px;}
+.date-transit-modes{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px;}
+.date-transit-chip{font-size:11px;background:var(--card2);border:1px solid var(--bdr);border-radius:20px;padding:3px 9px;}
+.date-transit-row{font-size:11.5px;color:var(--sub);line-height:1.55;margin-bottom:4px;}
+.date-transit-row.late{background:rgba(129,140,248,.09);border-radius:8px;padding:7px 9px;margin-top:6px;}
+.date-transit-btn{margin-top:9px;font-size:12px;font-weight:700;padding:7px 12px;border-radius:8px;
+  border:1px solid var(--pri);background:var(--pri);color:#fff;cursor:pointer;font-family:inherit;}
+.date-transit-btn:disabled{opacity:.55;cursor:default;}
+.date-transit-note{font-size:10.5px;color:var(--sub);margin-top:5px;line-height:1.5;}
 .date-tip-body{font-size:12px;color:var(--sub);line-height:1.85;}
 /* 데이트 — 외부 바로가기(지도·유튜브·블로그) */
 .date-ext{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;text-decoration:none;border:1px solid;white-space:nowrap;}
@@ -3462,25 +3473,227 @@ const CITY_TRANSIT={
   '경주':{modes:['🚗 렌터카','🚌 시내버스','🚲 자전거'],rental:'suburb',
     special:'황리단길·대릉원 일대는 도보권이고 <b>자전거 대여</b>가 잘 돼 있어요. 불국사·석굴암은 버스나 차 필요'},
 };
-// 국가 단위 폴백 (도시 항목이 없을 때)
+// 국가 단위 폴백 (도시 항목이 없을 때) — DB의 131개 국가 전부 커버
+// 국가 단위 교통 규범·렌트 판단만 담는다. 도시별 요금·노선명은 검증된 CITY_TRANSIT에만 둔다.
 const COUNTRY_TRANSIT={
+  // ── 동아시아 ──
   '일본':{modes:['🚆 JR·사철','🚇 지하철'],card:'Suica/ICOCA 등 IC카드 전국 호환',rental:'suburb',
     special:'JR패스는 <b>장거리 신칸센을 2회 이상</b> 탈 때부터 이득이에요 — 한 도시만 머물면 손해'},
+  '대한민국':{modes:['🚄 KTX','🚌 고속버스','🚇 지하철'],card:'T-money 전국 호환',rental:'suburb',
+    special:'도시 간은 KTX·고속버스가 촘촘해요. 지방 소도시·섬은 렌트가 편합니다'},
+  '한국':{modes:['🚄 KTX','🚌 고속버스','🚇 지하철'],card:'T-money 전국 호환',rental:'suburb'},
+  '중국':{modes:['🚄 가오톄(고속철)','🚇 지하철','🚕 디디'],rental:'no',
+    rentalNote:'국제운전면허가 통용되지 않아 렌트가 사실상 불가해요',
+    special:'고속철망이 세계 최대 수준이에요. 결제·호출은 알리페이/위챗 없이는 불편하니 미리 준비하세요'},
+  '대만':{modes:['🚄 고속철(HSR)','🚇 지하철','🚌 버스'],card:'이지카드(悠遊卡) 전국 호환',rental:'suburb',
+    special:'서부 도시는 고속철로 남북 90분대예요. 동부(화롄·타이둥)는 일반 기차'},
+  '홍콩':{modes:['🚇 MTR','🚋 트램','⛴️ 페리'],card:'옥토퍼스 카드',rental:'no'},
+  '마카오':{modes:['🚌 무료 카지노 셔틀','🚌 버스'],rental:'no',
+    special:'<b>카지노·호텔 무료 셔틀</b>이 사실상의 대중교통이에요 — 투숙객이 아니어도 대부분 탈 수 있습니다'},
+  '몽골':{modes:['🚙 4WD 투어','🚌 버스'],rental:'no',
+    special:'울란바토르 밖은 비포장이 대부분이라 <b>기사 포함 4WD 투어</b>가 사실상 유일한 방법이에요'},
+  // ── 동남아 ──
+  '태국':{modes:['✈️ 국내선','🚆 기차','🚌 버스'],rental:'no',special:'국내선 저가항공이 매우 싸요. 그랩(Grab) 앱이 필수'},
+  '베트남':{modes:['✈️ 국내선','🚌 슬리핑버스','🏍️ 그랩바이크'],rental:'no',special:'그랩이 택시보다 안전·투명해요'},
+  '싱가포르':{modes:['🚇 MRT','🚌 버스'],card:'컨택리스 카드 직접 탭',rental:'no'},
+  '말레이시아':{modes:['🚇 LRT/MRT','✈️ 국내선','🚌 버스'],rental:'suburb',special:'그랩이 보편적이고 저렴해요'},
+  '인도네시아':{modes:['✈️ 국내선','🚕 그랩/고젝','🚆 기차(자바)'],rental:'no',
+    special:'섬나라라 도시 간은 항공이 기본이에요. 자바섬 안은 기차가 편합니다'},
+  '필리핀':{modes:['✈️ 국내선','🛺 지프니/트라이시클','⛴️ 페리'],rental:'no',
+    special:'섬 간 이동은 국내선 저가항공이 기본. 마닐라 교통체증은 극심해요'},
+  '캄보디아':{modes:['🛺 툭툭','🚌 버스'],rental:'no',special:'툭툭은 그랩 앱으로 부르면 흥정 없이 정찰가예요'},
+  '라오스':{modes:['🚄 라오스-중국 철도','🚌 버스','🛺 툭툭'],rental:'no',
+    special:'비엔티안↔루앙프라방은 <b>고속철로 2시간</b>(버스는 10시간+) — 표가 빨리 매진돼요'},
+  '미얀마':{modes:['🚌 버스','✈️ 국내선'],rental:'no'},
+  '브루나이':{modes:['🚗 자동차','🚌 버스(제한적)'],rental:'yes',special:'대중교통이 빈약해 렌트나 택시가 필요해요'},
+  // ── 남아시아 ──
+  '인도':{modes:['🚆 기차','🚇 지하철(대도시)','🛺 오토릭샤'],rental:'no',
+    rentalNote:'교통 상황이 매우 혼잡해 직접 운전은 비추 — 기사 포함 차량이 일반적이에요',
+    special:'기차는 IRCTC에서 미리 예약(등급 차이가 큼). 우버·올라가 릭샤보다 투명해요'},
+  '네팔':{modes:['🚌 버스','✈️ 경비행기','🚙 지프'],rental:'no',special:'산악 도로가 험해 국내선 경비행기를 많이 씁니다'},
+  '스리랑카':{modes:['🚆 기차','🚌 버스','🛺 툭툭'],rental:'suburb',
+    special:'<b>칸디↔엘라 기차</b>는 세계적 절경 노선이에요 — 좌석은 미리 예약'},
+  '몰디브':{modes:['🛥️ 스피드보트','🛩️ 수상비행기'],rental:'no',
+    special:'리조트 이동은 <b>스피드보트·수상비행기</b>뿐이고 비용이 큽니다 — 예약 시 이동편 포함 여부를 꼭 확인하세요'},
+  // ── 중앙아시아·코카서스 ──
+  '우즈베키스탄':{modes:['🚄 아프로시욥 고속철','🚌 버스'],rental:'suburb',
+    special:'타슈켄트↔사마르칸트 고속철이 2시간대로 편해요'},
+  '카자흐스탄':{modes:['🚆 기차','✈️ 국내선'],rental:'suburb'},
+  '키르기스스탄':{modes:['🚐 마슈르트카','🚙 지프'],rental:'suburb'},
+  '타지키스탄':{modes:['🚙 4WD','🚐 마슈르트카'],rental:'no'},
+  '조지아':{modes:['🚐 마슈르트카','🚆 기차','🚇 지하철(트빌리시)'],rental:'suburb',
+    special:'카즈베기·스바네티 산악 지역은 4WD 합승이 일반적이에요'},
+  '아르메니아':{modes:['🚐 마슈르트카','🚇 지하철(예레반)'],rental:'suburb'},
+  '아제르바이잔':{modes:['🚇 지하철(바쿠)','🚌 버스'],rental:'suburb'},
+  // ── 중동 ──
+  '아랍에미리트':{modes:['🚇 메트로','🚕 택시'],card:'Nol 카드',rental:'suburb',
+    special:'더위 때문에 도보 이동이 힘들어요. 택시가 저렴합니다'},
+  '카타르':{modes:['🚇 도하 메트로','🚕 택시'],rental:'suburb'},
+  '쿠웨이트':{modes:['🚕 택시','🚗 자동차'],rental:'yes',special:'대중교통이 빈약해 차량이 필요해요'},
+  '오만':{modes:['🚗 렌터카','🚙 4WD'],rental:'yes',
+    special:'✅ <b>와디·사막을 보려면 렌트가 필수</b>예요. 일부 구간은 4WD가 필요합니다'},
+  '사우디아라비아':{modes:['🚄 하라마인 고속철','🚗 렌터카'],rental:'yes',
+    special:'제다↔메카↔메디나는 고속철, 그 외는 차량이 필요해요'},
+  '요르단':{modes:['🚗 렌터카','🚌 제트버스'],rental:'yes',
+    special:'✅ 페트라·와디럼·사해를 도는 <b>King’s Highway 루트는 렌트가 정답</b>이에요'},
+  '이스라엘':{modes:['🚆 기차','🚌 버스','🚋 트램'],card:'Rav-Kav 카드',rental:'suburb',
+    special:'⚠️ <b>금요일 저녁~토요일(샤밧)엔 대중교통이 대부분 멈춥니다</b> — 이 시간대 이동은 택시나 렌트로 계획하세요'},
+  '레바논':{modes:['🚕 서비스 택시','🚐 밴'],rental:'suburb'},
+  '이란':{modes:['🚇 지하철(테헤란)','🚌 버스','✈️ 국내선'],rental:'no',
+    special:'해외 카드가 통하지 않아 <b>현금 준비가 필수</b>예요'},
+  '터키':{modes:['🚌 시외버스','✈️ 국내선','🚋 트램'],card:'도시별 교통카드(이스탄불카트 등)',rental:'suburb',
+    special:'<b>시외버스망이 매우 좋고 저렴</b>해요. 장거리는 국내선 항공이 버스와 가격 차이가 크지 않습니다. 카파도키아는 괴레메 기점 투어·ATV가 일반적이에요'},
+  '튀르키예':{modes:['🚌 시외버스','✈️ 국내선','🚋 트램'],card:'도시별 교통카드(이스탄불카트 등)',rental:'suburb',
+    special:'<b>시외버스망이 매우 좋고 저렴</b>해요. 장거리는 국내선 항공이 버스와 가격 차이가 크지 않습니다'},
+  '키프로스':{modes:['🚗 렌터카','🚌 버스'],rental:'yes',
+    special:'✅ 대중교통이 빈약해 렌트가 사실상 필수. <b>좌측통행</b>이니 주의하세요'},
+  // ── 유럽 (서·남) ──
   '이탈리아':{modes:['🚆 트레니탈리아/이탈로','🚌 버스'],rental:'suburb',
     rentalNote:'대부분 구시가가 ZTL이라 시내 운전은 피하세요',special:'도시 간은 고속철(프레차로사)이 빠르고 저렴해요 — 미리 예약하면 반값'},
   '프랑스':{modes:['🚆 TGV','🚇 지하철'],rental:'suburb',special:'TGV는 미리 예약할수록 쌉니다(Ouigo 저가 옵션도 있어요)'},
-  '스페인':{modes:['🚆 렌페 AVE','🚇 지하철'],rental:'suburb'},
+  '스페인':{modes:['🚆 렌페 AVE','🚇 지하철'],rental:'suburb',special:'AVE 고속철이 주요 도시를 촘촘히 연결해요'},
+  '포르투갈':{modes:['🚆 CP 기차','🚋 트램','🚇 지하철'],rental:'suburb',
+    special:'리스본↔포르투는 알파 펜둘라르 고속열차로 3시간대예요'},
   '독일':{modes:['🚆 DB','🚇 U/S-Bahn'],rental:'suburb',special:'도이칠란트티켓(월 €58)은 장기 체류·완행 위주일 때 검토'},
   '스위스':{modes:['🚆 SBB','🚡 산악열차'],rental:'no',special:'스위스 트래블 패스가 기차·버스·유람선·일부 산악열차까지 커버'},
-  '영국':{modes:['🚆 내셔널레일','🚇 지하철'],rental:'suburb',special:'기차는 미리 살수록 극적으로 싸요(Advance 티켓)'},
-  '터키':{modes:['🚌 시외버스','✈️ 국내선'],rental:'suburb',
-    special:'<b>시외버스망이 매우 좋고 저렴</b>해요. 장거리는 국내선 항공이 버스와 가격 차이가 크지 않습니다'},
-  '태국':{modes:['✈️ 국내선','🚆 기차','🚌 버스'],rental:'no',special:'국내선 저가항공이 매우 싸요. 그랩(Grab) 앱이 필수'},
-  '베트남':{modes:['✈️ 국내선','🚌 슬리핑버스','🏍️ 그랩바이크'],rental:'no',special:'그랩이 택시보다 안전·투명해요'},
+  '오스트리아':{modes:['🚆 ÖBB','🚋 트램','🚇 U-Bahn'],rental:'suburb',
+    special:'빈↔잘츠부르크 기차가 편해요. 할슈타트는 기차+페리 조합'},
+  '영국':{modes:['🚆 내셔널레일','🚇 지하철'],rental:'suburb',special:'기차는 미리 살수록 극적으로 싸요(Advance 티켓). <b>좌측통행</b>'},
+  '아일랜드':{modes:['🚆 기차','🚌 버스','🚗 렌터카'],rental:'yes',
+    special:'✅ 서부 해안(모허 절벽·링오브케리)은 <b>렌트가 정답</b>. <b>좌측통행</b>이니 주의하세요'},
+  '네덜란드':{modes:['🚲 자전거','🚆 NS 기차','🚋 트램'],card:'OV-chipkaart / 컨택리스',rental:'no',
+    special:'⚠️ <b>자전거가 주력 교통수단</b>이에요. 도시 간은 기차가 30분~1시간대로 촘촘합니다'},
+  '벨기에':{modes:['🚆 SNCB','🚋 트램'],rental:'no',special:'브뤼셀·브뤼헤·겐트가 기차로 1시간 내예요'},
+  '룩셈부르크':{modes:['🚌 버스','🚆 기차'],rental:'suburb',special:'✅ <b>전국 대중교통이 무료</b>입니다(2020년부터)'},
+  '모나코':{modes:['🚌 버스','🚆 기차','🛗 공공 엘리베이터'],rental:'no',
+    special:'도시국가라 도보로 충분해요. 언덕이 심해 <b>무료 공공 엘리베이터</b>를 활용하세요'},
+  '말타':{modes:['🚌 버스','⛴️ 페리'],rental:'suburb',special:'버스망이 섬 전체를 커버해요. <b>좌측통행</b>'},
+  '그리스':{modes:['⛴️ 페리','🚇 지하철(아테네)','🚌 KTEL 버스'],rental:'suburb',
+    special:'⚠️ <b>섬 이동은 페리가 기본</b>이고 성수기엔 매진돼요 — 미리 예약하세요. 섬 안에서는 ATV·스쿠터 대여가 흔합니다'},
+  '아이슬란드':{modes:['🚗 렌터카','🚌 투어버스'],rental:'yes',
+    rentalNote:'✅ <b>링로드 일주는 렌트가 유일한 현실적 방법</b>이에요',
+    special:'겨울엔 4WD + 스터드 타이어 필수. F-road(내륙)는 일반 차량 진입 금지예요'},
+  // ── 유럽 (북) ──
+  '노르웨이':{modes:['🚆 기차','⛴️ 피오르 페리','🚌 버스'],rental:'suburb',
+    special:'베르겐 철도·피오르 페리 자체가 관광이에요. Norway in a Nutshell 패키지가 편합니다'},
+  '스웨덴':{modes:['🚆 SJ 기차','🚇 지하철(스톡홀름)'],rental:'suburb',
+    special:'스톡홀름 지하철역은 "세계 최장 미술관"으로 불려요'},
+  '덴마크':{modes:['🚲 자전거','🚆 DSB','🚇 지하철'],card:'Rejsekort',rental:'no',
+    special:'코펜하겐은 자전거 도시예요. 말뫼(스웨덴)까지 기차로 35분'},
+  '핀란드':{modes:['🚆 VR 기차','🚋 트램','🚌 버스'],rental:'suburb',
+    special:'로바니에미(산타마을)는 헬싱키에서 야간열차가 편해요'},
+  '에스토니아':{modes:['🚋 트램','🚌 버스','⛴️ 페리'],rental:'suburb',
+    special:'탈린 구시가는 도보권. 헬싱키까지 페리로 2시간이에요'},
+  '라트비아':{modes:['🚋 트램','🚌 버스'],rental:'suburb'},
+  '리투아니아':{modes:['🚌 버스','🚆 기차'],rental:'suburb'},
+  // ── 유럽 (중·동) ──
+  '체코':{modes:['🚋 트램','🚇 지하철','🚆 기차'],rental:'no',special:'프라하 트램망이 촘촘해요. 체스키크룸로프는 버스가 편합니다'},
+  '폴란드':{modes:['🚆 PKP 기차','🚋 트램'],rental:'suburb',special:'크라쿠프↔바르샤바 고속열차가 2시간대예요'},
+  '헝가리':{modes:['🚇 지하철','🚋 트램','🚆 기차'],rental:'no',
+    special:'부다페스트 <b>2번 트램</b>은 다뉴브 강변을 달리는 관광 노선이에요'},
+  '슬로베니아':{modes:['🚌 버스','🚗 렌터카'],rental:'yes',
+    special:'✅ 블레드·보힌·포스토이나를 도려면 렌트가 훨씬 편해요'},
+  '크로아티아':{modes:['🚌 버스','⛴️ 페리','🚗 렌터카'],rental:'suburb',
+    special:'해안 도시 간은 버스가 기본이고, 섬은 <b>야드롤리니야 페리</b>예요. 두브로브니크 구시가는 차량 진입 불가'},
+  '보스니아':{modes:['🚌 버스'],rental:'suburb',special:'모스타르↔사라예보는 버스가 일반적이에요'},
+  '몬테네그로':{modes:['🚌 버스','🚗 렌터카'],rental:'suburb',special:'코토르 만 해안도로는 렌트가 좋아요(성수기 정체 주의)'},
+  '세르비아':{modes:['🚌 버스','🚋 트램'],rental:'suburb'},
+  '북마케도니아':{modes:['🚌 버스'],rental:'suburb'},
+  '알바니아':{modes:['🚐 퍼구르 밴','🚌 버스'],rental:'suburb',special:'시간표가 유동적이라 여유를 두고 움직이세요'},
+  '불가리아':{modes:['🚌 버스','🚇 지하철(소피아)'],rental:'suburb'},
+  '루마니아':{modes:['🚆 CFR 기차','🚌 버스'],rental:'suburb',special:'트란실바니아 성 투어는 렌트가 편해요'},
+  '우크라이나':{modes:['🚆 기차','🚇 지하철'],rental:'no',special:'⚠️ 여행 전 외교부 여행경보를 반드시 확인하세요'},
+  '러시아':{modes:['🚆 기차','🚇 지하철'],rental:'no',
+    special:'모스크바·상트페테르부르크 지하철은 궁전급 인테리어로 유명해요. ⚠️ 여행경보 확인 필요'},
+  '벨라루스':{modes:['🚆 기차','🚇 지하철'],rental:'no'},
+  // ── 북미 ──
   '미국':{modes:['🚗 렌터카','✈️ 국내선'],rental:'yes',
-    rentalNote:'대도시(뉴욕·시카고·보스턴·샌프란시스코) 외에는 렌트가 사실상 필수예요'},
-  '대한민국':{modes:['🚄 KTX','🚌 고속버스','🚇 지하철'],rental:'suburb'},
-  '한국':{modes:['🚄 KTX','🚌 고속버스','🚇 지하철'],rental:'suburb'},
+    rentalNote:'대도시(뉴욕·시카고·보스턴·샌프란시스코) 외에는 렌트가 사실상 필수예요',
+    special:'국립공원·서부 로드트립은 렌트 전제로 계획하세요. 도시 간 거리가 멀어 국내선이 기본입니다'},
+  '캐나다':{modes:['🚗 렌터카','✈️ 국내선','🚆 VIA Rail'],rental:'yes',
+    special:'밴쿠버·토론토·몬트리올 도심은 대중교통으로 되지만, 로키·근교는 렌트가 필요해요'},
+  '멕시코':{modes:['🚌 ADO 고속버스','✈️ 국내선','🚇 지하철'],rental:'suburb',
+    special:'<b>ADO 등 1등급 버스가 쾌적하고 저렴</b>해요. 우버가 택시보다 안전합니다'},
+  '쿠바':{modes:['🚕 콜렉티보','🚌 비아술 버스','🚗 올드카'],rental:'no',
+    special:'인터넷·카드 결제가 제한적이라 <b>현금(유로/USD) 준비가 필수</b>예요'},
+  '과테말라':{modes:['🚌 치킨버스','🚐 셔틀밴'],rental:'no',special:'관광지 간에는 셔틀밴이 안전하고 편해요'},
+  '코스타리카':{modes:['🚗 렌터카','🚐 셔틀'],rental:'yes',
+    special:'✅ 국립공원을 도려면 렌트(가급적 4WD)가 필요해요. 우기엔 비포장 도로 주의'},
+  '파나마':{modes:['🚇 지하철(파나마시티)','🚌 버스'],rental:'suburb'},
+  '트리니다드 토바고':{modes:['🚗 렌터카','🚐 맥시택시'],rental:'yes'},
+  // ── 남미 ──
+  '브라질':{modes:['✈️ 국내선','🚌 장거리버스','🚇 지하철'],rental:'suburb',
+    special:'국토가 넓어 도시 간은 항공이 기본이에요. 야간 장거리버스도 잘 돼 있습니다'},
+  '아르헨티나':{modes:['✈️ 국내선','🚌 카마 버스','🚇 지하철(부에노스아이레스)'],rental:'suburb',
+    special:'<b>카마(침대형) 버스</b>가 장거리에 쾌적해요. 파타고니아는 항공이 필수'},
+  '칠레':{modes:['✈️ 국내선','🚌 버스','🚇 지하철(산티아고)'],rental:'suburb',
+    special:'남북으로 4,300km라 파타고니아·아타카마는 항공으로 이동하세요'},
+  '페루':{modes:['✈️ 국내선','🚌 크루즈델수르 버스','🚆 관광열차'],rental:'no',
+    special:'마추픽추는 <b>기차(잉카레일·페루레일) 예약이 필수</b>예요 — 성수기엔 몇 달 전 매진'},
+  '볼리비아':{modes:['🚌 버스','✈️ 국내선','🚙 4WD 투어'],rental:'no',
+    special:'우유니 소금사막은 기사 포함 4WD 투어가 사실상 유일한 방법이에요'},
+  '콜롬비아':{modes:['✈️ 국내선','🚌 버스','🚡 케이블카'],rental:'no',
+    special:'메데인의 <b>메트로케이블</b>은 교통수단이자 명물이에요'},
+  '에콰도르':{modes:['🚌 버스','✈️ 국내선'],rental:'suburb',special:'갈라파고스는 항공+크루즈 조합이에요'},
+  '우루과이':{modes:['🚌 버스','⛴️ 부에노스아이레스행 페리'],rental:'suburb'},
+  '파라과이':{modes:['🚌 버스'],rental:'suburb'},
+  // ── 오세아니아 ──
+  '호주':{modes:['🚗 렌터카','✈️ 국내선','🚆 도시철도'],rental:'yes',
+    rentalNote:'도시 밖은 렌트·캠퍼밴이 기본이에요. <b>좌측통행</b>',
+    special:'도시 간 거리가 극단적으로 멀어 국내선이 필수예요(시드니↔퍼스 4,000km)'},
+  '뉴질랜드':{modes:['🚗 렌터카','🚐 캠퍼밴'],rental:'yes',
+    rentalNote:'✅ <b>렌트·캠퍼밴이 사실상 유일한 방법</b>이에요. <b>좌측통행</b>',
+    special:'남섬은 도로 자체가 관광 코스예요. 겨울 산악도로는 체인이 필요할 수 있습니다'},
+  '피지':{modes:['⛴️ 아일랜드 페리','🛩️ 경비행기','🚌 버스'],rental:'no',
+    special:'섬 리조트 이동은 야사와 플라이어 등 페리·경비행기예요'},
+  '바누아투':{modes:['🚐 미니버스','🛩️ 국내선'],rental:'no'},
+  '사모아':{modes:['🚗 렌터카','🚌 버스'],rental:'yes'},
+  '통가':{modes:['🚗 렌터카','🚌 버스'],rental:'suburb'},
+  '팔라우':{modes:['🚗 렌터카','🛥️ 보트투어'],rental:'yes',special:'해양 관광은 보트투어가 기본이에요'},
+  '파푸아뉴기니':{modes:['🛩️ 국내선'],rental:'no',special:'⚠️ 육로 이동이 제한적이고 치안 확인이 필요해요'},
+  '뉴칼레도니아':{modes:['🚗 렌터카','🛩️ 국내선'],rental:'yes'},
+  '프랑스령 폴리네시아':{modes:['🛩️ 에어타히티','⛴️ 페리'],rental:'suburb',
+    special:'섬 간 이동은 국내선 항공이 기본이라 비용을 넉넉히 잡으세요'},
+  '프랑스령폴리네시아':{modes:['🛩️ 에어타히티','⛴️ 페리'],rental:'suburb'},
+  // ── 아프리카 ──
+  '남아공':{modes:['🚗 렌터카','✈️ 국내선'],rental:'yes',
+    rentalNote:'✅ 가든루트·와인랜드는 렌트가 필수예요. <b>좌측통행</b>',
+    special:'⚠️ 야간 운전과 도심 도보는 치안상 피하고, 우버를 이용하세요'},
+  '모로코':{modes:['🚄 알보라크 고속철','🚌 CTM 버스','🚕 그랑택시'],rental:'suburb',
+    special:'탕헤르↔카사블랑카 고속철이 있어요. 사하라는 투어 차량이 일반적입니다'},
+  '이집트':{modes:['🚆 야간열차','✈️ 국내선','🚕 우버'],rental:'no',
+    special:'카이로↔룩소르·아스완은 <b>야간열차 또는 국내선</b>. 우버가 택시 흥정보다 편해요'},
+  '튀니지':{modes:['🚆 기차','🚌 루아지(합승밴)'],rental:'suburb'},
+  '케냐':{modes:['🚙 사파리 4WD','🚆 마다라카 익스프레스'],rental:'no',
+    special:'사파리는 기사 포함 4WD가 기본이에요. 나이로비↔몸바사는 고속철이 편합니다'},
+  '탄자니아':{modes:['🚙 사파리 4WD','🛩️ 경비행기'],rental:'no',
+    special:'세렝게티·응고롱고로는 투어 차량, 잔지바르는 페리나 경비행기예요'},
+  '에티오피아':{modes:['✈️ 국내선','🚌 버스'],rental:'no'},
+  '르완다':{modes:['🚌 버스','🚗 렌터카'],rental:'suburb',special:'고릴라 트레킹은 허가증 사전 구매가 필수예요'},
+  '우간다':{modes:['🚙 4WD','🚌 버스'],rental:'no'},
+  '가나':{modes:['🚌 버스','🚕 택시'],rental:'no'},
+  '나이지리아':{modes:['✈️ 국내선','🚕 택시'],rental:'no',special:'⚠️ 여행경보와 치안 상황을 반드시 확인하세요'},
+  '세네갈':{modes:['🚐 합승밴','🚕 택시'],rental:'no'},
+  '코트디부아르':{modes:['🚌 버스','🚕 택시'],rental:'no'},
+  '짐바브웨':{modes:['🚙 4WD','🛩️ 경비행기'],rental:'suburb',special:'빅토리아폭포는 잠비아 쪽과 함께 보는 조합이 흔해요'},
+  '잠비아':{modes:['🚙 4WD','🛩️ 경비행기'],rental:'suburb'},
+  '마다가스카르':{modes:['🚙 4WD','🚐 택시브루스'],rental:'no',special:'도로 상태가 나빠 이동에 예상보다 오래 걸려요'},
+  '모리셔스':{modes:['🚗 렌터카','🚌 버스'],rental:'yes',special:'<b>좌측통행</b>이에요'},
+  '레위니옹':{modes:['🚗 렌터카','🚌 버스'],rental:'yes',special:'화산·서커스 지형을 도려면 렌트가 필요해요'},
+  // ── 기타 도서·특별지역 ──
+  '괌':{modes:['🚗 렌터카','🚌 셔틀버스'],rental:'yes',
+    special:'✅ 투몬 지역은 셔틀로 되지만 남부 일주는 렌트가 필요해요'},
+  '미국령':{modes:['🚗 렌터카','🚌 셔틀'],rental:'yes'},
+  '스페인(카나리아 제도)':{modes:['🚗 렌터카','🚌 버스'],rental:'yes',special:'화산 국립공원을 도려면 렌트가 편해요'},
+  '포르투갈(마데이라)':{modes:['🚗 렌터카','🚌 버스'],rental:'yes',special:'경사가 급해 운전 난이도가 높아요'},
+  '포르투갈(아조레스)':{modes:['🚗 렌터카','🛩️ 섬간 항공'],rental:'yes'},
+  '이탈리아(시칠리아)':{modes:['🚗 렌터카','🚆 기차','🚌 버스'],rental:'yes',
+    special:'✅ 내륙·해안 마을을 도려면 렌트가 훨씬 자유로워요'},
+  '미국(알래스카)':{modes:['🚗 렌터카','🚆 알래스카 철도','🛩️ 부시플레인'],rental:'yes'},
+  '미국(하와이)':{modes:['🚗 렌터카','🚌 더버스(오아후)'],rental:'yes',
+    special:'✅ 오아후 외 섬(마우이·빅아일랜드)은 <b>렌트가 필수</b>예요'},
+  '인도(시킴)':{modes:['🚙 공유 지프'],rental:'no',special:'산악 도로라 공유 지프가 일반적이에요'},
+  '인도(카슈미르)':{modes:['🚙 지프','🚕 택시'],rental:'no'},
 };
 // 국가별 택시 대략 요금 (원/km) — 도시 간 택시 타당성 판단용
 const TAXI_KM_KRW={'이탈리아':2200,'터키':600,'일본':3500,'대한민국':1500,'한국':1500,'태국':500,'베트남':700,
@@ -3489,15 +3702,47 @@ const TAXI_KM_KRW={'이탈리아':2200,'터키':600,'일본':3500,'대한민국'
   '그리스':1500,'네덜란드':2800,'오스트리아':2600,'벨기에':2600,'아랍에미리트':1200,'호주':2800,'캐나다':2200};
 // DB 도시명 ↔ 교통DB 키 불일치 해소 (_getHotelExamples의 별칭과 같은 문제)
 const _TRANSIT_ALIAS={'LA':'로스앤젤레스','제주도':'제주','나하':'오키나와','베니스':'베네치아','플로렌스':'피렌체'};
+function _normCountry(raw){
+  return String(raw||'').replace(/[\u{1F1E6}-\u{1F1FF}]/gu,'')
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}️]/gu,'').replace(/\s+/g,' ').trim();
+}
 function _cityTransit(dObj){
   if(!dObj) return null;
   const key=CITY_TRANSIT[dObj.kr]?dObj.kr:(_TRANSIT_ALIAS[dObj.kr]||dObj.kr);
   const c=CITY_TRANSIT[key];
   if(c&&c.modes&&c.modes.length) return {...c,_src:'city'};
-  const country=String(dObj.country||'').replace(/[\u{1F1E6}-\u{1F1FF}]/gu,'').replace(/\(.*\)/,'').trim();
-  const k=COUNTRY_TRANSIT[country];
+  const raw=_normCountry(dObj.country);
+  // 괄호 포함 키(미국(하와이) 등)를 먼저 — 시간대처럼 교통도 본토와 다르다
+  const k=COUNTRY_TRANSIT[raw]||COUNTRY_TRANSIT[raw.replace(/\(.*\)/,'').trim()];
   if(k) return {...k,_src:'country'};
   return null;
+}
+
+// ── 도시 스팟들의 실제 좌표 분산 → 도보권/대중교통/차량 판정 ──
+// 요금·노선명을 지어내는 대신, 이미 가진 좌표로 "어떻게 다녀야 하는 도시인지"를 계산한다.
+function _spotSpreadKm(dObj){
+  if(typeof SPOT_GEO==='undefined'||!dObj) return null;
+  const pts=_primarySpots(dObj).map(s=>SPOT_GEO[s.n]).filter(Boolean);
+  if(pts.length<2) return null;
+  let max=0;
+  for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){
+    const d=_haversineKm(pts[i],pts[j]); if(d>max) max=d;
+  }
+  return {km:Math.round(max*10)/10,n:pts.length};
+}
+function _spreadVerdict(km){
+  if(km<=2)  return {icon:'🚶',label:'도보권 도시',note:'주요 스팟이 반경 2km 안에 모여 있어요 — <b>걸어서 다 돌 수 있습니다</b>. 교통권을 살 이유가 거의 없어요.'};
+  if(km<=8)  return {icon:'🚇',label:'대중교통 도시',note:'스팟이 적당히 흩어져 있어요 — <b>1일권·교통카드가 이득</b>일 가능성이 높습니다.'};
+  if(km<=25) return {icon:'🚕',label:'대중교통 + 택시 병행',note:'구간마다 대중교통이 애매해요 — <b>3명 이상이면 택시가 더 쌀 수</b> 있습니다.'};
+  return {icon:'🚗',label:'차량 필요',note:'스팟이 매우 넓게 퍼져 있어요 — <b>렌트나 투어 차량</b>을 전제로 일정을 짜세요.'};
+}
+// 어느 도시에서나 동작하는 범용 링크 (수록되지 않은 도시의 최종 안전판)
+function _universalTransitLinks(dObj){
+  const q=encodeURIComponent(dObj.en||dObj.kr);
+  return [
+    {n:'🗺️ Google Maps 대중교통',u:`https://www.google.com/maps/dir/?api=1&destination=${q}&travelmode=transit`},
+    {n:'✈️ 공항↔시내 검색',u:`https://www.google.com/search?q=${encodeURIComponent((dObj.en||dObj.kr)+' airport to city center transport')}`},
+  ];
 }
 function _taxiKmKrw(dObj){
   const country=String(dObj&&dObj.country||'').replace(/[\u{1F1E6}-\u{1F1FF}]/gu,'').replace(/\(.*\)/,'').trim();
@@ -3763,15 +4008,21 @@ function _renderCityTransitCard(destKeys){
   const cities=destKeys.map(k=>findDest(k)).filter(d=>d&&d.kr);
   if(!cities.length) return '';
   const blocks=cities.map(d=>{
-    const t=_cityTransit(d);
-    if(!t) return '';
+    const t=_cityTransit(d)||{modes:[],_src:'none'};
     const ru=_RENTAL_UI[t.rental]||null;
+    // 보유 좌표로 계산한 "이 도시를 다니는 방식" — 수록 여부와 무관하게 항상 나온다
+    const sp=_spotSpreadKm(d);
+    const sv=sp?_spreadVerdict(sp.km):null;
+    const links=_universalTransitLinks(d);
     return `<div style="border:1px solid var(--bdr);border-radius:11px;padding:11px 13px;margin-top:8px;">
       <div style="display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;margin-bottom:6px;">
         <b style="font-size:13px;color:var(--txt);">${escHtml(d.kr)}</b>
-        ${t._src==='country'?`<span style="font-size:10px;color:var(--sub);">국가 일반 정보</span>`:''}
+        ${t._src==='country'?`<span style="font-size:10px;color:var(--sub);">국가 일반 정보</span>`
+          :t._src==='none'?`<span style="font-size:10px;color:var(--sub);">자동 분석</span>`:''}
         ${ru?`<span style="font-size:10.5px;font-weight:700;border-radius:5px;padding:2px 7px;background:${ru.color};">${ru.icon} ${ru.label}</span>`:''}
+        ${sv?`<span style="font-size:10.5px;font-weight:700;border-radius:5px;padding:2px 7px;background:var(--card2);">${sv.icon} ${sv.label}</span>`:''}
       </div>
+      ${sv?`<div style="font-size:11.5px;color:var(--sub);line-height:1.55;margin-bottom:5px;">📐 추천 스팟 ${sp.n}곳이 <b>최대 ${sp.km}km</b> 범위에 분포 — ${sv.note}</div>`:''}
       ${t.modes&&t.modes.length?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px;">${
         t.modes.map(m=>`<span style="font-size:11px;background:var(--card2);border:1px solid var(--bdr);border-radius:20px;padding:3px 9px;">${m}</span>`).join('')}</div>`:''}
       ${t.card?`<div style="font-size:11.5px;color:var(--sub);line-height:1.55;margin-bottom:4px;">🎟️ <b>교통권</b> — ${t.card}</div>`:''}
@@ -3780,6 +4031,9 @@ function _renderCityTransitCard(destKeys){
         t.airport.map(a=>`&nbsp;&nbsp;· ${escHtml(a.n)} — <b>${escHtml(a.t)}</b> · ${escHtml(a.c)}`).join('<br>')}</div>`:''}
       ${t.rentalNote?`<div style="font-size:11.5px;color:var(--sub);line-height:1.55;margin-bottom:4px;">🚗 ${t.rentalNote}</div>`:''}
       ${t.special?`<div class="ac-warn" style="margin-top:6px;">💡<div>${t.special}</div></div>`:''}
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;">
+        ${links.map(l=>`<a class="spot-src-btn" href="${l.u}" target="_blank" rel="noopener">${l.n}</a>`).join('')}
+      </div>
     </div>`;
   }).filter(Boolean).join('');
   if(!blocks) return '';
