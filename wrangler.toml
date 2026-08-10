@@ -13,6 +13,13 @@ not_found_handling = "single-page-application"
 binding = "TRIPMIND_KV"
 id      = "84aa1e07ebf246728e2dcd3005d57181"     # 2026-07-09 생성
 
+# ── DayPilot 워커 서비스 바인딩 ───────────────────────────────────
+# ⚠️ 같은 계정의 워커를 workers.dev URL로 fetch하면 Cloudflare가 막는다(error 1042).
+#    반드시 서비스 바인딩으로 호출할 것 — 네트워크 홉도 없어 더 빠르다.
+[[services]]
+binding = "DAYPILOT"
+service = "daypilot"
+
 # ── 예약 오픈 알림 발송 (KST 09:00 = UTC 00:00) ───────────────────
 # 등록된 예약 오픈일이 되면 DayPilot Web Push로 알림을 보낸다.
 [triggers]

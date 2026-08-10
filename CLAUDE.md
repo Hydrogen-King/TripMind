@@ -194,3 +194,24 @@ Claude와 로마·피렌체·베네치아·이스탄불 10박11일 가족여행(
   추가해야 한다 — 빠뜨리면 버튼이 조용히 죽는다(`[DTR-04]`가 검사).
 - ⚠️ 데이트 프록시는 CORS 화이트리스트라 **localhost에서는 실장소 보강이 동작하지 않는다** — 라이브에서 검증할 것.
 - 테스트 201 → **213개 전부 통과**.
+
+## ✔ 2026-08-10 반영 — J플래너 벤치마킹 (예약 액션·호출앱·DayPilot 푸시)
+유사 앱 j-planner를 보고 얻은 결론: **경쟁이 아니라 단계가 다르다**. TripMind는 결정을 돕고
+그쪽은 실행을 돕는데, 우리는 "예약 확정 → 출발 → 현지" 구간이 비어 있었다.
+- **✅ 예약 액션** (`BOOKING_WINDOWS`/`_renderBookingActions`) — 명소별 예약 오픈 창(방문 N일 전)을
+  계산해 D-day로 노출. 체크리스트에 모아두면 안 하게 되므로 **날짜에 꽂는다**가 핵심.
+- **📱 `HAIL_APPS`** — 유럽 다수는 Bolt가 Uber보다 싸고, 동남아 Grab·중동 Careem·중국 DiDi·터키
+  BiTaksi처럼 Uber가 없거나 약한 곳이 많다. 앱 이름을 알아야 실제로 부를 수 있다.
+- **📅 캘린더 알람** — 기존 `exportToCalendar`에 VALARM이 없었다. 출발 3일 전 + 날짜별 전날 저녁 추가.
+
+### 🔔 DayPilot Web Push 연동 (2026-08-10)
+DayPilot에 이미 VAPID Web Push가 있어 푸시를 새로 만들지 않고 **중계**한다.
+- TripMind 워커 `/api/reminders`(GET/POST/DELETE) + cron `0 0 * * *`(KST 09시)이 오픈일 도래분을 푸시.
+- ⚠️ **토큰을 브라우저에 두면 안 된다** — 누구나 사용자 폰에 푸시 가능. 워커 시크릿 `DAYPILOT_TOKEN`으로만.
+- ⚠️ **AGENT_TOKEN을 재사용하지 않았다** — 권한 과다(스크린샷·거래내역)에 값 변경 시 카드 파싱이 깨진다.
+  DayPilot에 `TRIPMIND_TOKEN`을 새로 발급하고 `/api/agent/alert` 한 경로만 허용하도록 인증부를 수정.
+- ⚠️ **같은 계정 워커를 workers.dev URL로 fetch하면 Cloudflare가 막는다 → `error code: 1042`.**
+  반드시 **서비스 바인딩**(`[[services]] binding="DAYPILOT" service="daypilot"` → `env.DAYPILOT.fetch`)
+  으로 호출할 것. 이것 때문에 한참 헤맸다. 서버 간 호출이라 DayPilot쪽 CORS도 손댈 필요 없음.
+- ⚠️ `/api/notify-test`는 **인증이 없어** 그대로 두면 푸시 스팸 벡터다 → KV로 10분 1회 레이트리밋.
+- 시크릿 등록 시 `echo`의 개행이 섞이면 헤더가 깨지므로 워커에서 `.trim()` 방어.

@@ -30,18 +30,25 @@ const MAX_REMINDERS = 50;
 const DAYPILOT_ALERT = 'https://daypilot.kangjuno980126.workers.dev/api/agent/alert';
 
 // DayPilot으로 푸시 중계 — 토큰 미설정이면 조용히 skip (기능 자체는 계속 동작)
+// ⚠️ 같은 계정 워커를 workers.dev URL로 fetch하면 Cloudflare가 error 1042로 막는다.
+//    서비스 바인딩(env.DAYPILOT)으로 호출하고, 없을 때만 일반 fetch로 폴백.
 async function pushToDayPilot(env, { title, body, tag }) {
   if (!env.DAYPILOT_TOKEN) return { ok: false, reason: 'no-token' };
+  // 시크릿에 개행이 섞여 들어가면 헤더가 깨지므로 방어적으로 정리
+  const token = String(env.DAYPILOT_TOKEN).trim();
   try {
-    const r = await fetch(DAYPILOT_ALERT, {
+    const req = new Request(DAYPILOT_ALERT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${env.DAYPILOT_TOKEN}`,
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({ title, body, tag, archive: true }),
     });
-    return { ok: r.ok, status: r.status };
+    const r = env.DAYPILOT ? await env.DAYPILOT.fetch(req) : await fetch(req);
+    let detail = '';
+    try { detail = (await r.text()).slice(0, 200); } catch {}
+    return { ok: r.ok, status: r.status, detail, via: env.DAYPILOT ? 'binding' : 'http' };
   } catch (e) {
     return { ok: false, reason: String(e) };
   }
@@ -180,7 +187,15 @@ export default {
       }
 
       // ⑧ 푸시 연결 테스트
+      // ⚠️ 인증이 없는 엔드포인트라 그대로 두면 누구나 사용자 폰으로 푸시를 스팸할 수 있다.
+      //    10분에 1회로 제한 — 연결 확인 용도에는 충분하다.
       if (url.pathname === '/api/notify-test' && request.method === 'POST') {
+        const last = await env.TRIPMIND_KV.get('notify-test:last');
+        if (last && Date.now() - Number(last) < 10 * 60 * 1000) {
+          return json({ ok: false, reason: 'rate-limited', retryAfterSec:
+            Math.ceil((10 * 60 * 1000 - (Date.now() - Number(last))) / 1000) }, 429);
+        }
+        await env.TRIPMIND_KV.put('notify-test:last', String(Date.now()), { expirationTtl: 900 });
         let body = {};
         try { body = await request.json(); } catch {}
         const r = await pushToDayPilot(env, {
