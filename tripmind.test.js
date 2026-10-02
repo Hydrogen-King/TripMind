@@ -923,6 +923,60 @@ test('[SHARE-03] 저장 목록은 덮어쓰지 않고 병합', () => {
 });
 
 /* ══════════════════════════════════════════════
+   2026-10 베네치아·피렌체 현지 교훈
+   ══════════════════════════════════════════════ */
+test('[CROWD-01] 붐비는 명소 오전 이동 로직 존재', () => {
+  assertContains(html, 'function _crowdFirst(spots){', '_crowdFirst()');
+  assertContains(html, 'itin.forEach(day=>_crowdFirst(day.spots));', 'buildItinerary 적용');
+});
+test('[CROWD-02] _crowdFirst: 오후 광장 ↔ 오전 카페 교체, 야경·식사 슬롯은 유지', () => {
+  const src = html.match(/const _CROWD_RE=[^\n]*\nconst _CALM_RE=[^\n]*\nfunction _isCrowdSpot[^\n]*\nfunction _crowdFirst\(spots\)\{[\s\S]*?\n\}/);
+  assert(src, '_crowdFirst 소스 추출 실패');
+  const fn = new Function(src[0] + '\nreturn _crowdFirst;')();
+  const day = [
+    {n:'동네 카페 브런치', p:'오전'},
+    {n:'산마르코 광장', p:'오후'},
+    {n:'루프탑 바', p:'야경'},
+  ];
+  fn(day);
+  assert(day[1].p === '오전', '광장이 오전으로 가야 함: ' + day[1].p);
+  assert(day[0].p === '오후', '카페가 오후로 가야 함: ' + day[0].p);
+  assert(day[2].p === '야경', '야경 슬롯은 그대로');
+  const museum = [{n:'우피치 미술관', p:'오전'}, {n:'시뇨리아 광장', p:'오후'}];
+  fn(museum);
+  assert(museum[0].p === '오전', '미술관(시간지정 예약)은 밀어내지 않음');
+});
+test('[CROWD-03] 날짜별 팁에 붐비는 시간대 안내', () => {
+  assertContains(html, '단체관광은 10~13시에 몰려요', '단체관광 피크');
+  assertContains(html, "return tips.slice(0,_isOverseas?4:2);", '해외 팁 4개');
+});
+test('[INTL2-01] 출국일 팁 — 역·공항 길목에서 끝내기', () => {
+  assertContains(html, '✈️ 출국일 — 배·섬·외곽은 오전에', '출국일 팁');
+});
+test('[INTL2-02] 해외 체크리스트 신규 항목', () => {
+  ['N시간 교통권은 첫 개찰부터 카운트', '결제 영수증 ≠ 입장권', '영업시간은 요일별로 공식 정보에서',
+   '날씨 타는 투어는 무료취소 마감 직전에 예보 확인', '출국일은 역·공항 가는 길목에서 끝내기']
+    .forEach(k => assertContains(html, k, k));
+});
+test('[INTL2-03] 파업 확인 항목은 파업 잦은 나라에서만', () => {
+  assertContains(html, 'const _STRIKE_C=/이탈리아|프랑스|스페인|포르투갈|그리스|벨기에/;', '국가 조건');
+  assertContains(html, 'scioperi.mit.gov.it', '이탈리아 파업 공지');
+});
+test('[INTL2-04] 일요일 저녁 휴무·투어 복귀 저녁 팁', () => {
+  assertContains(html, '📅 일요일 — 유럽은 저녁 휴무 식당이 많아요', '일요일 팁');
+  assertContains(html, '저녁은 브레이크타임 없는 식당을 복귀 지점 근처로', '투어 복귀 저녁');
+});
+test('[INTL2-05] 베네치아 교통권 개시 시각·짐보관', () => {
+  assertContains(html, '24·48·72h권은 첫 개찰부터 카운트', '교통권 개시');
+});
+test('[INTL2-06] 서류 보관함 — 영수증 말고 바코드 티켓', () => {
+  assertContains(html, '1인 1장 바코드 티켓</b>을 넣으세요', '서류함 안내');
+});
+test('[INTL2-07] 한 방향 루프 동선 체크리스트', () => {
+  assertContains(html, '하루 동선은 한 방향 루프로', '루프 동선');
+});
+
+/* ══════════════════════════════════════════════
    결과 출력
    ══════════════════════════════════════════════ */
 console.log('\n====================================');

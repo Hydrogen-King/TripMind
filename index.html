@@ -1755,7 +1755,7 @@ body{overscroll-behavior-y:none;}
     <div class="doc-head">
       <div>
         <div class="doc-title">📎 예약 서류</div>
-        <div class="doc-sub">항공권·바우처·기차표를 넣어두면 <b>인터넷 없이도</b> 열려요. 이 기기에만 저장됩니다.</div>
+        <div class="doc-sub">항공권·바우처·기차표를 넣어두면 <b>인터넷 없이도</b> 열려요. 이 기기에만 저장됩니다.<br>입장권은 결제 영수증 말고 <b>1인 1장 바코드 티켓</b>을 넣으세요 — 입구에선 바코드만 통해요.</div>
       </div>
       <button class="doc-x" onclick="closeDocVault()" aria-label="닫기">✕</button>
     </div>
@@ -3439,7 +3439,7 @@ const CITY_TRANSIT={
     pass:{name:'베네치아 우니카',note:'교통권+명소 묶음. 2일 이상 머물며 섬(무라노·부라노)까지 가면 다회권이 확실히 이득'},
     airport:[{n:'알릴라구나 수상버스 (VCE↔산마르코)',t:'70분',c:'€15'},{n:'버스 (VCE↔로마광장)',t:'25분',c:'€10'}],
     rental:'no',rentalNote:'차가 들어갈 수 없는 도시예요. 로마광장·트론케토 주차장에 세우고 걸어야 합니다',
-    special:'⚠️ <b>바포레토 1회권 €9.50은 비싸서 2~3번만 타도 24h권이 이득</b>이에요. 본섬은 대부분 도보가 빠르고, 무라노·부라노 갈 때 진가를 발휘합니다. 다리 계단이 많아 큰 캐리어는 고생'},
+    special:'⚠️ <b>바포레토 1회권 €9.50은 비싸서 2~3번만 타도 24h권이 이득</b>이에요. 본섬은 대부분 도보가 빠르고, 무라노·부라노 갈 때 진가를 발휘합니다. 다리 계단이 많아 큰 캐리어는 고생<br>· <b>24·48·72h권은 첫 개찰부터 카운트</b> — 마지막 날 마지막 배 시각에서 역산해 개시하세요. 메스트레 숙소면 ACTV 육상버스(4L 등)도 같은 표로 타요(공항버스는 별도) · 출국일 짐은 메스트레역·산타루치아역 짐보관에'},
   '밀라노':{modes:['🚇 지하철 M1~M5','🚋 트램','🚌 버스'],card:'1회 €2.20 / 1일 €7.60',
     airport:[{n:'말펜사 익스프레스 (MXP↔첸트랄레)',t:'50분',c:'€13'},{n:'공항버스',t:'50분',c:'€10'}],
     rental:'no',rentalNote:'Area C 혼잡통행료 + 주차난',special:'지하철망이 이탈리아에서 가장 촘촘해요 — 대중교통만으로 충분합니다'},
@@ -3755,7 +3755,7 @@ const COUNTRY_TRANSIT={
     special:'✅ 대중교통이 빈약해 렌트가 사실상 필수. <b>좌측통행</b>이니 주의하세요'},
   // ── 유럽 (서·남) ──
   '이탈리아':{modes:['🚆 트레니탈리아/이탈로','🚌 버스'],rental:'suburb',
-    rentalNote:'대부분 구시가가 ZTL이라 시내 운전은 피하세요',special:'도시 간은 고속철(프레차로사)이 빠르고 저렴해요 — 미리 예약하면 반값'},
+    rentalNote:'대부분 구시가가 ZTL이라 시내 운전은 피하세요',special:'도시 간은 고속철(프레차로사)이 빠르고 저렴해요 — 미리 예약하면 반값 · 파업이 잦아요: 평일 06~09·18~21시 지역열차와 보장 열차는 운행, 출발 전 scioperi.mit.gov.it 확인'},
   '프랑스':{modes:['🚆 TGV','🚇 지하철'],rental:'suburb',special:'TGV는 미리 예약할수록 쌉니다(Ouigo 저가 옵션도 있어요)'},
   '스페인':{modes:['🚆 렌페 AVE','🚇 지하철'],rental:'suburb',special:'AVE 고속철이 주요 도시를 촘촘히 연결해요'},
   '포르투갈':{modes:['🚆 CP 기차','🚋 트램','🚇 지하철'],rental:'suburb',
@@ -4663,6 +4663,22 @@ function _guessCat(s){
   return '문화/역사';
 }
 
+// ── [교훈] 사람 몰리는 명소는 개장 직후·오전에, 오후는 앉아서 쉬는 일정으로 ──
+// (2026-10 베네치아 실전: 리알토·산마르코 광장·Acqua Alta를 09시 전으로, 무라노는 단체관광(10~13시) 전 오전으로 옮김.
+//  체력도 오전이 가장 좋아서 걷는 명소는 오전, 카페·배·공원 같은 앉아서 쉬는 일정은 오후가 맞았다)
+const _CROWD_RE=/광장|다리|대성당|두오모|바실리카|분수|시장|마켓|타워|전망대|섬|거리|골목|서점|궁전|왕궁|성채|사원|신사|사찰|모스크|랜드마크/;
+const _CALM_RE=/카페|쇼핑|스파|온천|마사지|크루즈|곤돌라|유람선|공원|정원|산책/;
+function _isCrowdSpot(s){ const n=s.n||''; return _CROWD_RE.test(n)&&!_CALM_RE.test(n); }  // 이름만 본다 — 설명의 "도보 거리" 같은 말에 걸리지 않게
+function _crowdFirst(spots){
+  // 오후의 붐비는 스팟 ↔ 오전의 조용한 스팟을 맞바꾼다. 야경·일몰·저녁·점심처럼 시각이 정해진 슬롯은 건드리지 않음
+  spots.forEach(s=>{
+    if(s.p!=='오후'||!_isCrowdSpot(s)) return;
+    const calm=spots.find(x=>x.p==='오전'&&!_isCrowdSpot(x)&&_CALM_RE.test((x.n||'')+(x.d||'')));
+    if(calm){ calm.p='오후'; s.p='오전'; }
+  });
+  return spots;
+}
+
 function buildItinerary(dest,days,style){
   // ── 체력 레벨 → 하루 스팟 수 결정 (stamina 우선, 없으면 pace 폴백) ──
   let spotsPerDay;
@@ -4747,6 +4763,7 @@ function buildItinerary(dest,days,style){
       }
     });
   }
+  itin.forEach(day=>_crowdFirst(day.spots));
   return {itin,suggestedDays};
 }
 
@@ -5157,6 +5174,7 @@ function _runGenerate(){
       ['🗺️','<b>숙소가 시내가 아닐 수 있어요</b> — 숙소 위치 기준으로 가까운 권역부터 확인 (의외로 옆 도시가 더 가까울 때도)'],
       ['🍽️','<b>밥시간 간격 3~4시간 유지</b> — 이른 저녁(17시대)이면 오후 카페·간식은 가볍게 테이크아웃 정도로'],
       ['🚗','<b>마지막 날은 귀가 방향으로</b> — 체크아웃 후 스팟은 집 가는 경로상에 배치해 되돌아가지 않기'],
+      ['🔁','<b>하루 동선은 한 방향 루프로</b> — 같은 길을 되돌아오면 30분~1시간이 사라져요. 지도에 순서대로 찍어 선이 꼬이면 순서부터 바꾸기'],
       ['💰','<b>성수기 부대시설 요금 확인</b> — 수영장 등은 시즌별 요금 차이가 크고, 조식+수영장 패키지가 따로 결제보다 유리할 수 있어요'],
     ];
     html+=`<div style="background:var(--card);border:1.5px solid var(--bdr);border-radius:14px;padding:14px 16px;margin-top:12px;" role="note" aria-label="플래너 체크리스트">
@@ -5180,7 +5198,18 @@ function _runGenerate(){
       ['🌙','<b>자정 이후 이동은 택시승강장이 최종 안전판</b> — 지하철·기차는 끊기고 앱택시도 심야엔 매칭이 느려요. 공항·역의 <u>공식 택시 승강장</u>을 미리 확인하고, 현금·현지 결제수단을 조금 남겨두세요'],
       ['🍽️','<b>장기 여행엔 아시안 한 끼씩</b> — 현지식이 물릴 때 라멘·한식으로 리듬 전환. 식단 제약(햄·돼지)이 있으면 무슬림권(터키 등)은 자연히 안전, 이탈리아는 prosciutto·guanciale 든 메뉴만 피하면 OK'],
       ['🧳','<b>숙소는 동선·조식·환불가능·가족룸·심야체크인</b>을 함께 확인 — 도시세(1인 1박)는 현장 현금인 곳이 많아요'],
+      ['🌅','<b>사람 몰리는 명소는 개장 직후·09시 전</b> — 단체관광은 10~13시에 몰려요. 체력 좋은 오전에 걷는 일정을 몰고, 오후는 배·카페·실내처럼 앉아서 쉬는 일정으로'],
+      ['🚌','<b>N시간 교통권은 첫 개찰부터 카운트</b> — 마지막 날 마지막 탑승 시각에서 거꾸로 계산해 개시 시각을 정하세요 (예: 72시간권을 도착일 저녁에 개시 → 출국일 오전 배까지 커버)'],
+      ['🧾','<b>결제 영수증 ≠ 입장권</b> — "Not valid as a ticket"이라 적힌 결제 확인서와 1인 1장 바코드 티켓은 따로예요. 입구에선 바코드만 통하니 그것부터 챙기기'],
+      ['🕰️','<b>영업시간은 요일별로 공식 정보에서</b> — 블로그·지도 앱 시간은 틀릴 때가 있고(토요일 16:30 마감이라던 곳이 공식은 20:30), 정원·궁전은 폐장 1시간 전 입장 마감이 흔해요'],
+      ['🏔','<b>날씨 타는 투어는 무료취소 마감 직전에 예보 확인</b> — 보통 전날 오전이 마감이라 30분 전에 알람. 복귀가 늦어질 수 있는 날 저녁은 브레이크타임 없는 식당을 복귀 지점 근처로'],
+      ['✈️','<b>출국일은 역·공항 가는 길목에서 끝내기</b> — 배·섬·외곽은 오전에. 짐은 시내 대신 공항 가는 역 짐보관에 맡기면 다시 끌고 오갈 일이 없어요'],
     ];
+    // [교훈] 파업이 잦은 나라 — 2026-10 이탈리아 기차 파업 당일에 실제로 따져본 판단 기준
+    const _STRIKE_C=/이탈리아|프랑스|스페인|포르투갈|그리스|벨기에/;
+    if(destKeys.map(k=>findDest(k)).some(d=>d&&_STRIKE_C.test(d.country||''))){
+      _INTL.push(['🪧','<b>파업 확인 (이탈리아·프랑스 등)</b> — 출발 2~3일 전 파업 공지 확인(이탈리아는 scioperi.mit.gov.it). 이탈리아 기차는 평일 06~09·18~21시 지역열차와 "보장 열차" 목록은 운행하고, 파업 시작 전 출발해 1시간 안에 도착하는 열차는 종착역까지 가요. 소수 노조 단독 파업은 참여율이 낮은 편이지만 당일 앱으로 열차 상태를 보고 대체편을 미리 정해두기']);
+    }
     html+=`<div style="background:var(--card);border:1.5px solid var(--bdr);border-radius:14px;padding:14px 16px;margin-top:12px;" role="note" aria-label="해외 여행 체크리스트">
       <div style="font-size:13px;font-weight:700;color:var(--pri);margin-bottom:8px;">🌍 해외 여행 체크리스트 <span style="font-weight:400;color:var(--sub);font-size:11px;">— 국제여행 실전에서 배운 것들</span></div>
       ${_INTL.map(([ic,t])=>`<div style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--sub);line-height:1.6;margin-bottom:5px;"><span style="flex-shrink:0;">${ic}</span><span>${t}</span></div>`).join('')}
@@ -5251,13 +5280,18 @@ function _runGenerate(){
       const mo=dObj?dObj.getMonth()+1:null;
       const txt=spots.map(s=>(s.n||'')+(s.d||'')).join('');
       if(wd===1) tips.push('📅 월요일 — 박물관·미술관·유명 맛집 휴무가 잦아요. 가려던 곳 영업 여부부터 확인');
+      if(wd===0&&_isOverseas) tips.push('📅 일요일 — 유럽은 저녁 휴무 식당이 많아요. 저녁 식당은 일요일 영업시간을 따로 확인');
       if(_isOverseas&&/박물관|미술관|궁전|성당|대성당|갤러리|museum|palace|gallery/i.test(txt)) tips.push('🎫 예약제·시간지정이 많아요 — 공식 사이트에서 미리 예약(검색 상단 리셀러는 2~3배). 요일 휴관도 함께 확인');
+      const _crowd=spots.find(_isCrowdSpot);
+      if(_crowd) tips.push(`🌅 ${_crowd.n}처럼 사람 몰리는 곳은 개장 직후·09시 전에 — 단체관광은 10~13시에 몰려요. 오후는 카페·배·실내처럼 앉아서 쉬는 일정으로`);
+      if(_isOverseas&&/당일치기|원데이|돌로미티|국립공원|트레킹|하이킹|등산|빙하|산악|케이블카|로프웨이/.test(txt))  /* '곤돌라 투어' 같은 시내 투어는 제외 */ tips.push('🏔 날씨 타는 투어는 무료취소 마감(보통 전날 오전) 직전에 예보 확인 · 복귀가 늦어질 수 있으니 저녁은 브레이크타임 없는 식당을 복귀 지점 근처로');
       if(isTripFirst&&_isOverseas) tips.push('🛬 심야 도착이면 첫 밤은 공항 인근(무료 셔틀) 호텔 → 다음날 시내 숙소로 옮기면 자정 이동이 사라져요');
       if(isTripFirst) tips.push('🏨 체크인은 보통 15시 — 그 전 스팟은 숙소 가는 길목에, 체크인·수영장 후 저녁은 숙소 반경에서');
-      if(isTripLast) tips.push('🧳 귀가일 — 체크아웃 후엔 집 방향 동선의 스팟만 들러 되돌아가지 않는 경로로');
+      if(isTripLast&&_isOverseas) tips.push('✈️ 출국일 — 배·섬·외곽은 오전에, 마지막은 역·공항 가는 길목에서 끝내기 · 짐은 공항 가는 역 짐보관에(보관소 오픈 시각이 체크아웃 시각을 정해요)');
+      else if(isTripLast) tips.push('🧳 귀가일 — 체크아웃 후엔 집 방향 동선의 스팟만 들러 되돌아가지 않는 경로로');
       if(!isTripLast&&/야경|나이트|야시장|루프탑|일몰/.test(txt)) tips.push('🌙 야경 스팟은 해 진 뒤가 하이라이트 — 저녁 식사 후 마지막 순서로, 입장 마감 확인');
       if(mo>=6&&mo<=8&&/해변|비치|트레킹|산책|공원|둘레길|절벽|해안/.test(txt)) tips.push('☀️ 한여름 그늘 없는 야외 스팟은 오전에 — 한낮엔 실내·카페로 더위 피하기');
-      return tips.slice(0,_isOverseas?3:2);
+      return tips.slice(0,_isOverseas?4:2);
     }
 
     // ── 이동 수단 판별 헬퍼 (renderDayColumns 공통) ──
